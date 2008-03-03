@@ -146,6 +146,7 @@ AC_CONFIG_FILES([
 	dep/src/Makefile
 	dep/src/sockets/Makefile
 	Makefile
+	src/Makefile
 	src/framework/Makefile
 	src/shared/Makefile
 	src/shared/Config/Makefile
