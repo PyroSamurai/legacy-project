@@ -1,0 +1,32 @@
+WorldServerPort = 6414
+
+LogsDir = ""
+
+LoginDatabaseInfo     = "192.168.0.15;3306;legacy;legacy;legacydb"
+WorldDatabaseInfo     = "192.168.0.15;3306;legacy;legacy;legacydb"
+CharacterDatabaseInfo = "192.168.0.15;3306;legacy;legacy;legacydb"
+
+LogSQL = 1
+
+LogLevel = 3
+
+LogFile = "Server.log"
+
+LogTimestamp = 0
+
+LogFileLevel = 0
+
+WorldLogFile = "world.log"
+
+DBErrorLogFile = "DBErrors.log"
+
+CharLogFile = "Char.log"
+
+PlayerLimit = 100
+
+MaxPlayerLevel = 10
+
+Motd = "Welcome to the Massive Network Game Object Server."
+
+MapUpdateInterval = 100
+
