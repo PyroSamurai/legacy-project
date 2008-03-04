@@ -85,7 +85,9 @@ void WorldSocket::LogPacket(WorldPacket packet, uint8 origin)
 		sWorldLog.Log("SOCKET: %u LENGTH: %u OPCODE: %s (0x%.2X)(%u) \nData:\n",
 				(uint32)GetSocket(),
 				packet.size(),
-				LookupName(packet.GetOpcode(), g_worldOpcodeNames),
+				origin == 0 ?
+				LookupNameServer(packet.GetOpcode(), g_svrOpcodeNames) :
+				LookupNameClient(packet.GetOpcode(), g_clntOpcodeNames),
 				opcode, opcode);
 
 		uint32 p = 0;
@@ -184,14 +186,14 @@ void WorldSocket::OnRead()
 		///- If packet is LOGON_CHALLENGE or AUTH_SESSION, handle immediately
 		switch (_cmd)
 		{
-			case MSG_NULL_ACTION: // Logon Challenge
+			case CMSG_LOGON_CHALLENGE: // Logon Challenge
 			{
 				///- Ignore for now
 				_HandleLogonChallenge();
 				break;
 			}
 		
-			case MSG_AUTH_LOGON:
+			case CMSG_AUTH_RESPONSE:
 			{
 				_HandleAuthSession(packet);
 //				break;
@@ -264,7 +266,7 @@ void WorldSocket::Update(time_t diff)
 void WorldSocket::SizeError(WorldPacket const& packet, uint32 size) const
 {
 	sLog.outError("Client send packet %s (%u) with size %u but expected %u (attempt crash server?), skipped",
-			LookupName(packet.GetOpcode(), g_worldOpcodeNames),packet.GetOpcode(),packet.size(),size);
+			LookupNameServer(packet.GetOpcode(), g_svrOpcodeNames),packet.GetOpcode(),packet.size(),size);
 }
 
 /// Logon Challenge command handler
@@ -304,14 +306,14 @@ void WorldSocket::_HandleAuthSession(WorldPacket& recvPacket)
 	savedPacket >> patchVer;
 	savedPacket >> password;
 
-	QueryResult *result = loginDatabase.PQuery("select * from accounts where accountid = %u", accountId);
+	QueryResult *result = loginDatabase.PQuery("select * from accounts where accountid = '%u' and password = '%s' and online = 0", accountId, password.c_str());
 
 	///- Stop if the account is not found
 	if ( !result )
 	{
 		sLog.outString("Invalid user login");
 		WorldPacket packet;
-		packet.SetOpcode( MSG_AUTH_LOGON ); packet.Prepare();
+		packet.SetOpcode( SMSG_AUTH_LOGON ); packet.Prepare();
 		packet << (uint16) 0x0006;
 		SendPacket(&packet);
 
@@ -327,6 +329,7 @@ void WorldSocket::_HandleAuthSession(WorldPacket& recvPacket)
 				fields[i].GetName(), fields[i].GetString());
 	}
 */
+	loginDatabase.PExecute("UPDATE accounts set online = 1 WHERE accountid = '%u'", accountId);
 	_session = new WorldSession(accountId, this);
 	
 	ASSERT(_session);

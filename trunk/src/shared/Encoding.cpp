@@ -30,6 +30,11 @@ Encoding::~Encoding()
 {
 }
 
+const char Encoding::Encode(const char x)
+{
+	return x ^ UINT8_ENCODER;
+}
+
 const uint8 Encoding::Encode(const uint8 x)
 {
 	return x ^ UINT8_ENCODER;

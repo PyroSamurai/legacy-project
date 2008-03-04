@@ -123,6 +123,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 		void SendInitialPacketsAfterAddToMap();
 
 		void AllowPlayerToMove();
+		void EndOfRequest();
 
 		/*********************************************************/
 		/***                  LOAD SYSTEM                      ***/
@@ -147,6 +148,9 @@ class LEGACY_DLL_SPEC Player : public Unit
 		void SetDontMove(bool dontMove) { m_dontMove = dontMove; }
 		bool GetDontMove() const { return m_dontMove; }
 
+		void SetTeleportTo(uint16 target) { m_teleportMapId = target; }
+		uint16 GetTeleportTo() { return m_teleportMapId; }
+
 		uint32 GetTeam() const { return m_team; }
 
 
@@ -162,7 +166,8 @@ class LEGACY_DLL_SPEC Player : public Unit
 
 		WorldSession *m_session;
 
-		bool m_dontMove;
+		bool   m_dontMove;
+		uint16 m_teleportMapId;
 
 		uint32 m_team;
 		uint32 m_nextSave;

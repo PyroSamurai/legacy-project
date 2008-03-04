@@ -39,9 +39,31 @@ class LEGACY_DLL_SPEC WorldSession
 		WorldSession(uint32 id, WorldSocket *sock);
 		~WorldSession();
 
-		void SendPacket(WorldPacket* packet);
+		bool PlayerLogout() const { return m_playerLogout; }
 
+		void SendPacket(WorldPacket* packet);
 		void QueuePacket(WorldPacket& packet);
+
+
+		/// Is the user engaged in a log out proccess?
+		bool isLogingOut() const { return _logoutTime || m_playerLogout; }
+
+		/// Engage the logout process for the user
+		void LogoutRequest(time_t requestTime)
+		{
+			_logoutTime = requestTime;
+		}
+
+		/// Is logout cooldown expired?
+		bool ShouldLogOut(time_t currTime) const
+		{
+			return (_logoutTime > 0 && currTime >= _logoutTime + 20);
+		}
+
+		void LogoutPlayer(bool Save);
+
+
+
 		bool Update(uint32 diff);
 		void SetSocket(WorldSocket *sock);
 		WorldSocket* GetSocket() { return _socket; }
@@ -49,21 +71,21 @@ class LEGACY_DLL_SPEC WorldSession
 		uint32 GetAccountId() const { return _accountId; }
 		Player* GetPlayer() const { return _player; }
 		void SetPlayer(Player *plr) { _player = plr; }
-//		void HandlePlayerLoginOpcode(WorldPacket& recvPacket);
 
 	protected:
 
 		void HandleMovementOpcodes(WorldPacket& recvPacket);
 		void HandlePlayerLoginOpcode(WorldPacket& recvPacket);
 		void HandlePlayerLogin(LoginQueryHolder * holder);
+		void HandleCharCreateOpcode(WorldPacket& recvPacket);
+		void HandleEnterDoorOpcode(WorldPacket& recvPacket);
 
 	private:
 
 		Player *_player;
 		WorldSocket *_socket;
 
-		void HandleCharCreateOpcode(WorldPacket& recvPacket);
-
+		time_t _logoutTime;
 		bool m_playerLoading;  // code processed in LoginPlayer
 		bool m_playerLogout;   // code processed in LogoutPlayer
 		bool m_playerRecentlyLogout;

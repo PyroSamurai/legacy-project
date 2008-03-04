@@ -26,6 +26,19 @@
 #include "Map.h"
 #include "GridStates.h"
 
+class MapDoor
+{
+	public:
+		MapDoor(uint16 mapid, uint16 doorid) : _source(mapid), _door(doorid) {}
+		uint16 GetMapId() { return _source; }
+		uint16 GetDoorId() { return _door; }
+	private:
+		uint16 _source;
+		uint16 _door;
+};
+
+
+
 class LEGACY_DLL_DECL MapManager : public LeGACY::Singleton<MapManager, LeGACY::ClassLevelLockable<MapManager, ZThread::Mutex> >
 {
 	friend class LeGACY::OperatorNew<MapManager>;
@@ -33,6 +46,7 @@ class LEGACY_DLL_DECL MapManager : public LeGACY::Singleton<MapManager, LeGACY::
 	typedef std::pair<HM_NAMESPACE::hash_map<uint32, Map*>::iterator, bool> MapMapPair;
 
 	public:
+
 
 		Map* GetMap(uint32, const WorldObject* obj);
 
@@ -43,6 +57,14 @@ class LEGACY_DLL_DECL MapManager : public LeGACY::Singleton<MapManager, LeGACY::
 
 		bool CanPlayerEnter(uint32 mapid, Player* player);
 
+		void AddMap2Door(MapDoor* mapDoor, uint16 destMap)
+		{
+			DEBUG_LOG( "Adding map %5u door %2u destination %5u",
+				mapDoor->GetMapId(), mapDoor->GetDoorId(), destMap );
+			m_map2Map[mapDoor] = destMap;
+		}
+
+		uint16 FindMap2Map(MapDoor* mapDoor) { return _findMap2Map(mapDoor); }
 	private:
 		void checkAndCorrectGridStatesArray();
 		GridState* i_GridStates[MAX_GRID_STATE];
@@ -60,6 +82,29 @@ class LEGACY_DLL_DECL MapManager : public LeGACY::Singleton<MapManager, LeGACY::
 		{
 			MapMapType::const_iterator iter = i_maps.find(id);
 			return (iter == i_maps.end() ? NULL : iter->second);
+		}
+
+		typedef HM_NAMESPACE::hash_map<MapDoor*, uint16> Map2Map;
+		
+		Map2Map m_map2Map;
+		uint16 _findMap2Map(MapDoor* mapDoor)
+		{
+			/*
+			Map2Map::const_iterator iter = m_map2Map.find(mapDoor);
+			return (iter == m_map2Map.end() ? 0 : iter->second);
+			*/
+			HM_NAMESPACE::hash_map<MapDoor*, uint16>::iterator itr;
+			for(itr = m_map2Map.begin(); itr != m_map2Map.end(); ++itr)
+			{
+				MapDoor *map = itr->first;
+				if ((map->GetMapId() == mapDoor->GetMapId()) &&
+					(map->GetDoorId() == mapDoor->GetDoorId())) {
+					return itr->second;
+				}
+			}
+
+			return 0;
+
 		}
 
 		typedef LeGACY::ClassLevelLockable<MapManager, ZThread::Mutex>::Lock Guard;

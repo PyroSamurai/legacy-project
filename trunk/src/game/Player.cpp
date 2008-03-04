@@ -341,6 +341,14 @@ void Player::AllowPlayerToMove()
 	/* end */
 }
 
+void Player::EndOfRequest()
+{
+	WorldPacket data;
+	data.clear();
+	data.SetOpcode( 0x14 ); data.Prepare(); data << (uint8) 0x08;
+	GetSession()->SendPacket(&data);
+}
+
 void Player::AddToWorld()
 {
 	///- Do not add/remove the player from the object storage
