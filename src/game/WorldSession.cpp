@@ -17,18 +17,18 @@
  */
 
 #include "Common.h"
-
+#include "Database/DatabaseEnv.h"
 #include "Log.h"
 #include "Opcodes.h"
-
 #include "WorldSocket.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
 #include "Player.h"
 #include "ObjectMgr.h"
-
 #include "World.h"
 #include "NameTables.h"
+#include "MapManager.h"
+#include "ObjectAccessor.h"
 
 
 /// WorldSession constructor
@@ -65,12 +65,14 @@ void WorldSession::FillOpcodeHandlerHashTable()
 		return;
 
 	// fill table if empty
-	objmgr.opcodeTable[ MSG_AUTH_LOGON ] = OpcodeHandler(STATUS_NOT_LOGGEDIN,
+	objmgr.opcodeTable[ CMSG_AUTH_RESPONSE ] = OpcodeHandler(STATUS_NOT_LOGGEDIN,
 			&WorldSession::HandlePlayerLoginOpcode );
 
-	objmgr.opcodeTable[ MSG_PLAYER_MOVE ] = OpcodeHandler(STATUS_LOGGEDIN,
+	objmgr.opcodeTable[ CMSG_PLAYER_MOVE ] = OpcodeHandler(STATUS_LOGGEDIN,
 			&WorldSession::HandleMovementOpcodes );
 
+	objmgr.opcodeTable[ CMSG_ENTER_DOOR ] = OpcodeHandler(STATUS_LOGGEDIN,
+			&WorldSession::HandleEnterDoorOpcode );
 }
 
 
@@ -115,22 +117,21 @@ bool WorldSession::Update(uint32 /*diff*/)
 		if (iter == objmgr.opcodeTable.end())
 		{
 			sLog.outError( "SESSION: received unhandled opcode %s (0x%.2X)",
-				LookupName(packet->GetOpcode(), g_worldOpcodeNames),
+				LookupNameClient(packet->GetOpcode(), g_clntOpcodeNames),
 				packet->GetOpcode());
+
+				GetPlayer()->EndOfRequest();
 		}
 		else
 		{
-			sLog.outDetail( "SESSION: processing opcode %s (0x%.2X)",
-				LookupName(packet->GetOpcode(), g_worldOpcodeNames),
-				packet->GetOpcode());
-			(this->*iter->second.handler)(*packet);
-			/*
 			if (iter->second.status == STATUS_NOT_LOGGEDIN)
 			{
+				DEBUG_LOG("STATUS_NOT_LOGGEDIN");
 				(this->*iter->second.handler)(*packet);
 			}
 			else if (iter->second.status == STATUS_LOGGEDIN && _player)
 			{
+				DEBUG_LOG("STATUS_LOGGEDIN && _player");
 				(this->*iter->second.handler)(*packet);
 			} else if (iter->second.status == STATUS_LOGGEDIN) {
 				m_playerRecentlyLogout = false;
@@ -141,17 +142,54 @@ bool WorldSession::Update(uint32 /*diff*/)
 			if(!m_playerRecentlyLogout)
 			{
 				sLog.outError( "SESSION: received unexpected opcode %s (0x%.2X)",
-					LookupName(packet->GetOpcode(), g_worldOpcodeNames),
-					packet->GetOpcode());
+				LookupNameClient(packet->GetOpcode(), g_clntOpcodeNames),
+				packet->GetOpcode());
+
+				GetPlayer()->EndOfRequest();
+					
 			}
-			*/
+			
 		}
 		delete packet;
 	}
 
+	///- If necessray, log the player out
 	if (!_socket)
+	{
+		LogoutPlayer(true);
 		return false;     // Will remove this session from the world session map
+	}
 
 	return true;
+
+}
+
+///- Log the player out
+void WorldSession::LogoutPlayer(bool Save)
+{
+	m_playerLogout = true;
+
+	///- Reset the online field in the account table
+	//No SQL injection as AccountId is uint32
+	loginDatabase.PExecute("UPDATE accounts SET online = 0 WHERE accountid = '%u'", GetAccountId());
+
+	if(Save)
+	{
+		_player->SaveToDB();
+	}
+
+	///- Remove the player from the world
+	ObjectAccessor::Instance().RemoveObject(_player);
+	MapManager::Instance().GetMap(_player->GetMapId(), _player)->Remove(_player, false);
+
+	delete _player;
+	_player = NULL;
+
+	CharacterDatabase.PExecute("UPDATE characters SET online = 0 WHERE accountid = '%u'", GetAccountId());
+	sLog.outDebug( "SESSION: Send SMSG_LOGOUT_COMPLETE Message" );
+
+	m_playerLogout = false;
+	m_playerRecentlyLogout = true;
+	LogoutRequest(0);
 
 }

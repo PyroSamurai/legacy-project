@@ -28,7 +28,7 @@
 
 void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
 {
-	printf("WorldSession::HandleMovementOpcodes\n");
+	sLog.outDebug( "WORLD: Recvd CMSG_PLAYER_MOVE Message" );
 	// TODO: CHECK_PACKET_SIZE
 	
 	if(GetPlayer()->GetDontMove())

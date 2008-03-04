@@ -22,8 +22,8 @@
 #include "Common.h"
 #include "Opcodes.h"
 
-/// Lookup opcode name for human understandable logging
-inline const char* LookupName(uint32 id, const char* table[])
+/// Lookup client opcode name for human understandable logging
+inline const char* LookupNameClient(uint32 id, const char* table[])
 {
 	/* slow code
 	for(uint32 i = 0; table[i].name != 0; i++)
@@ -35,10 +35,18 @@ inline const char* LookupName(uint32 id, const char* table[])
 	*/
 
 	/* fast code */
-	if (id > MAX_OPCODE_ID)
-		return "UNKNOWN OPCODE_CODE received, it is more than max!";
+	if (id > MAX_CLNT_OPCODE_ID)
+		return "UNKNOWN CLNT_OPCODE_CODE received, it is more than max!";
 	return table[id];
 }
 
-extern const char* g_worldOpcodeNames[];
+/// Lookup server opcode name for human understandable logging
+inline const char* LookupNameServer(uint32 id, const char* table[])
+{
+	if (id > MAX_SVR_OPCODE_ID)
+		return "UNKNOWN SVR_OPCODE_CODE received, it is more than max!";
+	return table[id];
+}
+extern const char* g_clntOpcodeNames[];
+extern const char* g_svrOpcodeNames[];
 #endif

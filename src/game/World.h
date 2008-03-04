@@ -113,7 +113,11 @@ class World
 		void UpdateResultQueue();
 		void InitResultQueue();
 
+		void _UpdateGameTime();
+
 	private:
+		time_t m_startTime;
+		time_t m_gameTime;
 		IntervalTimer m_timers[WUPDATE_COUNT];
 
 		typedef HM_NAMESPACE::hash_map<uint32, WorldSession*> SessionMap;
@@ -121,6 +125,11 @@ class World
 
 		uint32 m_configs[CONFIG_VALUE_COUNT];
 		uint32 m_playerLimit;
+
+		std::string m_motd;
+
+		uint32 m_ShutdownIdleMode;
+		uint32 m_ShutdownTimer;
 
 		SqlResultQueue *m_resultQueue;
 

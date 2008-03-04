@@ -57,6 +57,21 @@ void World::SetInitialWorldSettings()
 	m_configs[CONFIG_SOCKET_SELECTTIME] = sConfig.GetIntDefault("SocketSelectTime", DEFAULT_SOCKET_SELECT_TIME);
 
 	m_configs[CONFIG_GRID_UNLOAD] = sConfig.GetBoolDefault("GridUnload", true);
+
+	QueryResult* resultMap2Map = loginDatabase.PQuery("select * from map2map");
+	do
+	{
+		Field* f = resultMap2Map->Fetch();
+		uint16 srcMap  = f[1].GetUInt16();
+		uint16 door    = f[2].GetUInt16();
+		uint16 destMap = f[3].GetUInt16();
+		MapDoor* mapDoor = new MapDoor(srcMap, door);
+		MapManager::Instance().AddMap2Door(mapDoor, destMap);
+	//	delete mapDoor;
+	} while( resultMap2Map->NextRow() );
+
+	//MapDoor* map = new MapDoor(12001, 12);
+	//DEBUG_LOG("Finding (12001, 12) = %u", MapManager::Instance().FindMap2Map(map));
 }
 
 void World::InitResultQueue()
@@ -77,6 +92,8 @@ void World::Update(time_t diff)
 		if(m_timers[i].GetCurrent()>=0)
 			m_timers[i].Update(diff);
 		else m_timers[i].SetCurrent(0);
+
+	_UpdateGameTime();
 
 	if(m_timers[WUPDATE_SESSIONS].Passed())
 	{
@@ -201,3 +218,13 @@ void World::RemoveQueuedPlayer(WorldSocket* socket)
 		(*iter)->SendAuthWaitQue(position);
 }
 
+/// Update the game time
+void World::_UpdateGameTime()
+{
+	///- update the time
+	time_t thisTime = time(NULL);
+	uint32 elapsed = uint32(thisTime - m_gameTime);
+	m_gameTime = thisTime;
+
+	///- Handle shutdown timer here
+}

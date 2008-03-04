@@ -35,7 +35,8 @@ class Encoding
 		Encoding();
 		~Encoding();
 
-		const uint8 Encode(const uint8 x);
+		const char   Encode(const char x);
+		const uint8  Encode(const uint8 x);
 		const uint16 Encode(const uint16 x);
 		const uint32 Encode(const uint32 x);
 		const uint64 Encode(const uint64 x);

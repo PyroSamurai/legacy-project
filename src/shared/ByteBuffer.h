@@ -196,7 +196,7 @@ class ByteBuffer
                 char c=read<char>();
                 if (c==0)
                     break;
-                value+=c;
+                value+=ENCODE(c);
             }
             return *this;
         }

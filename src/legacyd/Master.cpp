@@ -151,7 +151,7 @@ void Master::Run()
 		sWorldSocketMgr.Update( realCurrTime - realPrevTime );
 		realPrevTime = realCurrTime;
 
-		h.Select(1, 0);
+		h.Select(0, 10000);
 
 		// ping if need
 		
@@ -223,6 +223,8 @@ bool Master::_StartDB()
 /// Clear 'online' status for all accounts with characters in this realm
 void Master::clearOnlineAccounts()
 {
+	loginDatabase.PExecute("UPDATE accounts SET online = 0 WHERE online = 1");
+	CharacterDatabase.PExecute("UPDATE characters SET online = 0 WHERE online = 1");
 }
 
 /// Handle termination signals

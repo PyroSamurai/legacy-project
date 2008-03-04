@@ -92,8 +92,7 @@ void WorldSession::HandlePlayerLoginOpcode( WorldPacket & recv_data )
 	
 	m_playerLoading = true;
 
-	DEBUG_LOG( "WORLD: Recvd Player Logon Message" );
-	sLog.outDetail( "WORLD: Recvd Player Logon Message" );
+	sLog.outDebug( "WORLD: Recvd CMSG_AUTH_RESPONSE Message" );
 
 	uint8       lenPassword;
 	uint32      accountId;
@@ -222,8 +221,67 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 	m_playerLoading = false;
 	delete holder;
 }
-/*
-void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
+
+
+void WorldSession::HandleEnterDoorOpcode( WorldPacket & recv_data )
 {
+	sLog.outDebug( "WORLD: Recvd CMSG_ENTER_DOOR Message" );
+	uint8  sub_opcode;
+	uint16 currMapId;
+	uint16 doorid;
+
+	WorldPacket data;
+
+	GetPlayer()->SetDontMove(true);
+
+	recv_data >> sub_opcode;
+	if( sub_opcode == 0x04 )
+	{
+		DEBUG_LOG("Teleport ACK");
+//		data.clear(); data.SetOpcode( 0x14 ); data.Prepare();
+//		data << (uint8) 0x08;
+//		GetPlayer()->GetSession()->SendPacket(&data);
+//
+		data.clear(); data.SetOpcode( 0x29 ); data.Prepare();
+		data << (uint8) 0x0E;
+		GetPlayer()->GetSession()->SendPacket(&data);
+
+		///- Send teleport info, and waiting for confirmation
+		currMapId = GetPlayer()->GetMapId();
+		recv_data >> doorid;
+		MapDoor* mapDoor = new MapDoor(currMapId, doorid);
+		uint16 targetMapId = MapManager::Instance().FindMap2Map(mapDoor);
+		DEBUG_LOG( "Player '%s' enter door %u in map %u will be teleported to %u", GetPlayer()->GetName(), doorid, currMapId, targetMapId);
+		GetPlayer()->SetTeleportTo(targetMapId);
+//		return;
+	}
+	else if( sub_opcode == 0x08 )
+	{
+		//GetPlayer()->EndOfRequest();
+		//return;
+	}
+	
+
+	///- Teleport Confirmed
+
+
+	data.clear(); data.SetOpcode( 0x0C ); data.Prepare();
+	data << (uint8) 0x96 << (uint8) 0x2E << (uint8) 0x00 << (uint8) 0x00;
+	data << GetPlayer()->GetTeleportTo();
+	//data << GetPlayer()->GetPositionX();
+	data << (uint16) 0x007A;
+	//data << GetPlayer()->GetPositionY();
+	data << (uint16) 0x03A7;
+	data << (uint8) 0x01;
+	data << (uint8) 0x00;
+	GetPlayer()->GetSession()->SendPacket(&data);
+
+	data.clear(); data.SetOpcode( 0x05 ); data.Prepare();
+	data << (uint8) 0x04;
+
+	GetPlayer()->EndOfRequest();
+//	GetPlayer()->EndOfRequest();
+
+	GetPlayer()->SetDontMove(false);
+
 }
-*/
