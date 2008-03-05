@@ -34,7 +34,7 @@
 #include <set>
 
 class Unit;
-//class GameObject;
+class GameObject;
 //class DynamicObject;
 class WorldObject;
 class Map;

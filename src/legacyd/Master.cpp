@@ -217,6 +217,8 @@ bool Master::_StartDB()
 		return false;
 	}
 
+	clearOnlineAccounts();
+
 	return true;
 }
 

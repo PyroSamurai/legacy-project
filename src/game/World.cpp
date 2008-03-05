@@ -59,19 +59,22 @@ void World::SetInitialWorldSettings()
 	m_configs[CONFIG_GRID_UNLOAD] = sConfig.GetBoolDefault("GridUnload", true);
 
 	QueryResult* resultMap2Map = loginDatabase.PQuery("select * from map2map");
+	//where x != 0 and y != 0");
 	do
 	{
 		Field* f = resultMap2Map->Fetch();
 		uint16 srcMap  = f[1].GetUInt16();
 		uint16 door    = f[2].GetUInt16();
 		uint16 destMap = f[3].GetUInt16();
+		uint16 destX   = f[4].GetUInt16();
+		uint16 destY   = f[5].GetUInt16();
 		MapDoor* mapDoor = new MapDoor(srcMap, door);
-		MapManager::Instance().AddMap2Door(mapDoor, destMap);
+		MapDestination* mapDest = new MapDestination(destMap, destX, destY);
+		MapManager::Instance().AddMap2Dest(mapDoor, mapDest);
+		//MapManager::Instance().AddMap2Door(mapDoor, destMap);
 	//	delete mapDoor;
 	} while( resultMap2Map->NextRow() );
 
-	//MapDoor* map = new MapDoor(12001, 12);
-	//DEBUG_LOG("Finding (12001, 12) = %u", MapManager::Instance().FindMap2Map(map));
 }
 
 void World::InitResultQueue()

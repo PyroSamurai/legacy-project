@@ -201,17 +201,14 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 
 	MapManager::Instance().GetMap(pCurrChar->GetMapId(), pCurrChar)->Add(pCurrChar);
 
-	pCurrChar->SendInitialPacketsAfterAddToMap();
-
 	ObjectAccessor::Instance().AddObject(pCurrChar);
 
-//	pCurrChar->SendInitialPacketsAfterAddToMap();
+	pCurrChar->SendInitialPacketsAfterAddToMap();
 
 	CharacterDatabase.PExecute("UPDATE characters SET online = 1 WHERE accountid = '%u'", accountId);
 
 	std::string IP_str = _socket ? _socket->GetRemoteAddress().c_str() : "-";
-	sLog.outString("Account: %d (IP: %s) Login Character:[%s] (guid:%u)",
-		GetAccountId(), IP_str.c_str(), pCurrChar->GetName(), pCurrChar->GetGUID());
+	sLog.outString("Account: %d (IP: %s) Login Character:[%s] (guid:%u)", GetAccountId(), IP_str.c_str(), pCurrChar->GetName(), pCurrChar->GetGUID());
 
 //	pCurrChar->SetInGameTime( getMSTime() );
 
@@ -222,66 +219,107 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 	delete holder;
 }
 
-
-void WorldSession::HandleEnterDoorOpcode( WorldPacket & recv_data )
+void WorldSession::HandlePlayerActionOpcode( WorldPacket & recv_data )
 {
-	sLog.outDebug( "WORLD: Recvd CMSG_ENTER_DOOR Message" );
-	uint8  sub_opcode;
-	uint16 currMapId;
-	uint16 doorid;
+	sLog.outDebug( "WORLD: Recvd CMSG_PLAYER_ACTION Message" );
+
+	uint8 subOpcode;
+	recv_data >> subOpcode;
+
+	switch( subOpcode )
+	{
+
+		case 0x06:
+		{
+			GetPlayer()->SendMapChanged();
+			GetPlayer()->EndOfRequest();
+			break;
+		}
+
+		case CMSG_PLAYER_ENTER_DOOR:
+		case CMSG_PLAYER_ENTER_DOOR2:
+		{
+			HandlePlayerEnterDoorOpcode( recv_data );
+			break;
+		}
+
+		default:
+		{
+			sLog.outDebug( "WORLD: Unhandled CMSG_PLAYER_ACTION Message" );
+			GetPlayer()->EndOfRequest();
+		}
+	}
+}
+
+void WorldSession::HandlePlayerEnterDoorOpcode( WorldPacket & recv_data )
+{
+	sLog.outDebug( "WORLD: Recvd CMSG_PLAYER_ENTER_DOOR Message" );
 
 	WorldPacket data;
+	uint16 mapid;
+	uint16 doorid;
+	Player* player;
 
-	GetPlayer()->SetDontMove(true);
+	recv_data >> doorid;
 
-	recv_data >> sub_opcode;
-	if( sub_opcode == 0x04 )
-	{
-		DEBUG_LOG("Teleport ACK");
-//		data.clear(); data.SetOpcode( 0x14 ); data.Prepare();
-//		data << (uint8) 0x08;
-//		GetPlayer()->GetSession()->SendPacket(&data);
-//
-		data.clear(); data.SetOpcode( 0x29 ); data.Prepare();
-		data << (uint8) 0x0E;
-		GetPlayer()->GetSession()->SendPacket(&data);
+	player = GetPlayer();
 
-		///- Send teleport info, and waiting for confirmation
-		currMapId = GetPlayer()->GetMapId();
-		recv_data >> doorid;
-		MapDoor* mapDoor = new MapDoor(currMapId, doorid);
-		uint16 targetMapId = MapManager::Instance().FindMap2Map(mapDoor);
-		DEBUG_LOG( "Player '%s' enter door %u in map %u will be teleported to %u", GetPlayer()->GetName(), doorid, currMapId, targetMapId);
-		GetPlayer()->SetTeleportTo(targetMapId);
-//		return;
+	mapid = player->GetMapId();
+	MapDoor*        mapDoor = new MapDoor(mapid, doorid);
+	MapDestination* mapDest = MapManager::Instance().FindMap2Dest(mapDoor);
+
+	if( !mapDest ) {
+		DEBUG_LOG( "Destination map not found, aborting" );
+		player->EndOfRequest();
+		return;
 	}
-	else if( sub_opcode == 0x08 )
-	{
-		//GetPlayer()->EndOfRequest();
-		//return;
-	}
+
+	///- Send Enter Door action response
+	data.clear(); data.SetOpcode( CMSG_PLAYER_ACTION ); data.Prepare();
+	data << (uint8) 0x07;
+	player->GetSession()->SendPacket(&data);
 	
+	data.clear(); data.SetOpcode( 0x29 ); data.Prepare();
+	data << (uint8) 0x0E;
+	player->GetSession()->SendPacket(&data);
 
-	///- Teleport Confirmed
-
-
-	data.clear(); data.SetOpcode( 0x0C ); data.Prepare();
-	data << (uint8) 0x96 << (uint8) 0x2E << (uint8) 0x00 << (uint8) 0x00;
-	data << GetPlayer()->GetTeleportTo();
-	//data << GetPlayer()->GetPositionX();
-	data << (uint16) 0x007A;
-	//data << GetPlayer()->GetPositionY();
-	data << (uint16) 0x03A7;
-	data << (uint8) 0x01;
-	data << (uint8) 0x00;
-	GetPlayer()->GetSession()->SendPacket(&data);
-
-	data.clear(); data.SetOpcode( 0x05 ); data.Prepare();
-	data << (uint8) 0x04;
-
-	GetPlayer()->EndOfRequest();
-//	GetPlayer()->EndOfRequest();
-
-	GetPlayer()->SetDontMove(false);
+	player->TeleportTo(mapDest->MapId, mapDest->DestX, mapDest->DestY);
 
 }
+
+void WorldSession::HandlePlayerEnterMapCompletedOpcode( WorldPacket & recv_data )
+{
+	sLog.outDebug( "WORLD: Recvd CMSG_PLAYER_ENTER_MAP_COMPLETED Message" );
+	uint8 subOpcode;
+	recv_data >> subOpcode;
+	switch (subOpcode)
+	{
+		case 0x01:
+		{
+			WorldPacket data;
+			data.clear(); data.SetOpcode( 0x27 ); data.Prepare();
+			data << (uint8) 0x09;
+			data << GetPlayer()->GetAccountId();
+			data << (uint32) 0x00000162;
+			data << (uint32) 0x43F9A30C;
+			data << (uint32) 0x6F462A43;
+			data << (uint32) 0xA3656372;
+			data << (uint32) 0x0244F4F9;
+			data << (uint8 ) 0x00;
+			data << (uint16) 0x0405;
+			///- Incomplete packet, do not send
+			//GetPlayer()->GetSession()->SendPacket(&data);
+
+			GetPlayer()->EndOfRequest();
+			GetPlayer()->AllowPlayerToMove();
+			break;
+		}
+
+		default:
+		{
+			sLog.outDebug( "WORLD: Unhandled CMSG_PLAYER_ENTER_MAP_COMPLETED Message" );
+			GetPlayer()->EndOfRequest();
+		}
+	}
+}
+

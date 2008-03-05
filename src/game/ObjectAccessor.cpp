@@ -20,7 +20,7 @@
 #include "ObjectMgr.h"
 #include "Policies/SingletonImp.h"
 #include "Player.h"
-//#include "GameObject.h"
+#include "GameObject.h"
 //#include "DynamicObject.h"
 #include "WorldSession.h"
 #include "WorldPacket.h"

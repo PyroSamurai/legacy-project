@@ -78,8 +78,10 @@ class LEGACY_DLL_SPEC WorldSession
 		void HandlePlayerLoginOpcode(WorldPacket& recvPacket);
 		void HandlePlayerLogin(LoginQueryHolder * holder);
 		void HandleCharCreateOpcode(WorldPacket& recvPacket);
-		void HandleEnterDoorOpcode(WorldPacket& recvPacket);
-
+		void HandlePlayerActionOpcode(WorldPacket& recvPacket);
+		void HandlePlayerEnterDoorOpcode(WorldPacket& recvPacket);
+		void HandlePlayerEnterMapCompletedOpcode(WorldPacket& recvPacket);
+		void HandleMessagechatOpcode(WorldPacket& recvPacket);
 	private:
 
 		Player *_player;

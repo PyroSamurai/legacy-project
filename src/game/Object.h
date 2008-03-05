@@ -168,8 +168,17 @@ class LEGACY_DLL_SPEC WorldObject : public Object
 			x = m_positionX; y = m_positionY;
 		}
 
+		// main visibility check function in normal case (ignore grey zone distance check)
+//		bool isVisibleFor(Player const* u) const { return isVisibleForInState(u,false); }
+
+		// low level function for visibility change code must be define in all main world object subclasses
+//		virtual bool isVisibleForInState(Player const* u, bool inVisibleList) const = 0;
+
+		Map      * GetMap() const;
+		Map const* GetBaseMap() const;
+
 	protected:
-		WorldObject( WorldObject *instantiator );
+		explicit WorldObject( WorldObject *instantiator );
 		std::string m_name;
 
 	private:

@@ -44,7 +44,38 @@ LeGACY::PlayerNotifier::Visit(PlayerMapType &m)
 			i_player.UpdateVisibilityOf(iter->getSource());
 	}
 }
+/*
+void
+VisibleChangesNotifier::Visit(PlayerMapType &m)
+{
+	for(PlayerMapType::iterator iter=m.begin(); iter != m.end(); ++iter)
+	{
+		if(iter->getSource() == &i_object)
+			continue;
 
+		iter->getSource()->UpdateVisibilityOf(&i_object);
+	}
+}
+
+void
+VisibleNotifier::Visit(PlayerMapType &m)
+{
+	for(PlayerMapType::iterator iter=m.begin(); iter != m.end(); ++iter)
+	{
+		if( iter->getSource() == &i_player )
+			continue;
+
+		iter->getSource()->UpdateVisibilityOf(&i_player);
+		//i_player.UpdateVisibilityOf(iter->getSource(),i_data,i_data_updates,i_visibleNow);
+		i_clientGUIDs.erase(iter->getSource()->GetGUID());
+	}
+}
+
+void
+VisibleNotifier::Notify()
+{
+}
+*/
 void
 MessageDeliverer::Visit(PlayerMapType &m)
 {
@@ -71,3 +102,15 @@ ObjectMessageDeliverer::Visit(PlayerMapType &m)
 			session->SendPacket(i_message);
 	}
 }
+/*
+template<class T>void
+ObjectUpdater::Visit(GridRefManager<T> &m)
+{
+	for(typename GridRefManager<T>::iterator iter = m.begin(); iter != m.end(); ++iter)
+	{
+		iter->getSource()->Update(i_timeDiff);
+	}
+}
+*/
+//template void ObjectUpdater::Visit<GameObject>(GameObjectMapType &);
+//template void ObjectUpdater::Visit<DynamicObject>(DynamicObjectMapType &);
