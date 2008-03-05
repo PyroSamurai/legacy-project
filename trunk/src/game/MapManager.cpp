@@ -92,7 +92,7 @@ MapManager::Update(time_t diff)
 	for(MapMapType::iterator iter=i_maps.begin(); iter != i_maps.end(); ++iter)
 	{
 		//sLog.outString("MapManager::Update %u", i);
-		checkAndCorrectGridStatesArray(); // debugging code
+		//checkAndCorrectGridStatesArray(); // debugging code
 		iter->second->Update(i_timer.GetCurrent());
 	}
 	ObjectAccessor::Instance().Update(i_timer.GetCurrent());
@@ -117,4 +117,22 @@ void MapManager::checkAndCorrectGridStatesArray()
 		i_GridStateErrorCount++;
 	if(i_GridStateErrorCount > 2)
 		assert(false); // force a crash. Too many errors
+}
+
+void MapManager::AddMap2Dest(MapDoor* mapDoor, MapDestination* mapDest)
+{
+	m_map2Dest[mapDoor] = mapDest;
+}
+
+MapDestination* MapManager::FindMap2Dest(MapDoor* mapDoor)
+{
+	MapDestination* dest = _findMap2Dest(mapDoor);
+	if( !dest )
+	{
+		DEBUG_LOG("Map %u Door %u not found", mapDoor->MapId, mapDoor->DoorId);
+		return NULL;
+	}
+	DEBUG_LOG("Map %u Door%u destination is %u, x:%u, y:%u", mapDoor->MapId, mapDoor->DoorId, dest->MapId, dest->DestX, dest->DestY);
+
+	return dest;
 }

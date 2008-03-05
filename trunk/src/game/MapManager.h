@@ -29,12 +29,20 @@
 class MapDoor
 {
 	public:
-		MapDoor(uint16 mapid, uint16 doorid) : _source(mapid), _door(doorid) {}
-		uint16 GetMapId() { return _source; }
-		uint16 GetDoorId() { return _door; }
-	private:
-		uint16 _source;
-		uint16 _door;
+		MapDoor(uint16 mapid, uint16 doorid) : MapId(mapid), DoorId(doorid) {}
+		uint16 MapId;
+		uint16 DoorId;
+};
+
+class MapDestination
+{
+	public:
+		MapDestination(uint16 id, uint16 x, uint16 y) :
+			MapId(id), DestX(x), DestY(y) {}
+
+		uint16 MapId;
+		uint16 DestX;
+		uint16 DestY;
 };
 
 
@@ -57,14 +65,9 @@ class LEGACY_DLL_DECL MapManager : public LeGACY::Singleton<MapManager, LeGACY::
 
 		bool CanPlayerEnter(uint32 mapid, Player* player);
 
-		void AddMap2Door(MapDoor* mapDoor, uint16 destMap)
-		{
-			DEBUG_LOG( "Adding map %5u door %2u destination %5u",
-				mapDoor->GetMapId(), mapDoor->GetDoorId(), destMap );
-			m_map2Map[mapDoor] = destMap;
-		}
+		void AddMap2Dest(MapDoor* mapDoor, MapDestination* mapDest);
+		MapDestination* FindMap2Dest(MapDoor* mapDoor);
 
-		uint16 FindMap2Map(MapDoor* mapDoor) { return _findMap2Map(mapDoor); }
 	private:
 		void checkAndCorrectGridStatesArray();
 		GridState* i_GridStates[MAX_GRID_STATE];
@@ -84,28 +87,25 @@ class LEGACY_DLL_DECL MapManager : public LeGACY::Singleton<MapManager, LeGACY::
 			return (iter == i_maps.end() ? NULL : iter->second);
 		}
 
-		typedef HM_NAMESPACE::hash_map<MapDoor*, uint16> Map2Map;
-		
-		Map2Map m_map2Map;
-		uint16 _findMap2Map(MapDoor* mapDoor)
+		typedef HM_NAMESPACE::hash_map<MapDoor*, MapDestination*> Map2Dest;
+		Map2Dest m_map2Dest;
+
+		MapDestination* _findMap2Dest(MapDoor* mapDoor)
 		{
-			/*
-			Map2Map::const_iterator iter = m_map2Map.find(mapDoor);
-			return (iter == m_map2Map.end() ? 0 : iter->second);
-			*/
-			HM_NAMESPACE::hash_map<MapDoor*, uint16>::iterator itr;
-			for(itr = m_map2Map.begin(); itr != m_map2Map.end(); ++itr)
+			HM_NAMESPACE::hash_map<MapDoor*, MapDestination*>::iterator itr;
+			for(itr = m_map2Dest.begin(); itr != m_map2Dest.end(); ++itr)
 			{
 				MapDoor *map = itr->first;
-				if ((map->GetMapId() == mapDoor->GetMapId()) &&
-					(map->GetDoorId() == mapDoor->GetDoorId())) {
+				if ((map->MapId == mapDoor->MapId) &&
+					(map->DoorId == mapDoor->DoorId))
+				{
 					return itr->second;
 				}
 			}
 
-			return 0;
-
+			return NULL;
 		}
+
 
 		typedef LeGACY::ClassLevelLockable<MapManager, ZThread::Mutex>::Lock Guard;
 

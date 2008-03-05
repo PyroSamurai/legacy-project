@@ -34,9 +34,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
 	if(GetPlayer()->GetDontMove())
 		return;
 
-//	GetSocket()->LogPacket( recv_data, 1 );
 	/* extract packet */
-
 	uint8  sub_opcode;
 	uint8  unknown1;
 	uint16 pos_x;
@@ -63,6 +61,6 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
 	data << unknown1;
 	data << pos_x << pos_y;
 
-	GetPlayer()->SendMessageToSet(&data, false);
 	GetPlayer()->Relocate(pos_x, pos_y);
+	GetPlayer()->SendMessageToSet(&data, false);
 }

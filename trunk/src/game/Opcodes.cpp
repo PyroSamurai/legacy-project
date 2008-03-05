@@ -21,48 +21,46 @@
 
 const char* g_clntOpcodeNames[] = 
 {
-	"CMSG_LOGON_CHALLENGE",
-	"CMSG_AUTH_RESPONSE",
-	"CMSG_UNKNOWN_2",
-	"CMSG_UNKNOWN_3",
-	"CMSG_UNKNOWN_4",
-	"CMSG_UNKNOWN_5",
-	"CMSG_PLAYER_MOVE",
-	"CMSG_UNKNOWN_7",
-	"CMSG_UNKNOWN_8",
-	"CMSG_UNKNOWN_9",
-	"CMSG_UNKNOWN_10",
-	"CMSG_UNKNOWN_11",
-	"CMSG_UNKNOWN_12",
-	"CMSG_UNKNOWN_13",
-	"CMSG_UNKNOWN_14",
-	"CMSG_UNKNOWN_15",
-	"CMSG_UNKNOWN_16",
-	"CMSG_UNKNOWN_17",
-	"CMSG_UNKNOWN_18",
-	"CMSG_UNKNOWN_19",
-	"CMSG_ENTER_DOOR",
-	"CMSG_UNKNOWN_21",
-	"CMSG_UNKNOWN_22",
+	"CMSG_LOGON_CHALLENGE",                   // 0
+	"CMSG_AUTH_RESPONSE",                     // 1
+	"CMSG_PLAYER_MESSAGE",                    // 2
+	"CMSG_UNKNOWN_3",                         // 3
+	"CMSG_PLAYER_ENTER_DOOR",                 // 4
+	"CMSG_UNKNOWN_5",                         // 5
+	"CMSG_PLAYER_MOVE",                       // 6
+	"CMSG_UNKNOWN_7",                         // 7
+	"CMSG_PLAYER_ENTER_DOOR2",                // 8
+	"CMSG_UNKNOWN_9",                         // 9
+	"CMSG_UNKNOWN_10",                        // 10
+	"CMSG_UNKNOWN_11",                        // 11
+	"CMSG_PLAYER_ENTER_MAP_COMPLETED",        // 12
+	"CMSG_UNKNOWN_13",                        // 13
+	"CMSG_UNKNOWN_14",                        // 14
+	"CMSG_UNKNOWN_15",                        // 15
+	"CMSG_UNKNOWN_16",                        // 16
+	"CMSG_UNKNOWN_17",                        // 17
+	"CMSG_UNKNOWN_18",                        // 18
+	"CMSG_UNKNOWN_19",                        // 19
+	"CMSG_PLAYER_ACTION",                        // 20
 };
 
 const char* g_svrOpcodeNames[] =
 {
-	"SMSG_NULL_ACTION",
+	"SMSG_NULL_ACTION",                       // 0
 	"SMSG_AUTH_LOGON", 
 	"SMSG_BROADCAST_INFO",
 	"SMSG_QUERY_PLAYER_VISIBILITY",
 	"SMSG_QUERY_ALL_PLAYER_VISIBILITY",
 	"SMSG_QUERY_PLAYER_STATS",
 	"SMSG_UPDATE_PLAYER_VISIBILITY",
-	"SMSG_UNKNOWN_7",
-	"SMSG_AUTH_SESSION",
+	"SMSG_SUBOPCODE_RESPONSE_MAP_ENTER",
+	"SMSG_RESPONSE_COMPLETED",
 	"SMSG_UNKNOWN_9",
 	"SMSG_UNKNOWN_10",
 	"SMSG_UNKNOWN_11",
-	"SMSG_ENTER_MAP",
+	"SMSG_RESPONSE_PLAYER_RELOCATION",
 	"SMSG_UNKNOWN_13",
-	"SMSG_UNKNOWN_14",
+	"SMSG_ACTION_RESPONSE",
 	"SMSG_LOAD_COMPLETE",
 	"SMSG_UNKNOWN_16",
 	"SMSG_QUERY_INVENTORY",
@@ -89,7 +87,6 @@ const char* g_svrOpcodeNames[] =
 	"SMSG_UNKNOWN_38",
 	"SMSG_UNKNOWN_39",
 	"SMSG_UNKNOWN_40",
-
-	"SMSG_UNKNOWN_41",
+	"SMSG_RESPONSE_ENTER_MAP_ACK",
 };
 

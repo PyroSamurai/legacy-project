@@ -71,8 +71,14 @@ void WorldSession::FillOpcodeHandlerHashTable()
 	objmgr.opcodeTable[ CMSG_PLAYER_MOVE ] = OpcodeHandler(STATUS_LOGGEDIN,
 			&WorldSession::HandleMovementOpcodes );
 
-	objmgr.opcodeTable[ CMSG_ENTER_DOOR ] = OpcodeHandler(STATUS_LOGGEDIN,
-			&WorldSession::HandleEnterDoorOpcode );
+	objmgr.opcodeTable[ CMSG_PLAYER_ACTION ] = OpcodeHandler(STATUS_LOGGEDIN,
+			&WorldSession::HandlePlayerActionOpcode );
+
+	objmgr.opcodeTable[ CMSG_PLAYER_ENTER_MAP_COMPLETED ] = OpcodeHandler(STATUS_LOGGEDIN,
+			&WorldSession::HandlePlayerEnterMapCompletedOpcode );
+
+	objmgr.opcodeTable[ CMSG_PLAYER_MESSAGE ] = OpcodeHandler(STATUS_LOGGEDIN,
+			&WorldSession::HandleMessagechatOpcode );
 }
 
 
@@ -120,7 +126,7 @@ bool WorldSession::Update(uint32 /*diff*/)
 				LookupNameClient(packet->GetOpcode(), g_clntOpcodeNames),
 				packet->GetOpcode());
 
-				GetPlayer()->EndOfRequest();
+				//GetPlayer()->EndOfRequest();
 		}
 		else
 		{
@@ -145,7 +151,7 @@ bool WorldSession::Update(uint32 /*diff*/)
 				LookupNameClient(packet->GetOpcode(), g_clntOpcodeNames),
 				packet->GetOpcode());
 
-				GetPlayer()->EndOfRequest();
+				//GetPlayer()->EndOfRequest();
 					
 			}
 			

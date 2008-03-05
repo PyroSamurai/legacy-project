@@ -50,3 +50,39 @@ void Unit::Update( uint32 p_time )
 {
 	i_motionMaster.UpdateMotion(p_time);
 }
+/*
+bool Unit::isVisibleForInState( Player const* u, bool inVisibleList ) const
+{
+//	return isVisibleForOrDetect(u, false, inVisibleList);
+	return true;
+}
+
+bool Unit::isVisibleForOrDetect(Unit const* u, bool detect, bool inVisibleList) const
+{
+	if(!u)
+		return false;
+
+	// Always can see self
+	if (u==this)
+		return true;
+
+	if(!IsInWorld() || !u->IsInWorld())
+		return false;
+
+	// Grid dead/alive checks
+	if( u->GetTypeId()==TYPEID_PLAYER)
+	{
+		// if player is dead then he can't detect anyone in anycases
+		if(!u->isAlive())
+			detect = false;
+	}
+	else
+	{
+		// all dead creatures/players not visible for any creatures
+		if(!u-isAlive() || !isAlive())
+			return false;
+	}
+
+	return true;
+}
+*/

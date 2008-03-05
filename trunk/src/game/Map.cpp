@@ -203,10 +203,40 @@ void Map::Update(const uint32 &t_diff)
 
 void Map::Remove(Player *player, bool remove)
 {
+
+	CellPair p = LeGACY::ComputeCellPair(player->GetPositionX(), player->GetPositionY());
+	if(p.x_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP || p.y_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP)
+	{
+		// invalid coordinates
+		player->RemoveFromWorld();
+		if( remove )
+			DeleteFromWorld(player);
+
+		return;
+	}
+
+	Cell cell(p);
+	
+	if( !getNGrid(cell.data.Part.grid_x, cell.data.Part.grid_y) )
+	{
+		sLog.outError("Map::Remove() i_grids was NULL x:%d, y:%d",cell.data.Part.grid_x,cell.data.Part.grid_y);
+		return;
+	}
+	DEBUG_LOG("Remove player '%s' from grid[%u,%u]", player->GetName(), cell.GridX(), cell.GridY());
+	NGridType *grid = getNGrid(cell.GridX(), cell.GridY());
+	assert(grid != NULL);
+
+	RemoveFromGrid(player,grid,cell);
 	player->RemoveFromWorld();
+
+
+	UpdateObjectsVisibilityFor(player,cell,p);
+
 	if( remove )
 		DeleteFromWorld(player);
 
+	// reinitialize reset time
+//	InitResetTime();
 }
 
 void
@@ -291,20 +321,43 @@ Map::EnsureGridCreated(const GridPair &p)
 
 void Map::UpdateObjectVisibility( WorldObject* obj, Cell cell, CellPair cellpair)
 {
+	/*
+	cell.data.Part.reserved = CENTER_DISTRICT;
+	cell.SetNoCreate();
+	LeGACY::VisibleChangesNotifier notifier(*obj);
+	TypeContainerVisitor<LeGACY::VisibleChangesNotifier, WorldTypeMapContainer > player_notifier(notifier);
+	CellLock<GridReadGuard> cell_lock(cell, cellpair);
+	cell_lock->Visit(cell_lock, player_notifier, *this);
+*/
 }
 
 void Map::UpdatePlayerVisibility( Player* player, Cell cell, CellPair cellpair )
 {
-	//cell.data.Part.reserved = ALL_DISTRICT;
-	cell.data.Part.reserved = UPPER_DISTRICT;
+	/*
+	cell.data.Part.reserved = CENTER_DISTRICT;
 
 	LeGACY::PlayerNotifier pl_notifier(*player);
 	TypeContainerVisitor<LeGACY::PlayerNotifier, WorldTypeMapContainer > player_notifier(pl_notifier);
 
 	CellLock<ReadGuard> cell_lock(cell, cellpair);
 	cell_lock->Visit(cell_lock, player_notifier, *this);
+	*/
 }
 
-void Map::UpdateObjectsVisibilityFor( Player* plaer, Cell cell, CellPair cellpair )
+void Map::UpdateObjectsVisibilityFor( Player* player, Cell cell, CellPair cellpair)
 {
+	/*
+	LeGACY::VisibleNotifier notifier(*player);
+
+	cell.data.Part.reserved = CENTER_DISTRICT;
+	cell.SetNoCreate();
+	TypeContainerVisitor<LeGACY::VisibleNotifier, WorldTypeMapContainer > world_notifier(notifier);
+	TypeContainerVisitor<LeGACY::VisibleNotifier, GridTypeMapContainer  > grid_notifier(notifier);
+	CellLock<GridReadGuard> cell_lock(cell, cellpair);
+	cell_lock->Visit(cell_lock, world_notifier, *this);
+	cell_lock->Visit(cell_lock, grid_notifier,  *this);
+
+	// send data
+	notifier.Notify();
+	*/
 }

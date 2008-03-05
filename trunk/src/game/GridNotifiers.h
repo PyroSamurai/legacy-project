@@ -25,6 +25,7 @@
 #include <iostream>
 
 #include "Object.h"
+#include "GameObject.h"
 #include "Player.h"
 #include "Unit.h"
 
@@ -40,6 +41,46 @@ namespace LeGACY
 		template<class SKIP> void Visit(GridRefManager<SKIP> &) {}
 		Player &i_player;
 	};
+/*
+	struct LEGACY_DLL_DECL VisibleNotifier
+	{
+		Player &i_player;
+//		UpdateData i_data;
+//		UpdateDataMapType i_data_updates;
+		Player::ClientGUIDs i_clientGUIDs;
+		std::set<WorldObject*> i_visibleNow;
+
+		explicit VisibleNotifier(Player &player) : i_player(player),i_clientGUIDs(player.m_clientGUIDs) {}
+		template<class T> void Visit(GridRefManager<T> &m);
+		void Visit(PlayerMapType &);
+		void Notify(void);
+	};
+
+	struct LEGACY_DLL_DECL VisibleChangesNotifier
+	{
+		WorldObject &i_object;
+
+		explicit VisibleChangesNotifier(WorldObject &object) : i_object(object) {}
+		template<class T> void Visit(GridRefManager<T> &) {}
+		void Visit(PlayerMapType &);
+	};
+
+	struct LEGACY_DLL_DECL GridUpdater
+	{
+		GridType &i_grid;
+		uint32 i_timeDiff;
+		GridUpdater(GridType &grid, uint32 diff) : i_grid(grid), i_timeDiff(diff) {}
+
+		template<class T> void updateObjects(GridRefManager<T> &m)
+		{
+			for(typename GridRefManager<T>::iterator iter = m.begin(); iter != m.end(); ++iter)
+				iter->getSource()->Update(i_timeDiff);
+		}
+
+		void Visit(PlayerMapType &m) { updateObjects<Player>(m); }
+
+	};
+*/
 
 	struct LEGACY_DLL_DECL MessageDeliverer
 	{

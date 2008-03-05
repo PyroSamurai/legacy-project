@@ -41,6 +41,9 @@ class LEGACY_DLL_SPEC Unit : public WorldObject
 
 		MotionMaster* GetMotionMaster() { return &i_motionMaster; }
 
+		// virtual functions for all world objects type
+//		bool isVisibleForInState(Player const* u, bool inVisibleList) const;
+
 	protected:
 		explicit Unit( WorldObject *instantiator );
 

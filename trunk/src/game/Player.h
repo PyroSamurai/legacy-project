@@ -107,6 +107,11 @@ class LEGACY_DLL_SPEC Player : public Unit
 		void AddToWorld();
 		void RemoveFromWorld();
 
+		typedef std::set<uint64> ClientGUIDs;
+		ClientGUIDs m_clientGUIDs;
+
+		bool HaveAtClient(WorldObject const* u) { return u==this || m_clientGUIDs.find(u->GetGUID())!=m_clientGUIDs.end(); }
+
 		uint32 GetAccountId() { return m_session->GetAccountId(); };
 
 		bool Create ( uint32 guidlow, WorldPacket &data );
@@ -115,12 +120,17 @@ class LEGACY_DLL_SPEC Player : public Unit
 
 		WorldSession* GetSession() const { return m_session; }
 
+		void BuildUpdateBlockStatusPacket(WorldPacket *data);
+
 		void BuildUpdateBlockVisibilityPacket(WorldPacket *data);
 		void BuildUpdateBlockVisibilityForOthersPacket(WorldPacket *data);
 
-		void BuildUpdateBlockStatusPacket(WorldPacket *data);
+		void BuildUpdateBlockTeleportPacket(WorldPacket *data);
+
+		void TeleportTo(uint16 mapid, uint16 pos_x, uint16 pos_y);
 		void SendInitialPacketsBeforeAddToMap();
 		void SendInitialPacketsAfterAddToMap();
+		void SendMapChanged();
 
 		void AllowPlayerToMove();
 		void EndOfRequest();
@@ -158,6 +168,9 @@ class LEGACY_DLL_SPEC Player : public Unit
 		/***                VARIOUS SYSTEM                     ***/
 		/*********************************************************/
 		void UpdateVisibilityOf(WorldObject* target);
+
+		template<class T>
+			void UpdateVisibilityOf(T* target, UpdateData& data, UpdateDataMapType& data_updates, std::set<WorldObject*>& visibleNow);
 
 
 		GridReference<Player> &GetGridRef() { return m_gridRef; }

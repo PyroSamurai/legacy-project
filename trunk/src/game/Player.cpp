@@ -28,6 +28,7 @@
 #include "MapManager.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
+#include "CellImpl.h"
 #include "ObjectMgr.h"
 #include "ObjectAccessor.h"
 #include "Util.h"
@@ -261,8 +262,8 @@ void Player::SendInitialPacketsAfterAddToMap()
 {
 	WorldPacket data;
 
-//	BuildUpdateBlockVisibilityPacket(&data);
-//	GetSession()->SendPacket(&data);
+	BuildUpdateBlockVisibilityPacket(&data);
+	GetSession()->SendPacket(&data);
 
 	BuildUpdateBlockStatusPacket(&data);
 	GetSession()->SendPacket(&data);
@@ -341,6 +342,17 @@ void Player::AllowPlayerToMove()
 	/* end */
 }
 
+void Player::BuildUpdateBlockTeleportPacket(WorldPacket* data)
+{
+	data->clear(); data->SetOpcode( 0x0C ); data->Prepare();
+	*data << GetAccountId();
+	*data << GetTeleportTo();
+	*data << GetPositionX();
+	*data << GetPositionY();
+	*data << (uint8) 0x01 << (uint8) 0x00;
+
+}
+
 void Player::EndOfRequest()
 {
 	WorldPacket data;
@@ -377,4 +389,40 @@ void Player::UpdateVisibilityOf(WorldObject* target)
 	//target->SendUpdateToPlayer(this);
 	SendUpdateToPlayer((Player*) target);
 }
+
+void Player::TeleportTo(uint16 mapid, uint16 pos_x, uint16 pos_y)
+{
+	sLog.outDebug( "PLAYER: Teleport Player '%s' to %u [%u,%u]", GetName(), mapid, pos_x, pos_y );
+
+	WorldPacket data;
+
+	SetDontMove(true);
+
+	Map* map = MapManager::Instance().GetMap(GetMapId(), this);
+	map->Remove(this, false);
+
+	SetMapId(mapid);
+	Relocate(pos_x, pos_y);
+
+	// update player state for other and vice-versa
+	CellPair p = LeGACY::ComputeCellPair(GetPositionX(), GetPositionY());
+	Cell cell(p);
+	MapManager::Instance().GetMap(GetMapId(), this)->EnsureGridLoadedForPlayer(cell, this, true);
+}
+	
+void Player::SendMapChanged()
+{
+	WorldPacket data;
+	data.clear(); data.SetOpcode( 0x0C ); data.Prepare();
+	data << GetAccountId();
+	data << GetMapId();
+	data << GetPositionX();
+	data << GetPositionY();
+	data << (uint8) 0x01 << (uint8) 0x00;
+	GetSession()->SendPacket(&data);
+
+	SetDontMove(false);
+
+}
+
 
