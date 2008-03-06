@@ -27,6 +27,7 @@ noinst_LIBRARIES = liblegacygame.a
 liblegacygame_a_SOURCES = \
 	Cell.h \
 	CellImpl.h \
+	Chat.cpp Chat.h \
 	ChatHandler.cpp \
 	CharacterHandler.cpp \
 	GameObject.cpp GameObject.h \

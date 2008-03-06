@@ -32,8 +32,8 @@ LeGACY::PlayerNotifier::Visit(PlayerMapType &m)
 	int i = 0;
 	for(PlayerMapType::iterator iter=m.begin(); iter != m.end(); ++iter)
 	{
-//		if( iter->getSource() == &i_player )
-//			continue;
+		if( iter->getSource() == &i_player )
+			continue;
 
 		i++;
 		DEBUG_LOG("GridNotifier %u PlayerNotifier from '%s' to '%s'",

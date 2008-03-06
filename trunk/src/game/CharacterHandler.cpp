@@ -136,7 +136,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 	else
 		SetPlayer(pCurrChar);
 
-	WorldPacket data ( 5 );
+	WorldPacket data;
 
 	data.clear();
 	data.SetOpcode(0x14); data.Prepare(); data << (uint8) 0x08;
@@ -167,39 +167,10 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 	data << (uint8) 0x05 << (uint8) 0x92 << (uint16) 0x0001;
 	SendPacket(&data);
 
-	/*
-	data.clear();
-	data.SetOpcode(0x14); data.Prepare();
-	data << (uint8) 0x21 << (uint8) 0x00;
-	SendPacket(&data);
-
-	data.clear();
-	data.SetOpcode(0x23); data.Prepare();
-	data << (uint32) 0x317D0C0105 << (uint32) 0x00000000 << (uint32) 0x00000000;
-	SendPacket(&data);
-
-	data.clear();
-	data.SetOpcode(0x24); data.Prepare();
-	data << (uint8) 0x07 << (uint8) 0x03 << (uint8) 0x04;
-	SendPacket(&data);
-
-	data.clear();
-	data.SetOpcode(0x26); data.Prepare();
-	data << (uint8) 0x04 << (uint32) 0x00000000 << (uint32) 0x00000000;
-	SendPacket(&data);
-	*/
-
-/*
-	if (!MapManager::Instance().GetMap(pCurrChar->GetMapId(), pCurrChar)->AddInstanced(pCurrChar))
-	{
-		// TODO : Teleport to zone-in area
-	}
-
-	*/
-
 	sLog.outDebug("Adding player %s to Map.", pCurrChar->GetName());
 
-	MapManager::Instance().GetMap(pCurrChar->GetMapId(), pCurrChar)->Add(pCurrChar);
+	Map* map = MapManager::Instance().GetMap(pCurrChar->GetMapId(), pCurrChar);
+	map->Add(pCurrChar);
 
 	ObjectAccessor::Instance().AddObject(pCurrChar);
 
@@ -212,8 +183,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 
 //	pCurrChar->SetInGameTime( getMSTime() );
 
-	sLog.outString("Map '%u' has '%u' Players", pCurrChar->GetMapId(),
-		MapManager::Instance().GetMap(pCurrChar->GetMapId(), pCurrChar)->GetPlayersCount());
+	sLog.outString("Map '%u' has '%u' Players", pCurrChar->GetMapId(), map->GetPlayersCount());
 
 	m_playerLoading = false;
 	delete holder;
@@ -229,10 +199,28 @@ void WorldSession::HandlePlayerActionOpcode( WorldPacket & recv_data )
 	switch( subOpcode )
 	{
 
+		case 0x01:
+		{
+			sLog.outDebug( "WORLD: Recvd CMSG_PLAYER_CLICK_NPC Message");
+			GetPlayer()->EndOfRequest();
+			break;
+		}
 		case 0x06:
 		{
 			GetPlayer()->SendMapChanged();
-			GetPlayer()->EndOfRequest();
+			WorldPacket data;
+				data.clear();
+				data.SetOpcode(0x05); data.Prepare();
+				data << (uint8) 0x00;
+				data << GetPlayer()->GetAccountId();
+				data << (uint16) 0x4EFA;
+				data << (uint16) 0x4B12;
+				data << (uint16) 0x5473;
+				data << (uint16) 0x572C;
+				data << (uint16) 0x5A36;
+				GetPlayer()->GetSession()->SendPacket(&data);
+			//GetPlayer()->AllowPlayerToMove();
+//			GetPlayer()->EndOfRequest();
 			break;
 		}
 
@@ -297,6 +285,8 @@ void WorldSession::HandlePlayerEnterMapCompletedOpcode( WorldPacket & recv_data 
 		case 0x01:
 		{
 			WorldPacket data;
+			/* This is wrong here, it is Army data */
+			/*
 			data.clear(); data.SetOpcode( 0x27 ); data.Prepare();
 			data << (uint8) 0x09;
 			data << GetPlayer()->GetAccountId();
@@ -307,11 +297,40 @@ void WorldSession::HandlePlayerEnterMapCompletedOpcode( WorldPacket & recv_data 
 			data << (uint32) 0x0244F4F9;
 			data << (uint8 ) 0x00;
 			data << (uint16) 0x0405;
-			///- Incomplete packet, do not send
-			//GetPlayer()->GetSession()->SendPacket(&data);
 
-			GetPlayer()->EndOfRequest();
-			GetPlayer()->AllowPlayerToMove();
+			GetPlayer()->GetSession()->SendPacket(&data);
+			*/
+
+			///- Send Relocation Message to Set
+			data.clear();
+			data.SetOpcode(0x06); data.Prepare();
+			data << (uint8) 0x01;
+			data << GetPlayer()->GetAccountId();
+			data << (uint8) 0x05;
+			data << GetPlayer()->GetPositionX() << GetPlayer()->GetPositionY();
+			GetPlayer()->SendMessageToSet(&data, false);
+
+			if( 12000 == GetPlayer()->GetMapId() )
+			{
+				
+				data.clear();
+				data.SetOpcode(0x0F); data.Prepare();
+				data << (uint8) 0x0A;
+				//GetPlayer()->GetSession()->SendPacket(&data);
+				data.clear();
+    data.SetOpcode(0x06); data.Prepare();
+	    data << sub_opcode;
+		    data << GetPlayer()->GetAccountId();
+			    data << unknown1;
+				    data << pos_x << pos_y;
+				GetPlayer()->EndOfRequest();
+
+
+			} else {
+				GetPlayer()->AllowPlayerToMove();
+				GetPlayer()->EndOfRequest();
+			}
+
 			break;
 		}
 
@@ -321,5 +340,21 @@ void WorldSession::HandlePlayerEnterMapCompletedOpcode( WorldPacket & recv_data 
 			GetPlayer()->EndOfRequest();
 		}
 	}
+}
+
+void WorldSession::HandlePlayerExpressionOpcode( WorldPacket & recv_data )
+{
+	uint8 expressionType;
+	uint8 expressionCode;
+	recv_data >> expressionType;
+	recv_data >> expressionCode;
+
+	WorldPacket data;
+	data.clear(); data.SetOpcode( 0x20 ); data.Prepare();
+	data << expressionType;
+	data << GetPlayer()->GetAccountId();
+	data << expressionCode;
+
+	GetPlayer()->SendMessageToSet(&data, false);
 }
 

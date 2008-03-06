@@ -24,7 +24,7 @@ enum ClientOpcodes
 {
 	CMSG_LOGON_CHALLENGE                                      = 0,
 	CMSG_AUTH_RESPONSE                                        = 1,
-	CMSG_PLAYER_MESSAGE                                       = 2,
+	CMSG_PLAYER_CHAT_MESSAGE                                  = 2,
 	CMSG_UNKNOWN_3                                            = 3,
 	CMSG_PLAYER_ENTER_DOOR                                    = 4,
 	CMSG_UNKNOWN_5                                            = 5,
@@ -43,9 +43,21 @@ enum ClientOpcodes
 	CMSG_UNKNOWN_18                                           = 18,
 	CMSG_UNKNOWN_19                                           = 19,
 	CMSG_PLAYER_ACTION /* -----------------------------> */   = 20,
+	CMSG_UNKNOWN_21                                           = 21,
+	CMSG_UNKNOWN_22                                           = 22,
+	CMSG_UNKNOWN_23                                           = 23,
+	CMSG_UNKNOWN_24                                           = 24,
+	CMSG_UNKNOWN_25                                           = 25,
+	CMSG_UNKNOWN_26                                           = 26,
+	CMSG_UNKNOWN_27                                           = 27,
+	CMSG_UNKNOWN_28                                           = 28,
+	CMSG_UNKNOWN_29                                           = 29,
+	CMSG_UNKNOWN_30                                           = 30,
+	CMSG_UNKNOWN_31                                           = 31,
+	CMSG_PLAYER_EXPRESSION                                    = 32,
 };
 // if you add new server opcode .. Do NOT forget to change the following define MAX_SVR_OPCODE_ID and also add new client opcode to table in opcodes.cpp
-#define MAX_CLNT_OPCODE_ID 21
+#define MAX_CLNT_OPCODE_ID 33
 
 enum OpCodes
 {

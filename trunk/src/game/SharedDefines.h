@@ -67,4 +67,17 @@ enum Anim
 	ANIM_WALK      = 0x1
 };
 
+enum ChatMsg
+{
+	CHAT_MSG_NULL                 = 0x00,
+	CHAT_MSG_ALL                  = 0x01,
+	CHAT_MSG_LIGHT                = 0x02,
+	CHAT_MSG_WHISPER              = 0x03,
+	CHAT_MSG_GM                   = 0x04,
+	CHAT_MSG_PARTY                = 0x05,
+	CHAT_MSG_ARMY                 = 0x06,
+	CHAT_MSG_ALLY                 = 0x07,
+	CHAT_MSG_SYSTEM               = 0x0B
+};
+
 #endif

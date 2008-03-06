@@ -30,3 +30,4 @@ Motd = "Welcome to the Massive Network Game Object Server."
 
 MapUpdateInterval = 100
 
+MaxPingTime = 30
