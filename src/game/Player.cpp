@@ -58,6 +58,16 @@ Player::Player (WorldSession *session): Unit( 0 )
 
 Player::~Player ()
 {
+	if( GetSession()->PlayerLogout() )
+	{
+		WorldPacket data;
+		sLog.outDebug( "Player '%s' is logged out", GetName());
+		data.clear(); data.SetOpcode( 0x01 ); data.Prepare();
+		data << (uint8) 0x01;
+		data << GetAccountId();
+		SendMessageToSet(&data, false);
+		return;
+	}
 }
 
 bool Player::Create( uint32 accountId, WorldPacket& data)
@@ -223,6 +233,7 @@ void Player::BuildUpdateBlockVisibilityPacket(WorldPacket *data)
 
 void Player::BuildUpdateBlockVisibilityForOthersPacket(WorldPacket *data)
 {
+
 	data->clear(); data->SetOpcode( 0x03 ); data->Prepare();
 	*data << GetAccountId();
 	//*data << (uint8) 0x01 << (uint8) 0x01;
@@ -339,6 +350,8 @@ void Player::AllowPlayerToMove()
 	data.SetOpcode(0x0F); data.Prepare();
 	data << (uint8) 0x0A;
 	GetSession()->SendPacket(&data);
+
+	EndOfRequest();
 	/* end */
 }
 
@@ -356,6 +369,11 @@ void Player::BuildUpdateBlockTeleportPacket(WorldPacket* data)
 void Player::EndOfRequest()
 {
 	WorldPacket data;
+
+	data.clear();
+	data.SetOpcode( 0x05 ); data.Prepare(); data << (uint8) 0x04;
+	//GetSession()->SendPacket(&data);
+
 	data.clear();
 	data.SetOpcode( 0x14 ); data.Prepare(); data << (uint8) 0x08;
 	GetSession()->SendPacket(&data);
@@ -420,6 +438,9 @@ void Player::SendMapChanged()
 	data << GetPositionY();
 	data << (uint8) 0x01 << (uint8) 0x00;
 	GetSession()->SendPacket(&data);
+
+	Map* map = MapManager::Instance().GetMap(GetMapId(), this);
+	map->Add(this);
 
 	SetDontMove(false);
 

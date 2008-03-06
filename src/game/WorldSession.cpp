@@ -77,8 +77,12 @@ void WorldSession::FillOpcodeHandlerHashTable()
 	objmgr.opcodeTable[ CMSG_PLAYER_ENTER_MAP_COMPLETED ] = OpcodeHandler(STATUS_LOGGEDIN,
 			&WorldSession::HandlePlayerEnterMapCompletedOpcode );
 
-	objmgr.opcodeTable[ CMSG_PLAYER_MESSAGE ] = OpcodeHandler(STATUS_LOGGEDIN,
+	objmgr.opcodeTable[ CMSG_PLAYER_CHAT_MESSAGE ] = OpcodeHandler(STATUS_LOGGEDIN,
 			&WorldSession::HandleMessagechatOpcode );
+
+	objmgr.opcodeTable[ CMSG_PLAYER_EXPRESSION ] = OpcodeHandler(STATUS_LOGGEDIN,
+			&HandlePlayerExpressionOpcode );
+
 }
 
 

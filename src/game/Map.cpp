@@ -222,7 +222,7 @@ void Map::Remove(Player *player, bool remove)
 		sLog.outError("Map::Remove() i_grids was NULL x:%d, y:%d",cell.data.Part.grid_x,cell.data.Part.grid_y);
 		return;
 	}
-	DEBUG_LOG("Remove player '%s' from grid[%u,%u]", player->GetName(), cell.GridX(), cell.GridY());
+	DEBUG_LOG("Remove player '%s' from map %u grid[%u,%u]", player->GetName(), player->GetMapId(), cell.GridX(), cell.GridY());
 	NGridType *grid = getNGrid(cell.GridX(), cell.GridY());
 	assert(grid != NULL);
 
@@ -333,7 +333,7 @@ void Map::UpdateObjectVisibility( WorldObject* obj, Cell cell, CellPair cellpair
 
 void Map::UpdatePlayerVisibility( Player* player, Cell cell, CellPair cellpair )
 {
-	/*
+	
 	cell.data.Part.reserved = CENTER_DISTRICT;
 
 	LeGACY::PlayerNotifier pl_notifier(*player);
@@ -341,7 +341,6 @@ void Map::UpdatePlayerVisibility( Player* player, Cell cell, CellPair cellpair )
 
 	CellLock<ReadGuard> cell_lock(cell, cellpair);
 	cell_lock->Visit(cell_lock, player_notifier, *this);
-	*/
 }
 
 void Map::UpdateObjectsVisibilityFor( Player* player, Cell cell, CellPair cellpair)

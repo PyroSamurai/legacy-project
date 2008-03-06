@@ -132,7 +132,7 @@ MapDestination* MapManager::FindMap2Dest(MapDoor* mapDoor)
 		DEBUG_LOG("Map %u Door %u not found", mapDoor->MapId, mapDoor->DoorId);
 		return NULL;
 	}
-	DEBUG_LOG("Map %u Door%u destination is %u, x:%u, y:%u", mapDoor->MapId, mapDoor->DoorId, dest->MapId, dest->DestX, dest->DestY);
+	DEBUG_LOG("Map %u Door %u destination is %u, x:%u, y:%u", mapDoor->MapId, mapDoor->DoorId, dest->MapId, dest->DestX, dest->DestY);
 
 	return dest;
 }

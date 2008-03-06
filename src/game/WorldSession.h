@@ -82,6 +82,7 @@ class LEGACY_DLL_SPEC WorldSession
 		void HandlePlayerEnterDoorOpcode(WorldPacket& recvPacket);
 		void HandlePlayerEnterMapCompletedOpcode(WorldPacket& recvPacket);
 		void HandleMessagechatOpcode(WorldPacket& recvPacket);
+		void HandlePlayerExpressionOpcode(WorldPacket& recvPacket);
 	private:
 
 		Player *_player;

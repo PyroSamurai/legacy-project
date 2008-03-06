@@ -141,6 +141,11 @@ void Master::Run()
 	uint32 realCurrTime, realPrevTime;
 	realCurrTime = realPrevTime = getMSTime();
 
+	uint32 socketSelecttime = sWorld.getConfig(CONFIG_SOCKET_SELECTTIME);
+
+	uint32 numLoops = (sConfig.GetIntDefault( "MaxPingTime", 30 ) * (MINUTE * 10000000 / socketSelecttime));
+	uint32 loopCounter = 0;
+
 	///- Wait for termination signal
 	while (!World::m_stopEvent)
 	{
@@ -151,9 +156,18 @@ void Master::Run()
 		sWorldSocketMgr.Update( realCurrTime - realPrevTime );
 		realPrevTime = realCurrTime;
 
-		h.Select(0, 10000);
+		h.Select(0, socketSelecttime);
 
 		// ping if need
+		if( (++loopCounter) == numLoops )
+		{
+			loopCounter = 0;
+			sLog.outDetail("Ping MySQL to keep connection alive");
+			//delete WorldDatabase.Query("SELECT 1 FROM accounts LIMIT 1");
+			delete loginDatabase.Query("SELECT 1 FROM accounts LIMIT 1");
+			delete CharacterDatabase.Query("SELECT 1 FROM accounts LIMIT 1");
+		}
+
 		
 	}
 
