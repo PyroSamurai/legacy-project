@@ -318,11 +318,7 @@ void WorldSession::HandlePlayerEnterMapCompletedOpcode( WorldPacket & recv_data 
 				data << (uint8) 0x0A;
 				//GetPlayer()->GetSession()->SendPacket(&data);
 				data.clear();
-    data.SetOpcode(0x06); data.Prepare();
-	    data << sub_opcode;
-		    data << GetPlayer()->GetAccountId();
-			    data << unknown1;
-				    data << pos_x << pos_y;
+
 				GetPlayer()->EndOfRequest();
 
 
