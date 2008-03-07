@@ -47,7 +47,7 @@ class LoginQueryHolder : public SqlQueryHolder
 
 bool LoginQueryHolder::Initialize()
 {
-	sLog.outString("LoginQueryHolder::Initialize");
+//	sLog.outString("LoginQueryHolder::Initialize");
 	SetSize(MAX_PLAYER_LOGIN_QUERY);
 
 	bool res = true;
@@ -67,7 +67,7 @@ class CharacterHandler
 	public:
 		void HandlePlayerLoginCallback(QueryResult * /*dummy*/, SqlQueryHolder * holder)
 		{
-			sLog.outString("CharacterHandler::HandlePlayerLoginCallback");
+//			sLog.outString("CharacterHandler::HandlePlayerLoginCallback");
 			if(!holder) return;
 			WorldSession *session = sWorld.FindSession(((LoginQueryHolder*)holder)->GetAccountId());
 			if(!session)
@@ -83,7 +83,7 @@ class CharacterHandler
 
 void WorldSession::HandleCharCreateOpcode( WorldPacket & recv_data )
 {
-	sLog.outString("WorldSession::HandleCharCreateOpcode");
+	sLog.outString( "WORLD: Recv CSMG_CHAR_CREATE Message" );
 }
 
 void WorldSession::HandlePlayerLoginOpcode( WorldPacket & recv_data )
@@ -111,8 +111,6 @@ void WorldSession::HandlePlayerLoginOpcode( WorldPacket & recv_data )
 		m_playerLoading = false;
 		return;
 	}
-
-	sLog.outDetail("HandlePlayerLoginOpcode");
 
 	CharacterDatabase.DelayQueryHolder(&chrHandler, &CharacterHandler::HandlePlayerLoginCallback, holder);
 
@@ -169,12 +167,14 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 
 	sLog.outDebug("Adding player %s to Map.", pCurrChar->GetName());
 
+	pCurrChar->SendInitialPacketsAfterAddToMap();
+
 	Map* map = MapManager::Instance().GetMap(pCurrChar->GetMapId(), pCurrChar);
 	map->Add(pCurrChar);
 
 	ObjectAccessor::Instance().AddObject(pCurrChar);
 
-	pCurrChar->SendInitialPacketsAfterAddToMap();
+	//pCurrChar->SendInitialPacketsAfterAddToMap();
 
 	CharacterDatabase.PExecute("UPDATE characters SET online = 1 WHERE accountid = '%u'", accountId);
 
@@ -183,7 +183,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 
 //	pCurrChar->SetInGameTime( getMSTime() );
 
-	sLog.outString("Map '%u' has '%u' Players", pCurrChar->GetMapId(), map->GetPlayersCount());
+//	sLog.outString("Map '%u' has '%u' Players", pCurrChar->GetMapId(), map->GetPlayersCount());
 
 	m_playerLoading = false;
 	delete holder;
@@ -191,6 +191,8 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 
 void WorldSession::HandlePlayerActionOpcode( WorldPacket & recv_data )
 {
+	CHECK_PACKET_SIZE(recv_data, 1);
+
 	sLog.outDebug( "WORLD: Recvd CMSG_PLAYER_ACTION Message" );
 
 	uint8 subOpcode;
@@ -201,26 +203,20 @@ void WorldSession::HandlePlayerActionOpcode( WorldPacket & recv_data )
 
 		case 0x01:
 		{
-			sLog.outDebug( "WORLD: Recvd CMSG_PLAYER_CLICK_NPC Message");
+			sLog.outDebug( "WORLD: Recvd CMSG_PLAYER_CLICK_NPC Message" );
+			GetPlayer()->EndOfRequest();
+			break;
+		}
+		case 0x02:
+		{
+			sLog.outDebug( "WORLD: Recvd CMSG_UNKNOWN_2 Message" );
+			GetPlayer()->Send0602();
 			GetPlayer()->EndOfRequest();
 			break;
 		}
 		case 0x06:
 		{
-			GetPlayer()->SendMapChanged();
-			WorldPacket data;
-				data.clear();
-				data.SetOpcode(0x05); data.Prepare();
-				data << (uint8) 0x00;
-				data << GetPlayer()->GetAccountId();
-				data << (uint16) 0x4EFA;
-				data << (uint16) 0x4B12;
-				data << (uint16) 0x5473;
-				data << (uint16) 0x572C;
-				data << (uint16) 0x5A36;
-				GetPlayer()->GetSession()->SendPacket(&data);
-			//GetPlayer()->AllowPlayerToMove();
-//			GetPlayer()->EndOfRequest();
+			//GetPlayer()->SendMapChanged();
 			break;
 		}
 
@@ -241,11 +237,13 @@ void WorldSession::HandlePlayerActionOpcode( WorldPacket & recv_data )
 
 void WorldSession::HandlePlayerEnterDoorOpcode( WorldPacket & recv_data )
 {
+	CHECK_PACKET_SIZE(recv_data, 1+1);
+
 	sLog.outDebug( "WORLD: Recvd CMSG_PLAYER_ENTER_DOOR Message" );
 
 	WorldPacket data;
 	uint16 mapid;
-	uint16 doorid;
+	uint8  doorid;
 	Player* player;
 
 	recv_data >> doorid;
@@ -255,12 +253,16 @@ void WorldSession::HandlePlayerEnterDoorOpcode( WorldPacket & recv_data )
 	mapid = player->GetMapId();
 	MapDoor*        mapDoor = new MapDoor(mapid, doorid);
 	MapDestination* mapDest = MapManager::Instance().FindMap2Dest(mapDoor);
+	delete mapDoor;
 
 	if( !mapDest ) {
 		DEBUG_LOG( "Destination map not found, aborting" );
 		player->EndOfRequest();
 		return;
 	}
+
+	///- Temporary update door position
+	CharacterDatabase.PExecute("UPDATE map2map set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u AND x = 0 AND y = 0", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
 
 	///- Send Enter Door action response
 	data.clear(); data.SetOpcode( CMSG_PLAYER_ACTION ); data.Prepare();
@@ -272,11 +274,15 @@ void WorldSession::HandlePlayerEnterDoorOpcode( WorldPacket & recv_data )
 	player->GetSession()->SendPacket(&data);
 
 	player->TeleportTo(mapDest->MapId, mapDest->DestX, mapDest->DestY);
+	GetPlayer()->SendMapChanged();
 
+	//sWorld.RefreshDoorDatabase();
 }
 
 void WorldSession::HandlePlayerEnterMapCompletedOpcode( WorldPacket & recv_data )
 {
+	CHECK_PACKET_SIZE(recv_data, 1);
+
 	sLog.outDebug( "WORLD: Recvd CMSG_PLAYER_ENTER_MAP_COMPLETED Message" );
 	uint8 subOpcode;
 	recv_data >> subOpcode;
@@ -284,49 +290,8 @@ void WorldSession::HandlePlayerEnterMapCompletedOpcode( WorldPacket & recv_data 
 	{
 		case 0x01:
 		{
-			WorldPacket data;
-			/* This is wrong here, it is Army data */
-			/*
-			data.clear(); data.SetOpcode( 0x27 ); data.Prepare();
-			data << (uint8) 0x09;
-			data << GetPlayer()->GetAccountId();
-			data << (uint32) 0x00000162;
-			data << (uint32) 0x43F9A30C;
-			data << (uint32) 0x6F462A43;
-			data << (uint32) 0xA3656372;
-			data << (uint32) 0x0244F4F9;
-			data << (uint8 ) 0x00;
-			data << (uint16) 0x0405;
-
-			GetPlayer()->GetSession()->SendPacket(&data);
-			*/
-
-			///- Send Relocation Message to Set
-			data.clear();
-			data.SetOpcode(0x06); data.Prepare();
-			data << (uint8) 0x01;
-			data << GetPlayer()->GetAccountId();
-			data << (uint8) 0x05;
-			data << GetPlayer()->GetPositionX() << GetPlayer()->GetPositionY();
-			GetPlayer()->SendMessageToSet(&data, false);
-
-			if( 12000 == GetPlayer()->GetMapId() )
-			{
-				
-				data.clear();
-				data.SetOpcode(0x0F); data.Prepare();
-				data << (uint8) 0x0A;
-				//GetPlayer()->GetSession()->SendPacket(&data);
-				data.clear();
-
-				GetPlayer()->EndOfRequest();
-
-
-			} else {
-				GetPlayer()->AllowPlayerToMove();
-				GetPlayer()->EndOfRequest();
-			}
-
+			GetPlayer()->EndOfRequest();
+			GetPlayer()->UpdateRelocationToSet();
 			break;
 		}
 
@@ -340,6 +305,8 @@ void WorldSession::HandlePlayerEnterMapCompletedOpcode( WorldPacket & recv_data 
 
 void WorldSession::HandlePlayerExpressionOpcode( WorldPacket & recv_data )
 {
+	CHECK_PACKET_SIZE(recv_data, 1+1);
+
 	uint8 expressionType;
 	uint8 expressionCode;
 	recv_data >> expressionType;
@@ -354,3 +321,15 @@ void WorldSession::HandlePlayerExpressionOpcode( WorldPacket & recv_data )
 	GetPlayer()->SendMessageToSet(&data, false);
 }
 
+void WorldSession::HandleUnknownRequest14Opcode( WorldPacket & recv_data )
+{
+	CHECK_PACKET_SIZE(recv_data, 1);
+
+	uint8 subOpcode;
+	recv_data >> subOpcode;
+	if ( subOpcode != 0x08 )
+		return;
+
+	sLog.outDetail( "WORLD: Recv CMSG_UKNOWN_14 Message" );
+//	GetPlayer()->EndOfRequest();
+}

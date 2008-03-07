@@ -133,7 +133,7 @@ void Map::Add(Player *player)
 
 void Map::MessageBroadcast(Player *player, WorldPacket *msg, bool to_self, bool own_team_only)
 {
-	sLog.outDetail("Map::MessageBroadcast Player");
+//	sLog.outDetail("Map::MessageBroadcast Player");
 	CellPair p = LeGACY::ComputeCellPair(player->GetPositionX(), player->GetPositionY());
 
 	if(p.x_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP || p.y_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP )
@@ -160,7 +160,7 @@ void Map::MessageBroadcast(Player *player, WorldPacket *msg, bool to_self, bool 
 
 void Map::MessageBroadcast(WorldObject *obj, WorldPacket *msg)
 {
-	sLog.outString("Map::MessageBroadcast WorldObject");
+//	sLog.outString("Map::MessageBroadcast WorldObject");
 	CellPair p = LeGACY::ComputeCellPair(obj->GetPositionX(), obj->GetPositionY());
 
 	if(p.x_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP || p.y_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP )
@@ -278,7 +278,7 @@ Map::EnsureGridLoadedForPlayer(const Cell &cell, Player *player, bool add_player
 		if( player != NULL )
 		{
 			player->SendDelayResponse(MAX_GRID_LOAD_TIME);
-			DEBUG_LOG("Player %s enter cell[%u, %u] triggers of loading grid[%u,%u] on map %u", player->GetName(), cell.CellX(), cell.CellY(), cell.GridX(), cell.GridY(), i_id);
+			DEBUG_LOG("Player %s enter cell[%u,%u] triggers of loading grid[%u,%u] on map %u", player->GetName(), cell.CellX(), cell.CellY(), cell.GridX(), cell.GridY(), i_id);
 		}
 		else
 		{

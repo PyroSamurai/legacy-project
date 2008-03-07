@@ -45,6 +45,7 @@ liblegacygame_a_SOURCES = \
 	ObjectMgr.cpp ObjectMgr.h \
 	Opcodes.cpp Opcodes.h \
 	Player.cpp Player.h \
+	PlayerMisc.cpp \
 	RedZoneDistrict.cpp RedZoneDistrict.h \
 	SharedDefines.h \
 	Unit.cpp Unit.h \

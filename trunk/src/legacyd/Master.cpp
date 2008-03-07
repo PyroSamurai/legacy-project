@@ -108,7 +108,6 @@ void Master::Run()
 	sLog.outString("Listening in %d", wsport);
 
 	h.Add(&worldListenSocket);
-	sLog.outString("Ready...");
 
 	///- Catch termination signals
 	_HookSignals();
@@ -145,6 +144,8 @@ void Master::Run()
 
 	uint32 numLoops = (sConfig.GetIntDefault( "MaxPingTime", 30 ) * (MINUTE * 10000000 / socketSelecttime));
 	uint32 loopCounter = 0;
+
+	sLog.outString("Ready...");
 
 	///- Wait for termination signal
 	while (!World::m_stopEvent)

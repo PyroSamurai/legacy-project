@@ -52,12 +52,12 @@ MapManager::Initialize()
 Map*
 MapManager::_GetBaseMap(uint32 id)
 {
-	sLog.outString("_GetBaseMap '%u'", id);
+	//sLog.outString("_GetBaseMap '%u'", id);
 	Map *m = _findMap(id);
 
 	if( m == NULL )
 	{
-		sLog.outString("_GetBaseMap Create new Map '%u'", id);
+//		sLog.outString("_GetBaseMap Create new Map '%u'", id);
 		Guard guard(*this);
 
 		m = new Map(id, i_gridCleanUpDelay);

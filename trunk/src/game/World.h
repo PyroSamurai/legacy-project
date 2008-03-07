@@ -115,6 +115,8 @@ class World
 
 		void _UpdateGameTime();
 
+		void RefreshDoorDatabase();
+
 	private:
 		time_t m_startTime;
 		time_t m_gameTime;

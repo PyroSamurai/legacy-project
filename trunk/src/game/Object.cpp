@@ -121,7 +121,7 @@ void Object::SetUInt32Value( uint16 index, uint32 value )
 void Object::SendUpdateToPlayer(Player* player)
 {
 	// send update to another players
-//	SendUpdateObjectToAllExcept(player);
+	//SendUpdateObjectToAllExcept(player);
 
 //	sLog.outString("Object::SendUpdateToPlayer to '%s'",
 //		player->GetName());
@@ -129,7 +129,8 @@ void Object::SendUpdateToPlayer(Player* player)
 	// send create update to player
 	WorldPacket packet(100);
 
-	BuildCreateUpdateBlockForPlayer(&packet, player);
+//	BuildCreateUpdateBlockForPlayer(&packet, player);
+	BuildCreateUpdateBlockForPlayer(&packet, (Player*) this);
 	if (0 < packet.size()) 
 		player->GetSession()->SendPacket(&packet);
 
@@ -142,7 +143,7 @@ void Object::BuildCreateUpdateBlockForPlayer(WorldPacket *data, Player *target) 
 		DEBUG_LOG("Object::BuildCreateUpdateBlockForPlayer Target is invalid");
 		return;
 	}
-
+/*
 	if(target == this)     // building packet for oneself
 	{
 		DEBUG_LOG("Object::BuildCreateUpdateBlockForPlayer for oneself");
@@ -153,6 +154,10 @@ void Object::BuildCreateUpdateBlockForPlayer(WorldPacket *data, Player *target) 
 	DEBUG_LOG("Object::BuildCreateUpdateBlockForPlayer for '%s'",
 		((Player*)this)->GetName());
 	((Player*)this)->BuildUpdateBlockVisibilityForOthersPacket(data);
+*/
+	target->BuildUpdateBlockVisibilityForOthersPacket(data);
+	DEBUG_LOG("Object::BuildCreateUpdateBlockForPlayer for '%s'",
+		target->GetName());
 }
 
 
@@ -173,3 +178,20 @@ void WorldObject::_Create( uint32 guidlow, HighGuid guidhigh, uint32 mapid, uint
 	m_positionX = x;
 	m_positionY = y;
 }
+
+// Send current value fields changes to all viewers
+/*
+void Object::SendUpdateObjectToAllExcept(Player* exceptPlayer)
+{
+	// changes will be send in create packet
+	if(!IsInWorld())
+		return;
+
+	// nothing do
+	if(!m_objectUpdated)
+		return;
+
+	ObjectAccessor::UpdateObject(this, exceptPlayer);
+}
+*/
+

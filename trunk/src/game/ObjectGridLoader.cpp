@@ -96,7 +96,7 @@ void ObjectGridLoader::LoadN(void)
 			//loader.Load(i_grid(x, y), *this);
 		}
 	}
-	sLog.outDebug("ObjectGridLoader::Load FIX: ... loaded for grid %u on map %u", i_grid.GetGridId(), i_map->GetId());
+//	sLog.outDebug("ObjectGridLoader::Load FIX: ... loaded for grid %u on map %u", i_grid.GetGridId(), i_map->GetId());
 
 }
 

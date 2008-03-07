@@ -58,6 +58,12 @@ void World::SetInitialWorldSettings()
 
 	m_configs[CONFIG_GRID_UNLOAD] = sConfig.GetBoolDefault("GridUnload", true);
 
+	RefreshDoorDatabase();
+}
+
+void World::RefreshDoorDatabase()
+{
+//	MapManager::Instance().ClearDoorDatabase();
 	QueryResult* resultMap2Map = loginDatabase.PQuery("select * from map2map");
 	//where x != 0 and y != 0");
 	do
@@ -74,7 +80,6 @@ void World::SetInitialWorldSettings()
 		//MapManager::Instance().AddMap2Door(mapDoor, destMap);
 	//	delete mapDoor;
 	} while( resultMap2Map->NextRow() );
-
 }
 
 void World::InitResultQueue()

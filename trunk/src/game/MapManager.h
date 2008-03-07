@@ -31,7 +31,7 @@ class MapDoor
 	public:
 		MapDoor(uint16 mapid, uint16 doorid) : MapId(mapid), DoorId(doorid) {}
 		uint16 MapId;
-		uint16 DoorId;
+		uint8  DoorId;
 };
 
 class MapDestination
@@ -67,6 +67,15 @@ class LEGACY_DLL_DECL MapManager : public LeGACY::Singleton<MapManager, LeGACY::
 
 		void AddMap2Dest(MapDoor* mapDoor, MapDestination* mapDest);
 		MapDestination* FindMap2Dest(MapDoor* mapDoor);
+		void ClearDoorDatabase()
+		{
+			HM_NAMESPACE::hash_map<MapDoor*, MapDestination*>::iterator itr;
+			for(itr = m_map2Dest.begin(); itr != m_map2Dest.end(); ++itr)
+			{
+				delete itr->second;
+				delete itr->first;
+			}
+		}
 
 	private:
 		void checkAndCorrectGridStatesArray();
@@ -89,6 +98,7 @@ class LEGACY_DLL_DECL MapManager : public LeGACY::Singleton<MapManager, LeGACY::
 
 		typedef HM_NAMESPACE::hash_map<MapDoor*, MapDestination*> Map2Dest;
 		Map2Dest m_map2Dest;
+
 
 		MapDestination* _findMap2Dest(MapDoor* mapDoor)
 		{

@@ -89,7 +89,10 @@ enum CharacterFields
 	FD_HAIR_COLOR,
 	FD_SKIN_COLOR,
 
-	FD_ONLINE_STATUS
+	FD_ONLINE_STATUS,
+
+	FD_GOLD_IN_HAND,
+	FD_GOLD_IN_BANK
 };
 
 #define MAX_PLAYER_LOGIN_QUERY                           1
@@ -135,6 +138,13 @@ class LEGACY_DLL_SPEC Player : public Unit
 		void AllowPlayerToMove();
 		void EndOfRequest();
 
+		void Send0504();
+		void Send0F0A();
+		void Send0602();
+		void Send1408();
+
+		void SendUnknownImportant();
+
 		/*********************************************************/
 		/***                  LOAD SYSTEM                      ***/
 		/*********************************************************/
@@ -167,7 +177,19 @@ class LEGACY_DLL_SPEC Player : public Unit
 		/*********************************************************/
 		/***                VARIOUS SYSTEM                     ***/
 		/*********************************************************/
+		///- Tools for mapping door position
+		void SetLastPosition(uint16 x, uint16 y)
+		{
+			m_lastPositionX = x;
+			m_lastPositionY = y;
+		}
+		uint16 GetLastPositionX() { return m_lastPositionX; }
+		uint16 GetLastPositionY() { return m_lastPositionY; }
 		void UpdateVisibilityOf(WorldObject* target);
+		void UpdateRelocationToSet();
+		void UpdateCurrentStatus();
+		void UpdateCurrentEquipt();
+		void UpdateCurrentGold();
 
 		template<class T>
 			void UpdateVisibilityOf(T* target, UpdateData& data, UpdateDataMapType& data_updates, std::set<WorldObject*>& visibleNow);
@@ -175,7 +197,8 @@ class LEGACY_DLL_SPEC Player : public Unit
 
 		GridReference<Player> &GetGridRef() { return m_gridRef; }
 	protected:
-
+		uint16 m_lastPositionX;
+		uint16 m_lastPositionY;
 
 		WorldSession *m_session;
 
@@ -209,6 +232,9 @@ class LEGACY_DLL_SPEC Player : public Unit
 		uint16 m_sp_max;
 
 		uint32 m_atk_bonus, m_def_bonus, m_int_bonus, m_agi_bonus, m_hpx_bonus, m_spx_bonus;
+
+		uint32 m_gold_hand;
+		uint32 m_gold_bank;
 
 	private:
 		GridReference<Player> m_gridRef;

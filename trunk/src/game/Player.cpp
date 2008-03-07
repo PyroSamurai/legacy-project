@@ -108,7 +108,7 @@ void Player::Update( uint32 p_time )
 
 void Player::SendMessageToSet(WorldPacket *data, bool self)
 {
-	sLog.outString("Player::SendMessageToSet");
+//	sLog.outString("Player::SendMessageToSet");
 	MapManager::Instance().GetMap(GetMapId(), this)->MessageBroadcast(this, data, self);
 }
 
@@ -185,6 +185,9 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder)
 	m_agi_bonus = f[FD_ST_AGI_BONUS].GetUInt32();
 	m_hpx_bonus = f[FD_ST_HPX_BONUS].GetUInt32();
 	m_spx_bonus = f[FD_ST_SPX_BONUS].GetUInt32();
+
+	m_gold_hand = f[FD_GOLD_IN_HAND].GetUInt32();
+	m_gold_bank = f[FD_GOLD_IN_BANK].GetUInt32();
 	
 	Object::_Create( guid, HIGHGUID_PLAYER );
 	return true;
@@ -268,7 +271,6 @@ void Player::BuildUpdateBlockVisibilityForOthersPacket(WorldPacket *data)
 
 }
 
-
 void Player::SendInitialPacketsAfterAddToMap()
 {
 	WorldPacket data;
@@ -284,7 +286,10 @@ void Player::SendInitialPacketsAfterAddToMap()
 	data << (uint8) 0x02 << (uint8) 0x00 << (uint8) 0x01;
 	GetSession()->SendPacket(&data);
 
+	SendUnknownImportant();
+
 	AllowPlayerToMove();
+	UpdateCurrentStatus();
 }
 
 void Player::BuildUpdateBlockStatusPacket(WorldPacket *data)
@@ -336,23 +341,94 @@ void Player::BuildUpdateBlockStatusPacket(WorldPacket *data)
 	*data << (uint32) 0x00 << (uint8) 0x00;
 }
 
-void Player::AllowPlayerToMove()
+void Player::UpdateCurrentStatus()
 {
 	WorldPacket data;
-
-	/* Allow Client to Move around */
-	data.clear();
-	data.SetOpcode(0x05); data.Prepare();
-	data << (uint8) 0x04;
+	data.clear(); data.SetOpcode( 0x08 ); data.Prepare();
+	data << (uint8) 0x01;    // Update status for Character
+	data << (uint8) 0x19;    // update status for Current Health
+	data << (uint8) 0x01;    // positive value
+	data << m_hp;            // value of health
+	data << (uint16) 0x0000; // unknown value
 	GetSession()->SendPacket(&data);
 
-	data.clear();
-	data.SetOpcode(0x0F); data.Prepare();
-	data << (uint8) 0x0A;
+	data.clear(); data.SetOpcode( 0x08 ); data.Prepare();
+	data << (uint8) 0x01;    // Update status for Character
+	data << (uint8) 0x1A;    // update status for Current Health
+	data << (uint8) 0x01;    // positive value
+	data << m_sp;            // value of health
+	data << (uint16) 0x0000; // unknown value
 	GetSession()->SendPacket(&data);
+}
 
-	EndOfRequest();
-	/* end */
+void Player::UpdateCurrentEquipt()
+{
+	WorldPacket data;
+	data.clear(); data.SetOpcode( 0x05 ); data.Prepare();
+	data << (uint8) 0x00;
+	data << GetAccountId();
+
+	uint8  equip_cnt = 0;
+	uint16 equip[6];
+	if (0 != m_eq_head)   equip[equip_cnt++] = m_eq_head;
+	if (0 != m_eq_body)   equip[equip_cnt++] = m_eq_body;
+	if (0 != m_eq_wrist)  equip[equip_cnt++] = m_eq_wrist;
+	if (0 != m_eq_weapon) equip[equip_cnt++] = m_eq_weapon;
+	if (0 != m_eq_shoe)   equip[equip_cnt++] = m_eq_shoe;
+	if (0 != m_eq_accsr)  equip[equip_cnt++] = m_eq_accsr;
+	//data << (uint8) equip_cnt;
+	for (int i = 0; i < equip_cnt; i++) data << equip[i];
+	GetSession()->SendPacket(&data);
+}
+
+void Player::UpdateCurrentGold()
+{
+	WorldPacket data;
+	data.clear(); data.SetOpcode( 0x1A ); data.Prepare();
+	data << (uint8 ) 0x04;
+	data << (uint32) m_gold_hand; // gold
+	data << (uint32) 0x00000000;
+	GetSession()->SendPacket(&data);
+}
+
+void Player::Send0504()
+{
+	///- tell the client to wait for request
+	WorldPacket data; data.clear(); data.SetOpcode(0x05);
+	data.Prepare(); data << (uint8) 0x04;
+	GetSession()->SendPacket(&data);
+}
+
+void Player::Send0F0A()
+{
+	WorldPacket data; data.clear(); data.SetOpcode(0x0F);
+	data.Prepare(); data << (uint8) 0x0A;
+	GetSession()->SendPacket(&data);
+}
+
+void Player::Send0602()
+{
+	WorldPacket data; data.clear(); data.SetOpcode(0x06);
+	data.Prepare(); data << (uint8) 0x02;
+	GetSession()->SendPacket(&data);
+}
+
+void Player::Send1408()
+{
+	///- tell the client request is completed
+	WorldPacket data; data.clear(); data.SetOpcode(0x14);
+	data.Prepare(); data << (uint8) 0x08;
+	GetSession()->SendPacket(&data);
+}
+
+void Player::AllowPlayerToMove()
+{
+	Send0504(); Send0F0A(); //EndOfRequest();
+}
+
+void Player::EndOfRequest()
+{
+	Send1408();
 }
 
 void Player::BuildUpdateBlockTeleportPacket(WorldPacket* data)
@@ -363,21 +439,8 @@ void Player::BuildUpdateBlockTeleportPacket(WorldPacket* data)
 	*data << GetPositionX();
 	*data << GetPositionY();
 	*data << (uint8) 0x01 << (uint8) 0x00;
-
 }
 
-void Player::EndOfRequest()
-{
-	WorldPacket data;
-
-	data.clear();
-	data.SetOpcode( 0x05 ); data.Prepare(); data << (uint8) 0x04;
-	//GetSession()->SendPacket(&data);
-
-	data.clear();
-	data.SetOpcode( 0x14 ); data.Prepare(); data << (uint8) 0x08;
-	GetSession()->SendPacket(&data);
-}
 
 void Player::AddToWorld()
 {
@@ -402,7 +465,7 @@ void Player::SendDelayResponse(const uint32 ml_seconds)
 
 void Player::UpdateVisibilityOf(WorldObject* target)
 {
-	sLog.outString("SendUpdateToPlayer from '%s' to '%s'",
+	sLog.outString("Player::UpdateVisibilityOf '%s' to '%s'",
 		GetName(), target->GetName());
 	//target->SendUpdateToPlayer(this);
 	SendUpdateToPlayer((Player*) target);
@@ -439,11 +502,34 @@ void Player::SendMapChanged()
 	data << (uint8) 0x01 << (uint8) 0x00;
 	GetSession()->SendPacket(&data);
 
+	///- Unknown data after map changed
+	/*
+	data.clear(); data.SetOpcode( 0x18 ); data.Prepare();
+	data << (uint32) 0x00584808 << (uint32) 0x05000200;
+	GetSession()->SendPacket(&data);
+	*/
+
+	Send0504();  // This is important, maybe tell the client to Wait Cursor
+
+	/*
+	UpdateCurrentEquipt();
+	*/
+
 	Map* map = MapManager::Instance().GetMap(GetMapId(), this);
 	map->Add(this);
 
 	SetDontMove(false);
-
 }
 
+void Player::UpdateRelocationToSet()
+{
+	///- Send Relocation Message to Set
+	WorldPacket data;
+	data.clear(); data.SetOpcode( 0x06 ); data.Prepare();
+	data << (uint8) 0x01;
+	data << GetAccountId();
+	data << (uint8) 0x05;
+	data << GetPositionX() << GetPositionY();
+	SendMessageToSet(&data, false);
+}
 
