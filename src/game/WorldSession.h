@@ -31,6 +31,8 @@ class QueryResult;
 class LoginQueryHolder;
 class CharacterHandler;
 
+#define CHECK_PACKET_SIZE(P,S) if((P).size() < (S)) return SizeError((P),(S));
+
 /// Player session in the World
 class LEGACY_DLL_SPEC WorldSession
 {
@@ -40,6 +42,8 @@ class LEGACY_DLL_SPEC WorldSession
 		~WorldSession();
 
 		bool PlayerLogout() const { return m_playerLogout; }
+
+		void SizeError(WorldPacket const& packet, uint32 size) const;
 
 		void SendPacket(WorldPacket* packet);
 		void QueuePacket(WorldPacket& packet);
@@ -83,6 +87,8 @@ class LEGACY_DLL_SPEC WorldSession
 		void HandlePlayerEnterMapCompletedOpcode(WorldPacket& recvPacket);
 		void HandleMessagechatOpcode(WorldPacket& recvPacket);
 		void HandlePlayerExpressionOpcode(WorldPacket& recvPacket);
+
+		void HandleUnknownRequest14Opcode(WorldPacket& recvPacket);
 	private:
 
 		Player *_player;

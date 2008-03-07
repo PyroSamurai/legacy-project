@@ -97,7 +97,7 @@ Database::DelayQueryHolder(Class *object, void (Class::*method)(QueryResult*, Sq
     QueryQueues::iterator itr = m_queryQueues.find(queryThread);
     if (itr == m_queryQueues.end()) return false;
     holder->Execute(new LeGACY::QueryCallback<Class, SqlQueryHolder*>(object, method, (QueryResult*)NULL, holder), m_threadBody, itr->second);
-	sLog.outString("Database::DelayQueryHolder");
+//	sLog.outString("Database::DelayQueryHolder");
     return true;
 }
 

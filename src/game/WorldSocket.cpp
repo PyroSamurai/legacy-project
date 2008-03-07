@@ -306,10 +306,10 @@ void WorldSocket::_HandleAuthSession(WorldPacket& recvPacket)
 	savedPacket >> patchVer;
 	savedPacket >> password;
 
-	QueryResult *result = loginDatabase.PQuery("select * from accounts where accountid = '%u' and password = '%s' and online = 0", accountId, password.c_str());
+	QueryResult *result = loginDatabase.PQuery("SELECT * FROM accounts WHERE accountid = '%u' AND password = '%s' AND online = 0", accountId, password.c_str());
 
 	///- Stop if the account is not found
-	if ( !result )
+	if( !result )
 	{
 		sLog.outString("Invalid user login");
 		WorldPacket packet;
@@ -322,22 +322,37 @@ void WorldSocket::_HandleAuthSession(WorldPacket& recvPacket)
 		return;
 	}
 
-	Field* fields = result->Fetch();
-/*
-	for (uint32 i = 0; i < result->GetFieldCount(); i++) {
-		sLog.outString("Field[%2u] %-20s = %s", i,
-				fields[i].GetName(), fields[i].GetString());
-	}
-*/
 	loginDatabase.PExecute("UPDATE accounts set online = 1 WHERE accountid = '%u'", accountId);
+
+	result = CharacterDatabase.PQuery("SELECT * FROM characters WHERE accountid = '%u' AND psswd = '%s' AND online = 0", accountId, password.c_str());
+
+	///- Create new character challenge if character is not found
+	if( !result )
+	{
+		sLog.outString("Creating new Character for Player");
+		WorldPacket packet;
+		packet.SetOpcode( 0x01 ); packet.Prepare();
+		packet << (uint8) 0x03;
+		packet << (uint8) 0x00;
+		SendPacket(&packet);
+
+		return;
+
+	}
+
 	_session = new WorldSession(accountId, this);
 	
 	ASSERT(_session);
 	sWorld.AddSession(_session);
-	sWorld.AddQueuedPlayer(this);
 
-	/// Send Player Data info
-	//_SendInitializePacket(accountId);
+	///- do small delay
+#ifdef WIN32
+	Sleep(10);
+#else
+	ZThread::Thread::sleep(10);
+#endif
+
+	return;
 
 }
 

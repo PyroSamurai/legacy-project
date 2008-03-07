@@ -70,6 +70,8 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
 			if ( !targetPlayer )
 				return;
 			targetPlayer->GetSession()->SendPacket(&data);
+			GetPlayer()->GetSession()->SendPacket(&data);
+
 			break;
 		}
 		case CHAT_MSG_ALL:

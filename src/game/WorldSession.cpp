@@ -81,8 +81,16 @@ void WorldSession::FillOpcodeHandlerHashTable()
 			&WorldSession::HandleMessagechatOpcode );
 
 	objmgr.opcodeTable[ CMSG_PLAYER_EXPRESSION ] = OpcodeHandler(STATUS_LOGGEDIN,
-			&HandlePlayerExpressionOpcode );
+			&WorldSession::HandlePlayerExpressionOpcode );
 
+	objmgr.opcodeTable[ CMSG_UNKNOWN_14 ] = OpcodeHandler(STATUS_LOGGEDIN,
+			&WorldSession::HandleUnknownRequest14Opcode );
+}
+
+void WorldSession::SizeError(WorldPacket const& packet, uint32 size) const
+{
+	sLog.outError("Client (account %u) send packet %s (%u) with size %u but expected %u (attempt crash server?), skipped",
+		GetAccountId(), LookupNameClient(packet.GetOpcode(), g_clntOpcodeNames),packet.GetOpcode(),packet.size(),size);
 }
 
 
@@ -130,7 +138,7 @@ bool WorldSession::Update(uint32 /*diff*/)
 				LookupNameClient(packet->GetOpcode(), g_clntOpcodeNames),
 				packet->GetOpcode());
 
-				//GetPlayer()->EndOfRequest();
+				GetPlayer()->EndOfRequest();
 		}
 		else
 		{
@@ -155,7 +163,7 @@ bool WorldSession::Update(uint32 /*diff*/)
 				LookupNameClient(packet->GetOpcode(), g_clntOpcodeNames),
 				packet->GetOpcode());
 
-				//GetPlayer()->EndOfRequest();
+				GetPlayer()->EndOfRequest();
 					
 			}
 			

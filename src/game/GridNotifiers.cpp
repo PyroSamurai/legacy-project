@@ -36,11 +36,11 @@ LeGACY::PlayerNotifier::Visit(PlayerMapType &m)
 			continue;
 
 		i++;
-		DEBUG_LOG("GridNotifier %u PlayerNotifier from '%s' to '%s'",
+		sLog.outString("GridNotifier %u PlayerNotifier from '%s' to '%s'",
 			i, iter->getSource()->GetName(), i_player.GetName());
 
 		iter->getSource()->UpdateVisibilityOf(&i_player);
-		if ( iter->getSource() != &i_player )
+//		if ( iter->getSource() != &i_player )
 			i_player.UpdateVisibilityOf(iter->getSource());
 	}
 }

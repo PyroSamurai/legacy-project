@@ -20,7 +20,6 @@ AC_INIT([LeGACY],
 		[http://www.code.google.com/p/legacy-project],
 		[legacy])
 
-AM_CONFIG_HEADER([src/config.h])
 AC_CONFIG_SRCDIR([src/legacyd/Main.cpp])
 
 # Turn on all warning and error messages, and enforce GNU

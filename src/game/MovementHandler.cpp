@@ -48,19 +48,9 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
 
 	sLog.outDetail("Player '%s' (%u) move to %u, %u", GetPlayer()->GetName(),
 			GetPlayer()->GetAccountId(), pos_x, pos_y);
-
-	sLog.outDetail("SubOpcode = %u", sub_opcode);
-	sLog.outDetail("Unknown 1 = %u", unknown1);
-	sLog.outDetail("Unknown 2 = %u", unknown2);
-
-	WorldPacket data(1);
-	data.clear();
-	data.SetOpcode(0x06); data.Prepare();
-	data << sub_opcode;
-	data << GetPlayer()->GetAccountId();
-	data << unknown1;
-	data << pos_x << pos_y;
+	///- Tools for mapping door position
+	GetPlayer()->SetLastPosition(GetPlayer()->GetPositionX(), GetPlayer()->GetPositionY());
 
 	GetPlayer()->Relocate(pos_x, pos_y);
-	GetPlayer()->SendMessageToSet(&data, false);
+	GetPlayer()->UpdateRelocationToSet();
 }
