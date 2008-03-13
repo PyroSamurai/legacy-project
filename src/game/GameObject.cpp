@@ -19,6 +19,7 @@
 #include "Common.h"
 #include "GameObject.h"
 #include "ObjectMgr.h"
+#include "Spell.h"
 #include "Opcodes.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
@@ -38,5 +39,29 @@ GameObject::GameObject( WorldObject *instantiator ) : WorldObject( instantiator 
 }
 
 GameObject::~GameObject()
+{
+}
+
+void GameObject::AddToWorld()
+{
+	///- Register the gameobject for guid lookup
+	if(!IsInWorld()) ObjectAccessor::Instance().AddObject(this);
+	Object::AddToWorld();
+}
+
+void GameObject::RemoveFromWorld()
+{
+	///- Remove the gameobject from the accessor
+	if(IsInWorld()) ObjectAccessor::Instance().RemoveObject(this);
+	Object::RemoveFromWorld();
+}
+
+bool GameObject::Create(uint32 guidlow, uint32 name_id, uint32 mapid, uint16 x, uint16 y, uint32 go_state)
+{
+	Relocate(x,y);
+	SetMapId(mapid);
+}
+
+void GameObject::Update(uint32 /*p_time*/)
 {
 }

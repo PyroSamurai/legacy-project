@@ -49,15 +49,50 @@ void Player::SendUnknownImportant()
 	data << _BLANK_4__ << _BLANK_4__ << _BLANK_4__ << _BLANK_4__;
 	data << _BLANK_4__ << (uint16) 0x00 << (uint8 ) 0x00;
 	GetSession()->SendPacket(&data);
-
+/*
 	data.clear(); data.SetOpcode( 0x16 ); data.Prepare();
-	data << (uint32) 0x00000104 << (uint32) 0x1C024E00 << (uint8 ) 0x02 << (uint16) 0x0000;
-	data << (uint32) 0x02000000 << (uint32) 0x66000000 << (uint32) 0x0001B803 << _BLANK_4__;
-	data << (uint32) 0x00000003 << (uint32) 0x01CC03B6 << _BLANK_4__ << (uint32) 0x00000400;
-	data << (uint32) (uint32) 0x94059600 << (uint32) 0x00000002 << (uint32) 0x00050000 << (uint32) 0x01360000;
+	//data << (uint32) 0x00000104 << (uint32) 0x1C024E00 << (uint8 ) 0x02 << (uint16) 0x0000;
+	
+	data << (uint8 ) 0x04; // number of npc in map
+
+	data << (uint8 ) 0x01;   // npc id
+	data << (uint16) 0x0000;
+	data << (uint8 ) 0x00;
+	data << (uint16) 0x011A; // npc pos x 024E
+	data << (uint16) 0x0163; // npc pos y 021C
+	data << (uint32) 0x00000000;
+	data << (uint8 ) 0x00;
+	
+
+	//data << (uint32) 0x02000000 << (uint32) 0x66000000 << (uint32) 0x0001B803 << _BLANK_4__;
+	data << (uint8 ) 0x02;   // npc id
+	data << (uint16) 0x0000;
+	data << (uint8 ) 0x00;
+	data << (uint16) 0x00B6; // pos x 0366
+	data << (uint16) 0x0203; // pos y 01B8
+	data << (uint32) 0x00000000;
+	data << (uint8 ) 0x00;
+
+
+	//data << (uint32) 0x00000003 << (uint32) 0x01CC03B6 << _BLANK_4__ << (uint32) 0x00000400;
+	data << (uint8 ) 0x03;
+	data << (uint16) 0x0000;
+	data << (uint8 ) 0x00;
+	data << (uint16) 0x01B6; // 03B6;
+	data << (uint16) 0x0203; // 01CC;
+	data << (uint32) 0x00000000;
+	data << (uint8 ) 0x00;
+*/
+/*
+	data << (uint8) 0x04;
+	data << (uint8) 0x00;
+	data << (uint32) 0x94059600 << (uint32) 0x00000002 << (uint32) 0x00050000 << (uint32) 0x01360000;
 	data << (uint32) 0x00000244 << (uint32) 0x00060000 << (uint32) 0xE6000000 << (uint32) 0x00025800;
 	data << _BLANK_4__;
-	GetSession()->SendPacket(&data);
+*/
+//	GetSession()->SendPacket(&data);
+
+	UpdateMap2Npc();
 
 	data.clear(); data.SetOpcode( 0x0B ); data.Prepare();
 	data << (uint32) 0xF24B0204 <<(uint32)  0x00000001 << (uint8 ) 0x00;
@@ -65,4 +100,38 @@ void Player::SendUnknownImportant()
 
 //	Send0504();
 //	Send0F0A();
+}
+
+void Player::UpdateMap2Npc()
+{
+	uint16 mapid = GetMapId();
+	QueryResult *result = WorldDatabase.PQuery("select map_npcid, position_x, position_y from creature where mapid = '%u'", mapid);
+
+	if( !result )
+	{
+		sLog.outString("No Npc position define in map %u", mapid);
+		return;
+	}
+
+	int count = 0;
+
+	WorldPacket data;
+	data.clear(); data.SetOpcode( 0x16 ); data.Prepare();
+	data << (uint8) 0x04;
+	do
+	{
+		Field *f = result->Fetch();
+		uint8  map_npcid = f[0].GetUInt8();
+		uint16 npc_pos_x = f[1].GetUInt16();
+		uint16 npc_pos_y = f[2].GetUInt16();
+
+		data << map_npcid;
+		data << (uint16) 0x0000 << (uint8) 0x00;     // unknown fields
+		data << npc_pos_x << npc_pos_y;
+		data << (uint32) 0x00000000 << (uint8) 0x00; // unknown fields;
+		count++;
+	} while( result->NextRow() );
+
+	sLog.outString("Player::UpdateMap2Npc Updating %u npc's", count);
+	GetSession()->SendPacket(&data);
 }

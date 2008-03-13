@@ -33,20 +33,22 @@ enum TYPE
 {
 	TYPE_OBJECT        = 1,
 	TYPE_ITEM          = 2,
-	TYPE_UNIT          = 6,
-	TYPE_PLAYER        = 8,
-	TYPE_GAMEOBJECT    = 16,
-	TYPE_AREATRIGGER   = 32
+	TYPE_CONTAINER     = 6,
+	TYPE_UNIT          = 8,
+	TYPE_PLAYER        = 16,
+	TYPE_GAMEOBJECT    = 32,
+	TYPE_AREATRIGGER   = 64
 };
 
 enum TYPEID
 {
 	TYPEID_OBJECT      = 0,
 	TYPEID_ITEM        = 1,
-	TYPEID_UNIT        = 2,
-	TYPEID_PLAYER      = 3,
-	TYPEID_GAMEOBJECT  = 4,
-	TYPEID_AREATRIGGER = 5
+	TYPEID_CONTAINER   = 2,
+	TYPEID_UNIT        = 3,
+	TYPEID_PLAYER      = 4,
+	TYPEID_GAMEOBJECT  = 5,
+	TYPEID_AREATRIGGER = 6
 };
 
 uint32 GuidHigh2TypeId(uint32 guid_hi);
@@ -55,6 +57,7 @@ class WorldPacket;
 class UpdateData;
 class ByteBuffer;
 class WorldSession;
+class Creature;
 class Player;
 class Map;
 
@@ -76,8 +79,14 @@ class LEGACY_DLL_SPEC Object
 		}
 		virtual void RemoveFromWorld() { m_inWorld = false; }
 
-		const uint8& GetTypeId() const { return m_objectTypeId; }
 		const uint64& GetGUID() const { return GetUInt64Value(0); }
+		const uint32& GetGUIDLow() const { return GetUInt32Value(0); }
+		const uint32& GetGUIDHigh() const { return GetUInt32Value(1); }
+		const ByteBuffer& GetPackGUID() const { return m_PackGUID; }
+		uint32 GetEntry() const { return GetUInt32Value(OBJECT_FIELD_ENTRY); }
+
+		const uint8& GetTypeId() const { return m_objectTypeId; }
+		bool isType(uint8 mask) const { return (mask & m_objectType); }
 
 		virtual void BuildCreateUpdateBlockForPlayer( WorldPacket *data, Player *target ) const;
 		void SendUpdateToPlayer(Player* player);
@@ -86,23 +95,66 @@ class LEGACY_DLL_SPEC Object
 		//virtual void BuildUpdateBlockVisibilityForOthersPacket( WorldPacket *dat);
 
 
+		const int32& GetInt32Value( uint16 index ) const
+		{
+			ASSERT( index < m_valuesCount || PrintIndexError( index, false) );
+			return m_int32Values[ index ];
+		}
 
-
+		const uint32& GetUInt32Value( uint16 index ) const
+		{
+			ASSERT( index < m_valuesCount || PrintIndexError( index, false) );
+			return m_uint32Values[ index ];
+		}
 		const uint64& GetUInt64Value( uint16 index ) const
 		{
 			ASSERT( index + 1 < m_valuesCount || PrintIndexError( index, false)  );
 			return *((uint64*)&(m_uint32Values[ index ]));
 		}
 
+		const float& GetFloatValue( uint16 index ) const
+		{
+			ASSERT( index < m_valuesCount || PrintIndexError( index, false ) );
+			return m_floatValues[ index ];
+		}
+
 		void SetInt32Value(  uint16 index,         int32  value );
 		void SetUInt32Value( uint16 index,        uint32  value );
 		void SetUInt64Value( uint16 index,  const uint64 &value );
+		void SetFloatValue(  uint16 index,         float  value );
+		void SetStatFloatValue( uint16 index, float value);
+		void SetStatInt32Value( uint16 index, int32 value);
 
-//		bool LoadValues(const char* data);
+
+
+
+
+		void SetFlag( uint16 index, uint32 newFlag );
+
+		void RemoveFlag( uint16 index, uint32 oldFlag );
+
+		void ToggleFlag( uint16 index, uint32 flag)
+		{
+			if(HasFlag(index, flag))
+				RemoveFlag(index, flag);
+			else
+				SetFlag(index, flag);
+		}
+
+		bool HasFlag( uint16 index, uint32 flag ) const
+		{
+			ASSERT( index < m_valuesCount || PrintIndexError( index, false ) );
+			return (m_uint32Values[ index ] & flag) != 0;
+		}
+
+		bool LoadValues(const char* data);
 
 		uint16 GetValuesCount() const { return m_valuesCount; }
 
 		void InitValues() { _InitValues(); }
+
+
+		void MonsterSay(const char* text, const uint32 language, const uint64 TargetGuid);
 
 	protected:
 		Object ( );
@@ -117,9 +169,9 @@ class LEGACY_DLL_SPEC Object
 
 		union
 		{
-			int32 *m_int32Values;
+			int32  *m_int32Values;
 			uint32 *m_uint32Values;
-			float *m_floatValues;
+			float  *m_floatValues;
 		};
 
 		uint32 *m_uint32Values_mirror;
@@ -146,20 +198,13 @@ class LEGACY_DLL_SPEC WorldObject : public Object
 
 		virtual void Update(uint32 /*time_diff*/ ) {}
 
-		void _Create( uint32 guidlow, HighGuid highguid, uint32 mapid, uint16 x, uint16 y);
+		void _Create( uint32 guidlow, HighGuid highguid, uint16 mapid, uint16 x, uint16 y);
 
 		void Relocate(uint16 x, uint16 y)
 		{
 			m_positionX = x;
 			m_positionY = y;
 		}
-
-		const char* GetName() const { return m_name.c_str(); }
-		void SetName(std::string newname) { m_name = newname; }
-
-		void SetMapId(uint16 newMap) { m_mapId = newMap; }
-
-		uint16 GetMapId() const { return m_mapId; }
 
 		uint16 GetPositionX( ) const { return m_positionX; }
 		uint16 GetPositionY( ) const { return m_positionY; }
@@ -168,6 +213,15 @@ class LEGACY_DLL_SPEC WorldObject : public Object
 			x = m_positionX; y = m_positionY;
 		}
 
+		void SetMapId(uint16 newMap) { m_mapId = newMap; }
+
+		uint16 GetMapId() const { return m_mapId; }
+
+		const char* GetName() const { return m_name.c_str(); }
+		void SetName(std::string newname) { m_name = newname; }
+
+
+		bool IsInMap(const WorldObject* obj) const { return GetMapId()==obj->GetMapId(); }
 		// main visibility check function in normal case (ignore grey zone distance check)
 //		bool isVisibleFor(Player const* u) const { return isVisibleForInState(u,false); }
 
@@ -182,7 +236,7 @@ class LEGACY_DLL_SPEC WorldObject : public Object
 		std::string m_name;
 
 	private:
-		uint32 m_mapId;
+		uint16 m_mapId;
 
 		uint16 m_positionX;
 		uint16 m_positionY;

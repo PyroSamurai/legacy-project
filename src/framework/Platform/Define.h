@@ -42,8 +42,8 @@
 
 #define LEGACY_IMPORT __attribute__ ((cdecl))
 
-#define LEGACY_SRIPT_EXT ".so"
-#define LEGACY_SCRIPT_NAME "libLeGACYScript"
+#define LEGACY_SCRIPT_EXT ".so"
+#define LEGACY_SCRIPT_NAME "liblegacyscript"
 #endif
 
 #ifdef WIN32

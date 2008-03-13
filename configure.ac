@@ -154,6 +154,8 @@ AC_CONFIG_FILES([
 	src/game/Makefile
 	src/legacyd/Makefile
 	src/legacyd/legacyd.conf
+	src/bindings/Makefile
+	src/bindings/amachi/Makefile
 ])
 
 ## Disabled Makefiles, until they are ready for a successful make and make dist run.

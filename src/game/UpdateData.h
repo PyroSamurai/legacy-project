@@ -34,7 +34,9 @@ enum OBJECT_UPDATE_TYPE
 enum OBJECT_UPDATE_FLAGS
 {
 	UPDATEFLAG_NONE               = 0x00,
-	UPDATEFLAG_SELF               = 0x01
+	UPDATEFLAG_SELF               = 0x01,
+	UPDATEFLAG_LOWGUID            = 0x08,
+	UPDATEFLAG_HIGHGUID           = 0x10
 };
 
 class UpdateData

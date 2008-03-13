@@ -108,4 +108,18 @@ enum OpCodes
 // if you add new server opcode .. Do NOT forget to change the following define MAX_SVR_OPCODE_ID and also add new server opcode to table in opcodes.cpp
 #define MAX_SVR_OPCODE_ID 42
 
+
+/// Results of friend related commands
+enum FriendsResult
+{
+	FRIEND_DB_ERROR                                           = 0x00
+};
+
+/// Non Player Character flags
+enum NPCFlags
+{
+	UNIT_NPC_FLAG_NONE                                  = 0x00000000,
+	UNIT_NPC_FLAG_GOSSIP                                = 0x00000001
+};
+
 #endif

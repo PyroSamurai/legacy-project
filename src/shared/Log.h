@@ -81,6 +81,10 @@ class Log : public LeGACY::Singleton<Log, LeGACY::ClassLevelLockable<Log, ZThrea
 #define DEBUG_LOG
 #endif
 
+// primary for script library
+void LEGACY_DLL_SPEC outstring_log(const char * str, ...) ATTR_PRINTF(1,2);
+void LEGACY_DLL_SPEC debug_log(const char * str, ...) ATTR_PRINTF(1,2);
+void LEGACY_DLL_SPEC error_log(const char * str, ...) ATTR_PRINTF(1,2);
 
 
 #endif

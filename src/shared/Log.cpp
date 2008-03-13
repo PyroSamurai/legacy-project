@@ -205,4 +205,41 @@ void Log::outErrorDb( const char * err, ... )
 	fflush(stderr);
 }
 
+void outstring_log(const char * str, ...)
+{
+	if( !str ) return;
 
+	char buf[256];
+	va_list ap;
+	va_start(ap, str);
+	vsnprintf(buf,256, str, ap);
+	va_end(ap);
+
+	LeGACY::Singleton<Log>::Instance().outString(buf);
+}
+
+void debug_log(const char * str, ...)
+{
+	if( !str ) return;
+
+	char buf[256];
+	va_list ap;
+	va_start(ap, str);
+	vsnprintf(buf,256, str, ap);
+	va_end(ap);
+
+	LeGACY::Singleton<Log>::Instance().outDebug(buf);
+}
+
+void error_log(const char * str, ...)
+{
+	if( !str ) return;
+
+	char buf[256];
+	va_list ap;
+	va_start(ap, str);
+	vsnprintf(buf,256, str, ap);
+	va_end(ap);
+
+	LeGACY::Singleton<Log>::Instance().outError(buf);
+}

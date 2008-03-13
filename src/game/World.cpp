@@ -19,6 +19,7 @@
 #include "Common.h"
 #include "Database/DatabaseEnv.h"
 #include "Config/ConfigEnv.h"
+#include "SystemConfig.h"
 #include "Log.h"
 #include "Opcodes.h"
 #include "WorldSession.h"
@@ -26,10 +27,15 @@
 #include "Player.h"
 #include "World.h"
 #include "ObjectMgr.h"
+#include "Chat.h"
 #include "MapManager.h"
+#include "ScriptCalls.h"
 #include "Policies/SingletonImp.h"
 #include "Database/DatabaseImpl.h"
 #include "WorldSocket.h"
+#include "RedZoneDistrict.h"
+#include "GridNotifiersImpl.h"
+#include "CellImpl.h"
 
 #include "SystemConfig.h"
 
@@ -58,12 +64,55 @@ void World::SetInitialWorldSettings()
 
 	m_configs[CONFIG_GRID_UNLOAD] = sConfig.GetBoolDefault("GridUnload", true);
 
+
+	sLog.outString( "Loading Creature templates..." );
+	objmgr.LoadCreatureTemplates();
+
+
+
+
+	sLog.outString( "Loading Creature Data...");
+	objmgr.LoadCreatures();
+
+
+
+
+
+	///- Load and initialized scripts
+	sLog.outString( "Loading Scripts..." );
+	objmgr.LoadQuestStartScripts();   // must be after load Creature/Gameobject(Template/Data) and QuestTemplate
+	objmgr.LoadQuestEndScripts();     // must be after load Creature/Gameobject(Template/Data) and QuestTemplate
+	objmgr.LoadSpellScripts();
+	objmgr.LoadGameObjectScripts();
+	objmgr.LoadEventScripts();
+
+
+
+	sLog.outString( "Initializing Scripts..." );
+	if(!LoadScriptingModule())
+		exit(1);
+
 	RefreshDoorDatabase();
+
+	m_timers[WUPDATE_OBJECTS].SetInterval(0);
+	m_timers[WUPDATE_SESSIONS].SetInterval(0);
+
+
+	///- Initialize MapManager
+	sLog.outString( "Starting Map System" );
+	MapManager::Instance().Initialize();
+
+
+
+
+
+	sLog.outString( "WORLD: World initialized" );
 }
 
 void World::RefreshDoorDatabase()
 {
-//	MapManager::Instance().ClearDoorDatabase();
+	sLog.outString("Resfreshing Map2Dest database");
+	MapManager::Instance().ClearDoorDatabase();
 	QueryResult* resultMap2Map = loginDatabase.PQuery("select * from map2map");
 	//where x != 0 and y != 0");
 	do
@@ -80,6 +129,7 @@ void World::RefreshDoorDatabase()
 		//MapManager::Instance().AddMap2Door(mapDoor, destMap);
 	//	delete mapDoor;
 	} while( resultMap2Map->NextRow() );
+	sLog.outString("Map2Dest loaded: %u rows", MapManager::Instance().GetMap2DestCount());
 }
 
 void World::InitResultQueue()

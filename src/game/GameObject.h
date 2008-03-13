@@ -23,12 +23,45 @@
 #include "Object.h"
 #include "Database/DatabaseEnv.h"
 
+// from `gameobject_template`
+struct GameObjectInfo
+{
+	uint32  id;
+	uint32  type;
+	char   *name;
+
+	char   *ScriptName;
+};
+
+// from `gameobject`
+struct GameObjectData
+{
+	uint32 id;
+	uint32 mapid;
+	uint16 posX;
+	uint16 posY;
+	int32  spawntimesecs;
+	uint32 go_state;
+};
+
 class LEGACY_DLL_SPEC GameObject : public WorldObject
 {
 	public:
 		explicit GameObject( WorldObject *instantiator );
 		~GameObject();
 
+		void AddToWorld();
+		void RemoveFromWorld();
+
+		bool Create(uint32 guidlow, uint32 name_id, uint32 mapid, uint16 x, uint16 y, uint32 go_state);
+
+		void Update(uint32 p_time);
+
+
+		bool LoadFromDB(uint32 guid, uint32 InstanceId) {};
+		GameObjectInfo const* GetGOInfo() const;
+
+		GridReference<GameObject> &GetGridRef() { return m_gridRef; }
 	protected:
 
 	private:

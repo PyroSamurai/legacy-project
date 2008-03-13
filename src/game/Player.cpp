@@ -25,6 +25,9 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 #include "Player.h"
+
+#include "GossipDef.h"
+
 #include "MapManager.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
@@ -54,6 +57,8 @@ Player::Player (WorldSession *session): Unit( 0 )
 	m_nextSave = rand32(m_nextSave/2,m_nextSave*3/2);
 
 	m_dontMove = false;
+
+	PlayerTalkClass = new PlayerMenu( GetSession() );
 }
 
 Player::~Player ()
@@ -188,6 +193,12 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder)
 
 	m_gold_hand = f[FD_GOLD_IN_HAND].GetUInt32();
 	m_gold_bank = f[FD_GOLD_IN_BANK].GetUInt32();
+
+	m_unk1      = f[FD_UNK1].GetUInt16();
+	m_unk2      = f[FD_UNK2].GetUInt16();
+	m_unk3      = f[FD_UNK3].GetUInt16();
+	m_unk4      = f[FD_UNK4].GetUInt16();
+	m_unk5      = f[FD_UNK5].GetUInt16();
 	
 	Object::_Create( guid, HIGHGUID_PLAYER );
 	return true;
@@ -271,7 +282,7 @@ void Player::BuildUpdateBlockVisibilityForOthersPacket(WorldPacket *data)
 
 }
 
-void Player::SendInitialPacketsAfterAddToMap()
+void Player::SendInitialPacketsBeforeAddToMap()
 {
 	WorldPacket data;
 
@@ -282,14 +293,21 @@ void Player::SendInitialPacketsAfterAddToMap()
 	GetSession()->SendPacket(&data);
 
 	// TODO: Move to Broadcast handler
+	/*
 	data.clear(); data.SetOpcode( 0x21 ); data.Prepare();
 	data << (uint8) 0x02 << (uint8) 0x00 << (uint8) 0x01;
 	GetSession()->SendPacket(&data);
-
-	SendUnknownImportant();
+	*/
 
 	AllowPlayerToMove();
+	SendUnknownImportant();
+
+}
+
+void Player::SendInitialPacketsAfterAddToMap()
+{
 	UpdateCurrentStatus();
+	UpdateCurrentGold();
 }
 
 void Player::BuildUpdateBlockStatusPacket(WorldPacket *data)
@@ -327,18 +345,27 @@ void Player::BuildUpdateBlockStatusPacket(WorldPacket *data)
 	*data << m_spx_bonus;
 
 	/* unknow fields - TODO: Identify */
+	/*
 	*data << (uint8) 0xF4 << (uint8) 0x01;
 	*data << (uint8) 0xF4 << (uint8) 0x01;
 	*data << (uint8) 0xF4 << (uint8) 0x01;
 	*data << (uint8) 0xF4 << (uint8) 0x01;
 	*data << (uint8) 0xF4 << (uint8) 0x01;
+	*/
+	*data << m_unk1;
+	*data << m_unk2;
+	*data << m_unk3;
+	*data << m_unk4;
+	*data << m_unk5;
+	
+
 
 	*data << (uint16) 0x00;
 	*data << (uint16) 0x0101;
 
 	*data << (uint32) 0x00 << (uint32) 0x00 << uint32(0x00) << uint32(0x00);
 	*data << (uint32) 0x00 << (uint32) 0x00 << uint32(0x00) << uint32(0x00);
-	*data << (uint32) 0x00 << (uint8) 0x00;
+	*data << (uint32) 0x00 << (uint8 ) 0x00;
 }
 
 void Player::UpdateCurrentStatus()
@@ -518,6 +545,8 @@ void Player::SendMapChanged()
 	Map* map = MapManager::Instance().GetMap(GetMapId(), this);
 	map->Add(this);
 
+	UpdateMap2Npc();
+
 	SetDontMove(false);
 }
 
@@ -533,3 +562,11 @@ void Player::UpdateRelocationToSet()
 	SendMessageToSet(&data, false);
 }
 
+bool Player::HasSpell(uint32 spell) const
+{
+	return false;
+}
+
+void Player::TalkedToCreature( uint32 entry, uint64 guid )
+{
+}

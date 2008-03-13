@@ -88,6 +88,8 @@ class LEGACY_DLL_SPEC WorldSession
 		void HandleMessagechatOpcode(WorldPacket& recvPacket);
 		void HandlePlayerExpressionOpcode(WorldPacket& recvPacket);
 
+
+		void HandleGossipHelloOpcode(WorldPacket& recvPacket);
 		void HandleUnknownRequest14Opcode(WorldPacket& recvPacket);
 	private:
 

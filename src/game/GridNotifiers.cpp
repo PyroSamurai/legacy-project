@@ -102,7 +102,7 @@ ObjectMessageDeliverer::Visit(PlayerMapType &m)
 			session->SendPacket(i_message);
 	}
 }
-/*
+
 template<class T>void
 ObjectUpdater::Visit(GridRefManager<T> &m)
 {
@@ -111,6 +111,6 @@ ObjectUpdater::Visit(GridRefManager<T> &m)
 		iter->getSource()->Update(i_timeDiff);
 	}
 }
-*/
-//template void ObjectUpdater::Visit<GameObject>(GameObjectMapType &);
-//template void ObjectUpdater::Visit<DynamicObject>(DynamicObjectMapType &);
+
+template void ObjectUpdater::Visit<GameObject>(GameObjectMapType &);
+template void ObjectUpdater::Visit<DynamicObject>(DynamicObjectMapType &);

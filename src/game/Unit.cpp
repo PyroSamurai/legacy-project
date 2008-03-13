@@ -33,6 +33,8 @@
 Unit::Unit( WorldObject *instantiator )
 : WorldObject( instantiator ), i_motionMaster(this)
 {
+	m_objectType |= TYPE_UNIT;
+	m_objectTypeId = TYPEID_UNIT;
 }
 
 Unit::~Unit()
