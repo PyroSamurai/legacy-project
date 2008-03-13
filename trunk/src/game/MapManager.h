@@ -45,6 +45,7 @@ class MapDestination
 		uint16 DestY;
 };
 
+typedef HM_NAMESPACE::hash_map<MapDoor*, MapDestination*> Map2DestType;
 
 
 class LEGACY_DLL_DECL MapManager : public LeGACY::Singleton<MapManager, LeGACY::ClassLevelLockable<MapManager, ZThread::Mutex> >
@@ -69,12 +70,19 @@ class LEGACY_DLL_DECL MapManager : public LeGACY::Singleton<MapManager, LeGACY::
 		MapDestination* FindMap2Dest(MapDoor* mapDoor);
 		void ClearDoorDatabase()
 		{
-			HM_NAMESPACE::hash_map<MapDoor*, MapDestination*>::iterator itr;
-			for(itr = m_map2Dest.begin(); itr != m_map2Dest.end(); ++itr)
+			m_map2Dest.clear();
+			/*
+			while(!m_map2Dest.empty())
 			{
-				delete itr->second;
-				delete itr->first;
+				Map2DestType::iterator itr = m_map2Dest.begin();
+				m_map2Dest.erase(itr);
 			}
+			*/
+			sLog.outString("Map2Dest size: %u", m_map2Dest.size());
+		}
+		size_t GetMap2DestCount()
+		{
+			return m_map2Dest.size();
 		}
 
 	private:
@@ -96,8 +104,7 @@ class LEGACY_DLL_DECL MapManager : public LeGACY::Singleton<MapManager, LeGACY::
 			return (iter == i_maps.end() ? NULL : iter->second);
 		}
 
-		typedef HM_NAMESPACE::hash_map<MapDoor*, MapDestination*> Map2Dest;
-		Map2Dest m_map2Dest;
+		Map2DestType m_map2Dest;
 
 
 		MapDestination* _findMap2Dest(MapDoor* mapDoor)

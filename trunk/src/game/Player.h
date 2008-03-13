@@ -20,15 +20,22 @@
 #define __LEGACY_PLAYER_H
 
 #include "Common.h"
+#include "ItemPrototype.h"
 #include "Unit.h"
+#include "Item.h"
 
 #include "Database/DatabaseEnv.h"
-
+#include "NPCHandler.h"
+#include "Bag.h"
 #include "WorldSession.h"
+#include "Pet.h"
 #include "Util.h"
 
 #include <string>
 #include <vector>
+
+class Creature;
+class PlayerMenu;
 
 // used at player loading query list preparing, and later result selection
 enum PlayerLoginQueryIndex
@@ -92,7 +99,42 @@ enum CharacterFields
 	FD_ONLINE_STATUS,
 
 	FD_GOLD_IN_HAND,
-	FD_GOLD_IN_BANK
+	FD_GOLD_IN_BANK,
+
+	FD_UNK1,
+	FD_UNK2,
+	FD_UNK3,
+	FD_UNK4,
+	FD_UNK5
+};
+
+enum EquipmentSlots
+{
+	EQUIPMENT_SLOT_START                            = 0,
+	EQUIPMENT_SLOT_HEAD                             = 0,
+	EQUIPMENT_SLOT_BODY                             = 1,
+	EQUIPMENT_SLOT_END                              = 10
+};
+
+enum InventorySlots
+{
+	INVENTORY_SLOT_BAG_0                            = 255,
+	INVENTORY_SLOT_BAG_START                        = 19,
+	INVENTORY_SLOT_BAG_1                            = 19,
+	INVENTORY_SLOT_BAG_END                          = 23,
+
+	INVENTORY_SLOT_ITEM_START                       = 23,
+	INVENTORY_SLOT_ITEM_1                           = 23,
+
+	INVENTORY_SLOT_ITEM_END                         = 39
+};
+
+enum BankSlots
+{
+	BANK_SLOT_ITEM_START                            = 39,
+	BANK_SLOT_ITEM_1                                = 39,
+	
+	BANK_SLOT_ITEM_END                              = 67
 };
 
 #define MAX_PLAYER_LOGIN_QUERY                           1
@@ -143,6 +185,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 		void Send0602();
 		void Send1408();
 
+		void UpdateMap2Npc();
 		void SendUnknownImportant();
 
 		/*********************************************************/
@@ -191,9 +234,18 @@ class LEGACY_DLL_SPEC Player : public Unit
 		void UpdateCurrentEquipt();
 		void UpdateCurrentGold();
 
+
+
+
+		PlayerMenu* PlayerTalkClass;
+
+
+		void TalkedToCreature( uint32 entry, uint64 guid);
+
 		template<class T>
 			void UpdateVisibilityOf(T* target, UpdateData& data, UpdateDataMapType& data_updates, std::set<WorldObject*>& visibleNow);
 
+		bool HasSpell(uint32 spell) const;
 
 		GridReference<Player> &GetGridRef() { return m_gridRef; }
 	protected:
@@ -235,6 +287,12 @@ class LEGACY_DLL_SPEC Player : public Unit
 
 		uint32 m_gold_hand;
 		uint32 m_gold_bank;
+
+		uint16 m_unk1;
+		uint16 m_unk2;
+		uint16 m_unk3;
+		uint16 m_unk4;
+		uint16 m_unk5;
 
 	private:
 		GridReference<Player> m_gridRef;

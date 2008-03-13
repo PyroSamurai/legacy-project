@@ -43,4 +43,13 @@ LeGACY::PlayerRelocationNotifier::Visit(PlayerMapType &m)
 	}
 }
 
+inline void
+LeGACY::ObjectUpdater::Visit(CreatureMapType &m)
+{
+	for(CreatureMapType::iterator iter=m.begin(); iter != m.end(); ++iter) {
+//		sLog.outString( "GridNotifierImpl::LeGACY::ObjectUpdater" );
+		iter->getSource()->Update(i_timeDiff);
+	}
+}
+
 #endif

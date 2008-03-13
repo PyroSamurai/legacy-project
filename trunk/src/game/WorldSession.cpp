@@ -144,12 +144,12 @@ bool WorldSession::Update(uint32 /*diff*/)
 		{
 			if (iter->second.status == STATUS_NOT_LOGGEDIN)
 			{
-				DEBUG_LOG("STATUS_NOT_LOGGEDIN");
+				//DEBUG_LOG("STATUS_NOT_LOGGEDIN");
 				(this->*iter->second.handler)(*packet);
 			}
 			else if (iter->second.status == STATUS_LOGGEDIN && _player)
 			{
-				DEBUG_LOG("STATUS_LOGGEDIN && _player");
+				//DEBUG_LOG("STATUS_LOGGEDIN && _player");
 				(this->*iter->second.handler)(*packet);
 			} else if (iter->second.status == STATUS_LOGGEDIN) {
 				m_playerRecentlyLogout = false;

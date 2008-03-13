@@ -23,11 +23,28 @@ enum EObjectFields
 {
 	OBJECT_FIELD_GUID              = 0x0000, // Size: 2 Type: LONG, PUBLIC
 	OBJECT_FIELD_TYPE              = 0x0002, // Size: 1 Type: INT, PUBLIC
+	OBJECT_FIELD_ENTRY             = 0x0003, // Size: 1 Type: INT, PUBLIC
 	OBJECT_END                     = 0x0006
 };
 
+enum EItemFields
+{
+	ITEM_FIELD_OWNER               = OBJECT_END + 0x0000, // Size: 2, Type: LONG, PUBLIC
+	ITEM_FIELD_CONTAINED           = OBJECT_END + 0x0002, // Size: 2, Type: LONG, PUBLIC
 
+	ITEM_FIELD_STACK_COUNT         = OBJECT_END + 0x0008, // Size: 1, Type: INT, OWNER_ONLY, UNK2
+	ITEM_FIELD_DURATION            = OBJECT_END + 0x0009, // Size: 1, Type: INT, OWNER_ONLY, UNK2
 
+	ITEM_FIELD_FLAGS               = OBJECT_END + 0x000F, // Size: 1, Type: INT, PUBLIC
+
+	ITEM_END                       = OBJECT_END + 0x0036,
+};
+
+enum EContainerFields
+{
+	CONTAINER_FIELD_NUM_SLOTS      = ITEM_END + 0x0000, // Size: 1, Type: INT, PUBLIC
+	CONTAINER_END                  = ITEM_END + 0x004A,
+};
 
 
 enum EUnitFields
@@ -35,6 +52,18 @@ enum EUnitFields
 	UNIT_FIELD_ELEMENT        = OBJECT_END + 0x0000, // Size: 1 INT PUBLIC
 	UNIT_FIELD_HP             = OBJECT_END + 0x0002, // Size: 2 LONG PUBLIC
 	UNIT_END                  = OBJECT_END + 0x0004, // Size: 1 INT PUBLIC
+
+
+
+	UNIT_FIELD_FLAGS          = OBJECT_END + 0x0028, // Size: 1 INT PUBLIC
+
+
+
+	UNIT_DYNAMIC_FLAGS        = OBJECT_END + 0x009E, // Size: 1 INT OWNER_ONLY
+
+
+
+	UNIT_NPC_FLAGS            = OBJECT_END + 0x00A2, // Size: 1 INT DYNAMIC
 
 	PLAYER_XP                 = UNIT_END   + 0x0002, // Size: 1 INT PRIVATE
 	PLAYER_END                = UNIT_END   + 0x0004

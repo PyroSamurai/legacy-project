@@ -203,13 +203,12 @@ bool Master::_StartDB()
 	sLog.outString("World Database: %s", dbstring.c_str());
 
 	///- Initialize the world database
-/*	
+
 	sLog.outString("Connecting to world database...");
 	if(!WorldDatabase.Initialize(dbstring.c_str())){
 		sLog.outError("Cannot connect to world database %s", dbstring.c_str());
 		return false;
 	}
-*/	
 
 	if(!sConfig.GetString("CharacterDatabaseInfo", &dbstring))
 	{

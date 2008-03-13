@@ -34,5 +34,6 @@ liblegacydatabase_a_SOURCES = \
 	MySQLDelayThread.h \
 	QueryResult.h \
 	QueryResultMysql.cpp QueryResultMysql.h \
+	SQLStorage.cpp SQLStorage.h \
 	SqlDelayThread.cpp SqlDelayThread.h \
 	SqlOperations.cpp SqlOperations.h 

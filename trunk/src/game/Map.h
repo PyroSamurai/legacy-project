@@ -69,7 +69,7 @@ class LEGACY_DLL_DECL Map : public GridRefManager<NGridType>, public LeGACY::Obj
 	public:
 		typedef std::list<Player*> PlayerList;
 
-		Map(uint32 id, time_t);
+		Map(uint16 id, time_t);
 		virtual ~Map();
 
 		void Add(Player *);
@@ -89,7 +89,7 @@ class LEGACY_DLL_DECL Map : public GridRefManager<NGridType>, public LeGACY::Obj
 
 		void PlayerRelocation(Player *, uint16 x, uint16 y);
 
-		uint32 GetId(void) const { return i_id; }
+		uint16 GetId(void) const { return i_id; }
 
 		static void InitStateMachine();
 		static void DeleteStateMachine();
@@ -100,7 +100,7 @@ class LEGACY_DLL_DECL Map : public GridRefManager<NGridType>, public LeGACY::Obj
 		bool CanEnter(Player* player) const;
 		const char* GetMapName() const;
 
-		void LoadMap(uint32, int x, int y);
+		void LoadMap(uint16, int x, int y);
 
 		void SendInitSelf( Player * player );
 
@@ -142,6 +142,11 @@ class LEGACY_DLL_DECL Map : public GridRefManager<NGridType>, public LeGACY::Obj
 		void UpdatePlayerVisibility(Player* player, Cell cell, CellPair cellpair);
 		void UpdateObjectsVisibilityFor(Player* player, Cell cell, CellPair cellpair);
 
+
+		void resetMarkedCells() { marked_cells.reset(); }
+		bool isCellMarked(uint32 pCellId) { return marked_cells.test(pCellId); }
+		void markCell(uint32 pCellId) { marked_cells.set(pCellId); }
+
 	protected:
 		typedef LeGACY::ObjectLevelLockable<Map, ZThread::Mutex>::Lock Guard;
 
@@ -149,9 +154,10 @@ class LEGACY_DLL_DECL Map : public GridRefManager<NGridType>, public LeGACY::Obj
 		typedef GridReadGuard ReadGuard;
 		typedef GridWriteGuard WriteGuard;
 
-		uint32 i_id;
+		uint16 i_id;
 		NGridType* i_grids[MAX_NUMBER_OF_GRIDS][MAX_NUMBER_OF_GRIDS];
 		//GridMap *GridMaps[MAX_NUMBER_OF_GRIDS][MAX_NUMBER_OF_GRIDS];
+		std::bitset<TOTAL_NUMBER_OF_CELLS_PER_MAP*TOTAL_NUMBER_OF_CELLS_PER_MAP> marked_cells;
 
 		time_t i_gridExpiry;
 

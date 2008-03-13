@@ -28,7 +28,7 @@
 
 void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
 {
-	sLog.outDebug( "WORLD: Recvd CMSG_PLAYER_MOVE Message" );
+//	sLog.outDebug( "WORLD: Recvd CMSG_PLAYER_MOVE Message" );
 	// TODO: CHECK_PACKET_SIZE
 	
 	if(GetPlayer()->GetDontMove())
@@ -46,11 +46,11 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
 	recv_data >> pos_y;
 	recv_data >> unknown2;
 
-	sLog.outDetail("Player '%s' (%u) move to %u, %u", GetPlayer()->GetName(),
-			GetPlayer()->GetAccountId(), pos_x, pos_y);
+	sLog.outDetail("Player '%s' (%u) move to %u, %u - %.4X, %.4X", GetPlayer()->GetName(), GetPlayer()->GetAccountId(), pos_x, pos_y, pos_x, pos_y);
 	///- Tools for mapping door position
 	GetPlayer()->SetLastPosition(GetPlayer()->GetPositionX(), GetPlayer()->GetPositionY());
 
 	GetPlayer()->Relocate(pos_x, pos_y);
 	GetPlayer()->UpdateRelocationToSet();
+	GetPlayer()->EndOfRequest();
 }

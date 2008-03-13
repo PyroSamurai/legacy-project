@@ -24,46 +24,50 @@
 #include <cmath>
 
 // Forward class definitions
-//class Corpse;
-//class Creature;
-//class DynamicObject;
+class Corpse;
+class Creature;
+class DynamicObject;
 class GameObject;
-//class Pet;
+class Pet;
 class Player;
 
 #define MAX_NUMBER_OF_GRIDS      64
 
-#define SIZE_OF_GRIDS            533.33333f
+//#define SIZE_OF_GRIDS            533.33333f
+#define SIZE_OF_GRIDS            30000
 #define CENTER_GRID_ID           (MAX_NUMBER_OF_GRIDS/2)
 
 #define CENTER_GRID_OFFSET       (SIZE_OF_GRIDS/2)
 
 #define MIN_GRID_DELAY           60*1000
 
-#define MAX_NUMBER_OF_CELLS      8
+//#define MAX_NUMBER_OF_CELLS      8
+#define MAX_NUMBER_OF_CELLS      1
 #define SIZE_OF_GRID_CELL        (SIZE_OF_GRIDS/MAX_NUMBER_OF_CELLS)
 
-#define CENTER_GRID_CELL_ID      256
+//#define CENTER_GRID_CELL_ID      256
+#define CENTER_GRID_CELL_ID      0
 #define CENTER_GRID_CELL_OFFSET  (SIZE_OF_GRID_CELL/2)
 
 #define TOTAL_NUMBER_OF_CELLS_PER_MAP (MAX_NUMBER_OF_GRIDS*MAX_NUMBER_OF_CELLS)
 
-#define MAP_RESOLUTION 256
+//#define MAP_RESOLUTION 256
+#define MAP_RESOLUTION 256000
 
 #define MAP_SIZE                 (SIZE_OF_GRIDS*MAX_NUMBER_OF_GRIDS)
 #define MAP_HALFSIZE             (MAP_SIZE/2)
 
 // Creature used instead pet to simplify *::Visit templates (not required duplicate code for Create->Pet case)
-//typedef TYPELIST_3(Player, Creature/*pets*/, Corpse/*resurrectable*/)
-typedef TYPELIST_1(Player)
+typedef TYPELIST_3(Player, Creature/*pets*/, Corpse/*resurrectable*/)
+//typedef TYPELIST_2(Player, GameObject)
 		AllWorldObjectTypes;
-//typedef TYPELIST_4(GameObject, Creature/*except pets*/, DynamicObject, Corpse/*Bones*/)
-typedef TYPELIST_1(GameObject)
+typedef TYPELIST_4(GameObject, Creature/*except pets*/, DynamicObject, Corpse/*Bones*/)
+//typedef TYPELIST_2(Creature /*except pets*/, GameObject)
 		AllGridObjectTypes;
 
-//typedef GridRefManager<Corpse>        CorpseMapType;
-//typedef GridRefManager<Creature>      CreatureMapType;
-//typedef GridRefManager<DynamicObject> DynamicObjectMapType;
+typedef GridRefManager<Corpse>        CorpseMapType;
+typedef GridRefManager<Creature>      CreatureMapType;
+typedef GridRefManager<DynamicObject> DynamicObjectMapType;
 typedef GridRefManager<GameObject>    GameObjectMapType;
 typedef GridRefManager<Player>        PlayerMapType;
 

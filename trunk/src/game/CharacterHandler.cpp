@@ -135,7 +135,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 		SetPlayer(pCurrChar);
 
 	WorldPacket data;
-
+/*
 	data.clear();
 	data.SetOpcode(0x14); data.Prepare(); data << (uint8) 0x08;
 	SendPacket(&data);
@@ -164,10 +164,10 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 	data.SetOpcode(0x18); data.Prepare();
 	data << (uint8) 0x05 << (uint8) 0x92 << (uint16) 0x0001;
 	SendPacket(&data);
-
+*/
 	sLog.outDebug("Adding player %s to Map.", pCurrChar->GetName());
 
-	pCurrChar->SendInitialPacketsAfterAddToMap();
+	pCurrChar->SendInitialPacketsBeforeAddToMap();
 
 	Map* map = MapManager::Instance().GetMap(pCurrChar->GetMapId(), pCurrChar);
 	map->Add(pCurrChar);
@@ -187,6 +187,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 
 	m_playerLoading = false;
 	delete holder;
+
 }
 
 void WorldSession::HandlePlayerActionOpcode( WorldPacket & recv_data )
@@ -204,7 +205,7 @@ void WorldSession::HandlePlayerActionOpcode( WorldPacket & recv_data )
 		case 0x01:
 		{
 			sLog.outDebug( "WORLD: Recvd CMSG_PLAYER_CLICK_NPC Message" );
-			GetPlayer()->EndOfRequest();
+			HandleGossipHelloOpcode( recv_data );
 			break;
 		}
 		case 0x02:
@@ -216,12 +217,12 @@ void WorldSession::HandlePlayerActionOpcode( WorldPacket & recv_data )
 		}
 		case 0x06:
 		{
-			//GetPlayer()->SendMapChanged();
+			GetPlayer()->EndOfRequest();
 			break;
 		}
 
 		case CMSG_PLAYER_ENTER_DOOR:
-		case CMSG_PLAYER_ENTER_DOOR2:
+	//	case CMSG_PLAYER_ENTER_DOOR2:
 		{
 			HandlePlayerEnterDoorOpcode( recv_data );
 			break;
@@ -262,7 +263,11 @@ void WorldSession::HandlePlayerEnterDoorOpcode( WorldPacket & recv_data )
 	}
 
 	///- Temporary update door position
-	CharacterDatabase.PExecute("UPDATE map2map set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u AND x = 0 AND y = 0", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
+	if(player->GetName() == "Eleven")
+	{
+		CharacterDatabase.PExecute("UPDATE map2map set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
+		//CharacterDatabase.PExecute("UPDATE map2map set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u AND x = 0 AND y = 0", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
+	}
 
 	///- Send Enter Door action response
 	data.clear(); data.SetOpcode( CMSG_PLAYER_ACTION ); data.Prepare();
@@ -276,7 +281,8 @@ void WorldSession::HandlePlayerEnterDoorOpcode( WorldPacket & recv_data )
 	player->TeleportTo(mapDest->MapId, mapDest->DestX, mapDest->DestY);
 	GetPlayer()->SendMapChanged();
 
-	//sWorld.RefreshDoorDatabase();
+	if(player->GetName() == "Eleven")
+		sWorld.RefreshDoorDatabase();
 }
 
 void WorldSession::HandlePlayerEnterMapCompletedOpcode( WorldPacket & recv_data )

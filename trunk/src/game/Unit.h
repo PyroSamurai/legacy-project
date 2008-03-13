@@ -27,6 +27,19 @@
 #include "MotionMaster.h"
 #include <list>
 
+class Creature;
+class GameObject;
+class Item;
+
+enum DeathState
+{
+	ALIVE     = 0,
+	JUST_DIED = 1,
+	DEAD      = 2
+};
+
+#define CREATURE_MAX_SPELLS 4
+
 class LEGACY_DLL_SPEC Unit : public WorldObject
 {
 	public:

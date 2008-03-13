@@ -170,7 +170,7 @@ WorldObject::WorldObject( WorldObject *instantiator )
 	m_name         = "";
 }
 
-void WorldObject::_Create( uint32 guidlow, HighGuid guidhigh, uint32 mapid, uint16 x, uint16 y)
+void WorldObject::_Create( uint32 guidlow, HighGuid guidhigh, uint16 mapid, uint16 x, uint16 y)
 {
 	Object::_Create(guidlow, guidhigh);
 

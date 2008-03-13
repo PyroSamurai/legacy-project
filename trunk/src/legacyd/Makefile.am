@@ -31,6 +31,7 @@ legacyd_SOURCES = \
 	WorldRunnable.cpp WorldRunnable.h
 
 legacyd_LDADD = \
+	../bindings/amachi/liblegacyscript.la \
 	../../dep/src/sockets/liblegacysockets.a \
 	../game/liblegacygame.a \
 	../shared/Database/liblegacydatabase.a \
@@ -41,6 +42,7 @@ legacyd_LDADD = \
 	-lpthread
 
 legacyd_LDFLAGS = \
+	-L../bindings/amachi \
 	-L../../dep/src/sockets \
 	-L../../dep/src/zthread \
 	$(MYSQL_LIBS) $(POSTGRE_LIBS) -L$(libdir) $(ZLIB) $(COMPATLIB) $(SSLLIB) \

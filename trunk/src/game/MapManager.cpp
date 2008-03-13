@@ -41,6 +41,7 @@ MapManager::~MapManager()
 		delete iter->second;
 
 	Map::DeleteStateMachine();
+	ClearDoorDatabase();
 }
 
 void

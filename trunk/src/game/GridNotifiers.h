@@ -24,7 +24,9 @@
 #include "UpdateData.h"
 #include <iostream>
 
+#include "Corpse.h"
 #include "Object.h"
+#include "DynamicObject.h"
 #include "GameObject.h"
 #include "Player.h"
 #include "Unit.h"
@@ -41,7 +43,7 @@ namespace LeGACY
 		template<class SKIP> void Visit(GridRefManager<SKIP> &) {}
 		Player &i_player;
 	};
-/*
+
 	struct LEGACY_DLL_DECL VisibleNotifier
 	{
 		Player &i_player;
@@ -78,9 +80,13 @@ namespace LeGACY
 		}
 
 		void Visit(PlayerMapType &m) { updateObjects<Player>(m); }
+		void Visit(CreatureMapType &m) { updateObjects<Creature>(m); }
+		void Visit(GameObjectMapType &m) { updateObjects<GameObject>(m); }
+		void Visit(DynamicObjectMapType &m) { updateObjects<DynamicObject>(m); }
 
+		void Visit(CorpseMapType &m) { updateObjects<Corpse>(m); }
 	};
-*/
+
 
 	struct LEGACY_DLL_DECL MessageDeliverer
 	{
@@ -110,7 +116,18 @@ namespace LeGACY
 		void Visit(PlayerMapType &);
 	};
 
+	struct LEGACY_DLL_DECL ObjectUpdater
+	{
+		uint32 i_timeDiff;
+		explicit ObjectUpdater(const uint32 &diff) : i_timeDiff(diff) {}
+		template<class T> void Visit(GridRefManager<T> &m);
+		void Visit(PlayerMapType &) {}
+		void Visit(CorpseMapType &) {}
+		void Visit(CreatureMapType &);
+	};
+
 	#ifndef WIN32
+	template<> void PlayerRelocationNotifier::Visit<Creature>(CreatureMapType &);
 	template<> void PlayerRelocationNotifier::Visit<Player>(PlayerMapType &);
 	#endif
 

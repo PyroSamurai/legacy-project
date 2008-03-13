@@ -33,12 +33,15 @@ class LEGACY_DLL_DECL ObjectGridLoader
 
 	public:
 		ObjectGridLoader(NGridType &grid, Map* map, const Cell &cell)
-			: i_cell(cell), i_grid(grid), i_map(map), i_gameObjects(0)
+			: i_cell(cell), i_grid(grid), i_map(map), i_gameObjects(0), i_creatures(0)
 		{}
 
 		void Load(GridType &grid);
 		void Visit(GameObjectMapType &m);
-//		void Visit(CreatureMapType &m);
+		void Visit(CreatureMapType &m);
+		void Visit(CorpseMapType &) {}
+
+		void Visit(DynamicObjectMapType&) {}
 
 		void LoadN(void);
 
@@ -47,7 +50,8 @@ class LEGACY_DLL_DECL ObjectGridLoader
 		NGridType &i_grid;
 		Map* i_map;
 		uint32 i_gameObjects;
-//		uint32 i_creatures;
+		uint32 i_creatures;
+		uint32 i_corpses;
 };
 /*
 class LEGACY_DLL_DECL ObjectGridUnloader
@@ -72,8 +76,8 @@ class LEGACY_DLL_DECL ObjectGridUnloader
 	private:
 		NGridType &i_grid;
 };
-
 */
+
 
 typedef GridLoader<Player, AllWorldObjectTypes, AllGridObjectTypes> GridLoaderType;
 

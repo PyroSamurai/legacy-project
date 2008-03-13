@@ -41,7 +41,7 @@ Map::~Map()
 	UnloadAll(true);
 }
 
-void Map::LoadMap(uint32 mapid, int x, int y)
+void Map::LoadMap(uint16 mapid, int x, int y)
 {
 }
 
@@ -53,7 +53,7 @@ void Map::DeleteStateMachine()
 {
 }
 
-Map::Map(uint32 id, time_t expiry)
+Map::Map(uint16 id, time_t expiry)
 : i_id(id), i_gridExpiry(expiry),
   i_resetTime(0), i_resetDelayTime(0), i_maxPlayers(0)
 {
@@ -143,8 +143,7 @@ void Map::MessageBroadcast(Player *player, WorldPacket *msg, bool to_self, bool 
 	}
 
 	Cell cell(p);
-	//cell.data.Part.reserved = ALL_DISTRICT;
-	cell.data.Part.reserved = UPPER_DISTRICT;
+	cell.data.Part.reserved = CENTER_DISTRICT;
 
 	if( !loaded(GridPair(cell.data.Part.grid_x, cell.data.Part.grid_y)) ) {
 		sLog.outDetail("Not loaded");
@@ -170,7 +169,7 @@ void Map::MessageBroadcast(WorldObject *obj, WorldPacket *msg)
 	}
 
 	Cell cell(p);
-	cell.data.Part.reserved = ALL_DISTRICT;
+	cell.data.Part.reserved = CENTER_DISTRICT;
 	cell.SetNoCreate();
 
 	if( !loaded(GridPair(cell.data.Part.grid_x, cell.data.Part.grid_y)) )
@@ -328,7 +327,7 @@ void Map::UpdateObjectVisibility( WorldObject* obj, Cell cell, CellPair cellpair
 	TypeContainerVisitor<LeGACY::VisibleChangesNotifier, WorldTypeMapContainer > player_notifier(notifier);
 	CellLock<GridReadGuard> cell_lock(cell, cellpair);
 	cell_lock->Visit(cell_lock, player_notifier, *this);
-*/
+	*/
 }
 
 void Map::UpdatePlayerVisibility( Player* player, Cell cell, CellPair cellpair )
