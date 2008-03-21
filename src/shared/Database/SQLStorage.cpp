@@ -23,15 +23,16 @@
 
 enum
 {
-	FT_NA='x',                                              //not used or unknown, 4 byte size
-	FT_NA_BYTE='X',                                         //not used or unknown, byte
-	FT_STRING='s',                                          //char*
-	FT_FLOAT='f',                                           //float
-	FT_INT='i',                                             //uint32
-	FT_BYTE='b',                                            //uint8
-	FT_SORT='d',                                            //sorted by this field, field is not included
-	FT_IND='n',                                             //the same,but parsed to data
-	FT_LOGIC='l'                                            //Logical (boolean)
+	FT_NA='x',          //not used or unknown, 4 byte size
+	FT_NA_BYTE='X',     //not used or unknown, byte
+	FT_STRING='s',      //char*
+	FT_FLOAT='f',       //float
+	FT_INT='i',         //uint32
+	FT_SHORT='u',       //uint16
+	FT_BYTE='b',        //uint8
+	FT_SORT='d',        //sorted by this field, field is not included
+	FT_IND='n',         //the same,but parsed to data
+	FT_LOGIC='l'        //Logical (boolean)
 };
 
 #ifdef DO_POSTGRESQL
@@ -40,8 +41,7 @@ extern DatabasePostgre  WorldDatabase;
 extern DatabaseMysql  WorldDatabase;
 #endif
 
-//const char CreatureInfofmt[]="iiiiissiiiiiiiiiififfiiiiiiiiiiiffiiliiiiiiiiiiiiiiiisiilliis";
-const char CreatureInfofmt[]="iss";
+const char CreatureInfofmt[]="iisiiiiiiiiiiiiiiiiiiiiiiiiiisis";
 const char CreatureDataAddonInfofmt[]="iiiiiis";
 const char CreatureModelfmt[]="iffii";
 const char CreatureInfoAddonInfofmt[]="iiiiiis";
@@ -135,13 +135,25 @@ void SQLStorage::Load ()
         //get struct size
         uint32 sc=0;
         uint32 bo=0;
+		uint32 so=0;
+		uint32 by=0;
         for(uint32 x=0;x<iNumFields;x++)
             if(format[x]==FT_STRING)
                 sc++;
             else if (format[x]==FT_LOGIC)
                 bo++;
-        recordsize=(iNumFields-sc-bo)*4+sc*sizeof(char*)+bo*sizeof(bool);
+			else if (format[x]==FT_SHORT)
+				so++;
+			else if (format[x]==FT_BYTE)
+			{
+				by++;
+				printf("BYTE count %u\n", by);
+			}
+		printf("Numfields %u sc %u bo %u so %u by %u\n", iNumFields, sc, bo, so, by);
+        recordsize=(iNumFields-sc-bo-so-by)*4+sc*sizeof(char*)+bo*sizeof(bool)+(so*sizeof(uint16))+(by*sizeof(uint8));
     }
+
+	printf("recordsize: %u\n", recordsize);
 
     char** newIndex=new char*[maxi];
     memset(newIndex,0,maxi*sizeof(char*));
@@ -168,6 +180,14 @@ void SQLStorage::Load ()
                     *((uint32*)(&p[offset]))=fields[x].GetUInt32();
                     offset+=sizeof(uint32);
                     break;
+				case FT_SHORT:
+					*((uint16*)(&p[offset]))=fields[x].GetUInt16();
+					offset+=sizeof(uint16);
+					break;
+				case FT_BYTE:
+					*((uint8*)(&p[offset]))=fields[x].GetUInt8();
+					offset+=sizeof(uint8);
+					break;
                 case FT_FLOAT:
                     *((float*)(&p[offset]))=fields[x].GetFloat();
                     offset+=sizeof(float);
@@ -186,7 +206,7 @@ void SQLStorage::Load ()
                         st=new char[l];
                         memcpy(st,tmp,l);
                     }
-					sLog.outString("SQLStorage::Load FIELD %u = '%s'", x, st);
+					//sLog.outString("SQLStorage::Load FIELD %u = '%s'", x, st);
                     *((char**)(&p[offset]))=st;
                     offset+=sizeof(char*);
                     break;

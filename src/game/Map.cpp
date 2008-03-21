@@ -81,6 +81,21 @@ void Map::AddToGrid(Player *obj, NGridType *grid, Cell const& cell)
 	(*grid)(cell.CellX(), cell.CellY()).AddWorldObject(obj, obj->GetGUID());
 }
 
+template<>
+void Map::AddToGrid(Creature* obj, NGridType *grid, Cell const& cell)
+{
+	// add to world object registry in grid
+	if(obj->isPet())
+	{
+	}
+	// add to grid object store
+	else
+	{
+		(*grid)(cell.CellX(), cell.CellY()).AddGridObject<Creature>(obj, obj->GetGUID());
+		obj->SetCurrentCell(cell);
+	}
+}
+
 template<class T>
 void Map::RemoveFromGrid(T* obj, NGridType *grid, Cell const& cell)
 {
@@ -95,7 +110,13 @@ void Map::AddNotifier(T* , Cell const& , CellPair const& )
 template<>
 void Map::AddNotifier(Player* obj, Cell const& cell, CellPair const& cellpair)
 {
-//	PlayerRelocationNotify(obj,cell,cellpair);
+	PlayerRelocationNotify(obj,cell,cellpair);
+}
+
+template<>
+void Map::AddNotifier(Creature* obj, Cell const& cell, CellPair const& cellpair)
+{
+	CreatureRelocationNotify(obj,cell,cellpair);
 }
 
 void Map::Reset()
@@ -130,10 +151,39 @@ void Map::Add(Player *player)
 
 }
 
+template<class T>
+void
+Map::Add(T *obj)
+{
+	CellPair p = LeGACY::ComputeCellPair(obj->GetPositionX(), obj->GetPositionY());
+
+	assert(obj);
+
+	if(p.x_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP || p.y_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP)
+	{
+		sLog.outError("Map::Add: Object " I64FMTD " have invalid coordinates X:%u Y:%u grid cell [%u,%u]", obj->GetGUID(), obj->GetPositionX(), obj->GetPositionY(), p.x_coord, p.y_coord);
+		return;
+	}
+
+	Cell cell(p);
+	EnsureGridCreated(GridPair(cell.GridX(), cell.GridY()));
+	NGridType *grid = getNGrid(cell.GridX(), cell.GridY());
+	assert( grid != NULL );
+
+	AddToGrid(obj,grid,cell);
+	obj->AddToWorld();
+
+	DEBUG_LOG("Object %u enters grid[%u,%u]", GUID_LOPART(obj->GetGUID()), cell.GridX(), cell.GridY());
+
+	UpdateObjectVisibility(obj,cell,p);
+
+	AddNotifier(obj,cell,p);
+}
+
 
 void Map::MessageBroadcast(Player *player, WorldPacket *msg, bool to_self, bool own_team_only)
 {
-//	sLog.outDetail("Map::MessageBroadcast Player");
+	sLog.outDetail("Map::MessageBroadcast Player");
 	CellPair p = LeGACY::ComputeCellPair(player->GetPositionX(), player->GetPositionY());
 
 	if(p.x_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP || p.y_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP )
@@ -359,3 +409,65 @@ void Map::UpdateObjectsVisibilityFor( Player* player, Cell cell, CellPair cellpa
 	notifier.Notify();
 	*/
 }
+
+void Map::PlayerRelocationNotify(Player* player, Cell cell, CellPair cellpair)
+{
+	CellLock<ReadGuard> cell_lock(cell, cellpair);
+	LeGACY::PlayerRelocationNotifier relocationNotifier(*player);
+	cell.data.Part.reserved = ALL_DISTRICT;
+
+	TypeContainerVisitor<LeGACY::PlayerRelocationNotifier, GridTypeMapContainer > p2grid_relocation(relocationNotifier);
+	TypeContainerVisitor<LeGACY::PlayerRelocationNotifier, WorldTypeMapContainer > p2world_relocation(relocationNotifier);
+
+	cell_lock->Visit(cell_lock, p2grid_relocation, *this);
+	cell_lock->Visit(cell_lock, p2world_relocation, *this);
+}
+
+void
+Map::CreatureRelocation(Creature *creature, uint16 x, uint16 y)
+{
+	Cell old_cell = creature->GetCurrentCell();
+
+	CellPair new_val = LeGACY::ComputeCellPair(x, y);
+	Cell new_cell(new_val);
+
+	// delay creature move for grid/cell to grid/cell moves
+	if( old_cell.DiffCell(new_cell) || old_cell.DiffGrid(new_cell) )
+	{
+		AddCreatureToMoveList(creature, x, y);
+	}
+	else
+	{
+		creature->Relocate(x, y);
+		CreatureRelocationNotify(creature,new_cell,new_val);
+	}
+}
+
+void Map::AddCreatureToMoveList(Creature* c, uint16 x, uint16 y)
+{
+	if(!c) return;
+
+	i_creaturesToMove[c] = CreatureMover(x,y);
+}
+
+void Map::MoveAllCreaturesInMoveList()
+{
+	while(!i_creaturesToMove.empty())
+	{
+		// get data and remove element
+		CreatureMoveList::iterator iter = i_creaturesToMove.begin();
+		Creature* c = iter->first;
+		CreatureMover cm = iter->second;
+		i_creaturesToMove.erase(iter);
+
+		c->Relocate(cm.x, cm.y);
+	}
+}
+
+void Map::CreatureRelocationNotify(Creature *creature, Cell cell, CellPair cellpair)
+{
+}
+
+template void Map::Add(Creature *);
+
+//template void Map::Remove(Creature *, bool);

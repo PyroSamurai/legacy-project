@@ -63,99 +63,78 @@ struct CreatureItem
 	uint32 lastincr;
 };
 
+// from `creature_template` table
 struct CreatureInfo
 {
 	uint32 Entry;
+	uint32 modelid;
 	char*  Name;
+	uint32 hp;
+	uint32 sp;
+	uint32 stat_int;
+	uint32 stat_atk;
+	uint32 stat_def;
+	uint32 stat_hpx;
+	uint32 stat_spx;
+	uint32 stat_agi;
+	uint32 level;
+	uint32 element;
+	uint32 skill1;
+	uint32 skill2;
+	uint32 skill3;
+	uint32 skill4;
+	uint32 skill5;
+	uint32 drop1;
+	uint32 drop2;
+	uint32 drop3;
+	uint32 drop4;
+	uint32 drop5;
+	uint32 drop6;
+	uint32 drop7;
+	uint32 drop8;
+	uint32 drop9;
+	uint32 drop10;
+	uint32 npcflag;
+	char const* AIName;
+	uint32 MovementType;
 	char*  ScriptName;
 };
-
-// from `creature_template` table
-/*
-struct CreatureInfo
-{
-	uint32  Entry;
-	uint32  DisplayID_A;
-	uint32  DisplayID_A2;
-	uint32  DisplayID_H;
-	uint32  DisplayID_H2;
-	char*   Name;
-	char*   SubName;
-	uint32  minlevel;
-	uint32  maxlevel;
-	uint32  minhealth;
-	uint32  maxhealth;
-	uint32  minmana;
-	uint32  maxmana;
-	uint32  armor;
-	uint32  faction_A;
-	uint32  faction_H;
-	uint32  npcflag;
-	float   speed;
-	uint32  rank;
-	float   mindmg;
-	float   maxdmg;
-	uint32  dmgschool;
-	uint32  attackpower;
-	uint32  baseattacktime;
-	uint32  rangeattacktime;
-	uint32  Flags;
-	uint32  dynamicflags;
-	uint32  family;
-	uint32  trainer_type;
-	uint32  trainer_spell;
-	uint32  classNum;
-	uint32  race;
-	float   minrangedmg;
-	float   maxrangedmg;
-	uint32  rangedattackpower;
-	uint32  type;
-	bool    civilian;
-	uint32  flag1;
-	uint32  lootid;
-	uint32  pickpocketLootId;
-	uint32  SkinLootId;
-	uint32  resistance1;
-	uint32  resistance2;
-	uint32  resistance3;
-	uint32  resistance4;
-	uint32  resistance5;
-	uint32  resistance6;
-	uint32  spell1;
-	uint32  spell2;
-	uint32  spell3;
-	uint32  spell4;
-	uint32  mingold;
-	uint32  maxgold;
-	char const* AIName;
-	uint32  MovementType;
-	uint32  InhabitType;
-	bool    RacialLeader;
-	bool    RegenHealth;
-	uint32  equipmentId;
-	uint32  MechanicImmuneMask;
-	char const* ScriptName;
-};
-*/
-
 
 // from `creature` table
 struct CreatureData
 {
-	uint32 id;
+	uint32 id;           // entry in creature_template
 	uint16 mapid;
 	uint8  map_npcid;
 	uint16 posX;
 	uint16 posY;
+
+	uint32 spawntimesecs;
 
 	uint16 spawn_posX;
 	uint16 spawn_posY;
 
 	uint16 hp;
 	uint16 sp;
+
+	uint8  deathState;
+	uint8  movementType;
+
+	uint32 team00;
+	uint32 team01;
+	uint32 team03;
+	uint32 team04;
+
+	uint32 team10;
+	uint32 team11;
+	uint32 team12;
+	uint32 team13;
+	uint32 team14;
 };
 
 typedef std::list<GossipOption> GossipOptionList;
+
+#define MAP_NPCID_MULTIPLIER 100
 
 class LEGACY_DLL_SPEC Creature : public Unit
 {
@@ -176,6 +155,8 @@ class LEGACY_DLL_SPEC Creature : public Unit
 
 		void Update( uint32 time );
 
+		uint8 GetMapNpcId();// { return (GetGUIDLow()-(GetMapId()*MAP_NPCID_MULTIPLIER)); }
+		uint16 GetModelId() { return GetUInt16Value(UNIT_FIELD_DISPLAYID); }
 		void GetRespawnCoord(uint16 &x, uint16 &y) const { x = respawn_cord[0]; y = respawn_cord[1]; }
 
 		bool isPet() const { return m_isPet; }
@@ -188,7 +169,26 @@ class LEGACY_DLL_SPEC Creature : public Unit
 
 		bool AIM_Initialize();
 
-		bool LoadFromDB(uint32 guid, uint32 InstanceId);
+		bool LoadFromDB(uint32 guid, uint32 InstanceId=0);
+
+
+
+
+
+
+
+
+
+
+
+		MovementGeneratorType GetDefaultMovementType() const { return m_defaultMovementType; }
+		void SetDefaultMovementType(MovementGeneratorType mgt) { m_defaultMovementType = mgt; }
+
+		
+
+		// for use only in LoadHelper, Map::Add Map::CreatureCellRelocation
+		Cell const& GetCurrentCell() const { return m_currentCell; }
+		void SetCurrentCell(Cell const& cell) { m_currentCell = cell; }
 
 		/*************************************************************/
 		/***                   VENDOR SYSTEM                       ***/
@@ -278,6 +278,8 @@ class LEGACY_DLL_SPEC Creature : public Unit
 		Cell   m_currentCell;          // store current cell where creature listed
 
 		uint32 m_DBTableGuid;
+
+		bool m_AI_locked;
 
 	private:
 		GridReference<Creature> m_gridRef;

@@ -101,7 +101,13 @@ MapManager::Update(time_t diff)
 	i_timer.SetCurrent(0);
 }
 
-// debuggin code
+void MapManager::MoveAllCreaturesInMoveList()
+{
+	for(MapMapType::iterator iter=i_maps.begin(); iter != i_maps.end(); ++iter)
+		iter->second->MoveAllCreaturesInMoveList();
+}
+
+// debugging code
 void MapManager::checkAndCorrectGridStatesArray()
 {
 	bool ok = true;
@@ -120,14 +126,14 @@ void MapManager::checkAndCorrectGridStatesArray()
 		assert(false); // force a crash. Too many errors
 }
 
-void MapManager::AddMap2Dest(MapDoor* mapDoor, MapDestination* mapDest)
+void MapManager::AddMapMatrix(MapDoor* mapDoor, MapDestination* mapDest)
 {
-	m_map2Dest[mapDoor] = mapDest;
+	m_mapMatrix[mapDoor] = mapDest;
 }
 
-MapDestination* MapManager::FindMap2Dest(MapDoor* mapDoor)
+MapDestination* MapManager::FindMapMatrix(MapDoor* mapDoor)
 {
-	MapDestination* dest = _findMap2Dest(mapDoor);
+	MapDestination* dest = _findMapMatrix(mapDoor);
 	if( !dest )
 	{
 		DEBUG_LOG("Map %u Door %u not found", mapDoor->MapId, mapDoor->DoorId);

@@ -52,9 +52,18 @@ class WorldSocket : public TcpSocket
 		void Update(time_t diff);
 		// Player Queue
 		void SendAuthWaitQue(uint32 position);
+		void SendMotd();
 
 		void _ChangeMap(const uint16, const uint16, const uint16);
 		void _EndForNow();
+
+
+
+
+		void SetLogging(bool newvalue)
+		{
+			m_logPacket = newvalue;
+		}
 
 	protected:
 		void _HandleLogonChallenge();
@@ -80,6 +89,8 @@ class WorldSocket : public TcpSocket
 		uint32 m_pkt_cnt;
 		uint32 m_send_cnt;
 		uint32 m_recv_cnt;
+
+		bool   m_logPacket;
 };
 
 #endif

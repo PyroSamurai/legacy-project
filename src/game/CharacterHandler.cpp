@@ -31,6 +31,8 @@
 #include "Database/DatabaseImpl.h"
 #include "Encoder.h"
 
+#include "BattleSystem.h"
+
 // check used symbols in player name at creating and rename
 std::string notAllowedChars = "\t\v\b\f\a\n\r\\\"\'\? <>[](){}_=+-|/!@#$%^&*~`.,0123456789\0";
 
@@ -38,9 +40,11 @@ class LoginQueryHolder : public SqlQueryHolder
 {
 	private:
 		uint32 m_accountId;
+		uint64 m_guid;
 	public:
-		LoginQueryHolder(uint32 accountId)
-			: m_accountId(accountId) { }
+		LoginQueryHolder(uint32 accountId, uint64 guid)
+			: m_accountId(accountId), m_guid(guid) { }
+		uint64 GetGuid() const { return m_guid; }
 		uint32 GetAccountId() const { return m_accountId; }
 		bool Initialize();
 };
@@ -81,16 +85,201 @@ class CharacterHandler
 		}
 } chrHandler;
 
+void WorldSession::HandleCharCreateSelectName(WorldPacket & recv_data)
+{
+	CHECK_PACKET_SIZE(recv_data, 1);
+	WorldPacket data;
+	std::string name;
+
+	recv_data >> name;
+
+	CharacterDatabase.escape_string(name);
+	QueryResult* result = CharacterDatabase.PQuery("SELECT * FROM characters WHERE name = '%s'", name.c_str());
+
+	SetLogging(false);
+	///- Name already taken
+	if( result )
+	{
+		sLog.outDebug("Name '%s' exists", name.c_str());
+		delete result;
+		data.Initialize( 0x09 );
+		data << (uint8 ) 0x03;
+		data << (uint8 ) 0x01;
+		SendPacket(&data);
+		return;
+	}
+
+	delete result;
+	///- Name ok
+	
+	CharacterDatabase.PExecute("INSERT INTO characters (accountid, name) values (%u, '%s')", GetAccountId(), name.c_str());
+
+	data.Initialize( 0x09 );
+	data << (uint8 ) 0x03;
+	data << (uint8 ) 0x00;
+	SendPacket(&data);
+}
+
 void WorldSession::HandleCharCreateOpcode( WorldPacket & recv_data )
 {
+	CHECK_PACKET_SIZE(recv_data, 1);
+
+	uint8 subOpcode;
+
+	recv_data >> subOpcode;
+
 	sLog.outString( "WORLD: Recv CSMG_CHAR_CREATE Message" );
+
+	switch( subOpcode )
+	{
+		case 0x01:
+			HandleCharCreate( recv_data );
+			break;
+
+		case 0x02:
+			HandleCharCreateSelectName( recv_data );
+			break;
+	}
+}
+
+void WorldSession::HandleCharCreate( WorldPacket & recv_data )
+{
+	CHECK_PACKET_SIZE(recv_data, 1+1+1+1+2+2+2+2+1+1+1+1+1+1+1+1);
+	
+	uint8  gender = 0;
+	uint8  face = 0;
+	uint8  hair = 0;
+	uint8  reborn = 0;
+
+	uint8  skin_color_R = 0;
+	uint8  skin_color_G = 0;
+	uint8  skin_color_B = 0;
+	uint8  hair_color_R = 0;
+	uint8  hair_color_G = 0;
+	uint8  hair_color_B = 0;
+	uint8  shirt_color = 0;
+	uint8  misc_color = 0;
+
+	uint8  element = 0;
+	uint8  stat_int = 0;
+	uint8  stat_atk = 0;
+	uint8  stat_def = 0;
+	uint8  stat_hpx = 0;
+	uint8  stat_spx = 0;
+	uint8  stat_agi = 0;
+
+	uint8  lenPassword1 = 0;
+	std::string password1 = "";
+	uint8  lenPassword2 = 0;
+	std::string password2 = "";
+
+	uint8 tmp_password1[100];
+	uint8 tmp_password2[100];
+
+	recv_data >> gender;
+	recv_data >> face;
+	recv_data >> hair;
+	recv_data >> reborn;
+
+	recv_data >> hair_color_R;
+	recv_data >> hair_color_G;
+	recv_data >> hair_color_B;
+	recv_data >> skin_color_R;
+	recv_data >> skin_color_G;
+	recv_data >> skin_color_B;
+	recv_data >> shirt_color;
+	recv_data >> misc_color;
+
+	sLog.outDebug("Coloring: hair: %u, skin %u, shirt %u, misc %u", hair_color_R, skin_color_R, shirt_color, misc_color);
+	recv_data >> element;
+
+	recv_data >> stat_int;
+	recv_data >> stat_atk;
+	recv_data >> stat_def;
+	recv_data >> stat_hpx;
+	recv_data >> stat_spx;
+	recv_data >> stat_agi;
+
+	recv_data >> lenPassword1;
+
+	CHECK_PACKET_SIZE( recv_data, lenPassword1 );
+
+	for(uint8 i = 0; i < lenPassword1; i++)
+	{
+		recv_data >> tmp_password1[i];
+		password1 += tmp_password1[i];
+	}
+	sLog.outDebug("Password1: '%s'", password1.c_str());
+
+	recv_data >> lenPassword2;
+
+	CHECK_PACKET_SIZE( recv_data, lenPassword2 );
+	for(uint8 i = 0; i < lenPassword2; i++)
+	{
+		recv_data >> tmp_password2[i];
+		password2 += tmp_password2[i];
+	}
+	sLog.outDebug("Password2: '%s'", password2.c_str());
+
+	QueryResult* result = CharacterDatabase.PQuery("SELECT name FROM characters WHERE accountid = %u", GetAccountId());
+	if( !result )
+		return;
+
+	std::string name = (*result)[0].GetCppString();
+
+	delete result;
+
+	loginDatabase.PExecute("DELETE FROM accounts WHERE accountid = %u", GetAccountId());
+	loginDatabase.PExecute("INSERT INTO accounts (accountid, password, online) values (%u, md5('%s'), 1)", GetAccountId(), password1.c_str());
+
+	CharacterDatabase.PExecute("DELETE FROM characters WHERE accountid = %u AND name = '%s'", GetAccountId(), name.c_str());
+
+	std::ostringstream ss;
+	ss << "INSERT INTO characters (accountid, psswd, gender, element, face, hair, name, reborn, level, mapid, pos_x, pos_y, stat_int, stat_atk, stat_def, stat_hpx, stat_spx, stat_agi, hair_color_R, hair_color_G, hair_color_B, skin_color_R, skin_color_G, skin_color_B, shirt_color, misc_color ) values ( "
+		<< GetAccountId() << ", md5('"
+		<< password1 << "'), "
+		<< uint32(gender) << ", "      // to prevent save uint8 as char
+		<< uint32(element) << ", "
+		<< uint32(face) << ", "
+		<< uint32(hair) << ", '"
+		<< name.c_str() << "', "
+		<< uint32(reborn) << ", "
+		<< uint32(1) << ", "
+		<< uint32(10816) << ", "
+		<< uint32(442) << ", "
+		<< uint32(758) << ", "
+		<< uint32(stat_int) << ", "
+		<< uint32(stat_atk) << ", "
+		<< uint32(stat_def) << ", "
+		<< uint32(stat_hpx) << ", "
+		<< uint32(stat_spx) << ", "
+		<< uint32(stat_agi) << ", "
+		<< uint32(hair_color_R) << ", "
+		<< uint32(hair_color_G) << ", "
+		<< uint32(hair_color_B) << ", "
+		<< uint32(skin_color_R) << ", "
+		<< uint32(skin_color_G) << ", "
+		<< uint32(skin_color_B) << ", "
+		<< uint32(shirt_color) << ", "
+		<< uint32(misc_color) << " )";
+
+	CharacterDatabase.Execute( ss.str().c_str() );
+
+	WorldPacket data;
+	data << lenPassword1;
+	data << GetAccountId();
+	data << (uint32) 0x00;
+	data << password1;
+
+	HandlePlayerLoginOpcode( data );
 }
 
 void WorldSession::HandlePlayerLoginOpcode( WorldPacket & recv_data )
 {
-	//TODO: CHECK_PACKET_SIZE(recv_data, 8);
+	CHECK_PACKET_SIZE(recv_data, 9);
 	
 	m_playerLoading = true;
+	uint64 playerGuid = 0;
 
 	sLog.outDebug( "WORLD: Recvd CMSG_AUTH_RESPONSE Message" );
 
@@ -100,11 +289,20 @@ void WorldSession::HandlePlayerLoginOpcode( WorldPacket & recv_data )
 	std::string password;
 
 	recv_data >> lenPassword;
+	CHECK_PACKET_SIZE(recv_data, 8+lenPassword);
 	recv_data >> accountId;
 	recv_data >> patchVer;
 	recv_data >> password;
 
-	LoginQueryHolder *holder = new LoginQueryHolder(accountId);
+	QueryResult* result = CharacterDatabase.PQuery("SELECT guid FROM characters WHERE accountid = '%u'", accountId);
+
+	if( !result )
+		return;
+
+	playerGuid = (*result)[0].GetUInt32();
+	delete result;
+
+	LoginQueryHolder *holder = new LoginQueryHolder(accountId, playerGuid);
 	if(!holder->Initialize())
 	{
 		delete holder;    // delete all unprocessed queries
@@ -118,13 +316,12 @@ void WorldSession::HandlePlayerLoginOpcode( WorldPacket & recv_data )
 
 void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 {
-	sLog.outDetail("Creating Player");
-	uint32 accountId = holder->GetAccountId();
+	uint64 playerGuid = holder->GetGuid();
 
 	Player* pCurrChar = new Player(this);
 	//pCurrChar->GetMotionMaster()->Initialize();
 
-	if(!pCurrChar->LoadFromDB(accountId, holder))
+	if(!pCurrChar->LoadFromDB(GUID_LOPART(playerGuid), holder))
 	{
 		delete pCurrChar;  // delete it manually
 		delete holder;     // delete all unprocessed queries
@@ -134,39 +331,11 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 	else
 		SetPlayer(pCurrChar);
 
-	WorldPacket data;
-/*
-	data.clear();
-	data.SetOpcode(0x14); data.Prepare(); data << (uint8) 0x08;
-	SendPacket(&data);
-
-	data.clear();
-	data.SetOpcode(0x18); data.Prepare();
-	data << (uint8) 0x05 << (uint8) 0x02 << (uint16) 0x0000;
-	SendPacket(&data);
-
-	data.clear();
-	data.SetOpcode(0x18); data.Prepare();
-	data << (uint8) 0x05 << (uint8) 0x31 << (uint16) 0x0001;
-	SendPacket(&data);
-
-	data.clear();
-	data.SetOpcode(0x18); data.Prepare();
-	data << (uint8) 0x05 << (uint8) 0x62 << (uint16) 0x0001;
-	SendPacket(&data);
-
-	data.clear();
-	data.SetOpcode(0x18); data.Prepare();
-	data << (uint8) 0x05 << (uint8) 0x91 << (uint16) 0x0001;
-	SendPacket(&data);
-
-	data.clear();
-	data.SetOpcode(0x18); data.Prepare();
-	data << (uint8) 0x05 << (uint8) 0x92 << (uint16) 0x0001;
-	SendPacket(&data);
-*/
 	sLog.outDebug("Adding player %s to Map.", pCurrChar->GetName());
 
+
+
+	pCurrChar->LoadPet();
 	pCurrChar->SendInitialPacketsBeforeAddToMap();
 
 	Map* map = MapManager::Instance().GetMap(pCurrChar->GetMapId(), pCurrChar);
@@ -174,9 +343,9 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 
 	ObjectAccessor::Instance().AddObject(pCurrChar);
 
-	//pCurrChar->SendInitialPacketsAfterAddToMap();
+	pCurrChar->SendInitialPacketsAfterAddToMap();
 
-	CharacterDatabase.PExecute("UPDATE characters SET online = 1 WHERE accountid = '%u'", accountId);
+	CharacterDatabase.PExecute("UPDATE characters SET online = 1 WHERE guid = '%u'", pCurrChar->GetGUIDLow());
 
 	std::string IP_str = _socket ? _socket->GetRemoteAddress().c_str() : "-";
 	sLog.outString("Account: %d (IP: %s) Login Character:[%s] (guid:%u)", GetAccountId(), IP_str.c_str(), pCurrChar->GetName(), pCurrChar->GetGUID());
@@ -185,8 +354,14 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 
 //	sLog.outString("Map '%u' has '%u' Players", pCurrChar->GetMapId(), map->GetPlayersCount());
 
+
+
 	m_playerLoading = false;
 	delete holder;
+
+	WorldPacket data(0, 1);
+	data << (uint8) 1;
+//	HandlePlayerClickNpc( data );
 
 }
 
@@ -204,25 +379,26 @@ void WorldSession::HandlePlayerActionOpcode( WorldPacket & recv_data )
 
 		case 0x01:
 		{
-			sLog.outDebug( "WORLD: Recvd CMSG_PLAYER_CLICK_NPC Message" );
-			HandleGossipHelloOpcode( recv_data );
+			HandlePlayerClickNpc( recv_data );
 			break;
 		}
 		case 0x02:
 		{
-			sLog.outDebug( "WORLD: Recvd CMSG_UNKNOWN_2 Message" );
-			GetPlayer()->Send0602();
+			///- Area/Npc near Triggerred
+			// ignore for now
 			GetPlayer()->EndOfRequest();
 			break;
 		}
 		case 0x06:
 		{
+			///- Close Dialog
+			// TODO: Handle next dialog if any
 			GetPlayer()->EndOfRequest();
 			break;
 		}
 
 		case CMSG_PLAYER_ENTER_DOOR:
-	//	case CMSG_PLAYER_ENTER_DOOR2:
+		case CMSG_PLAYER_AREA_TRIGGER:
 		{
 			HandlePlayerEnterDoorOpcode( recv_data );
 			break;
@@ -230,7 +406,7 @@ void WorldSession::HandlePlayerActionOpcode( WorldPacket & recv_data )
 
 		default:
 		{
-			sLog.outDebug( "WORLD: Unhandled CMSG_PLAYER_ACTION Message" );
+			///- Unhandled, preventing player from getting stuck for now
 			GetPlayer()->EndOfRequest();
 		}
 	}
@@ -253,7 +429,7 @@ void WorldSession::HandlePlayerEnterDoorOpcode( WorldPacket & recv_data )
 
 	mapid = player->GetMapId();
 	MapDoor*        mapDoor = new MapDoor(mapid, doorid);
-	MapDestination* mapDest = MapManager::Instance().FindMap2Dest(mapDoor);
+	MapDestination* mapDest = MapManager::Instance().FindMapMatrix(mapDoor);
 	delete mapDoor;
 
 	if( !mapDest ) {
@@ -265,16 +441,16 @@ void WorldSession::HandlePlayerEnterDoorOpcode( WorldPacket & recv_data )
 	///- Temporary update door position
 	if(player->GetName() == "Eleven")
 	{
-		CharacterDatabase.PExecute("UPDATE map2map set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
-		//CharacterDatabase.PExecute("UPDATE map2map set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u AND x = 0 AND y = 0", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
+		CharacterDatabase.PExecute("UPDATE map_matrix set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
+		//CharacterDatabase.PExecute("UPDATE map_matrix set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u AND x = 0 AND y = 0", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
 	}
 
 	///- Send Enter Door action response
-	data.clear(); data.SetOpcode( CMSG_PLAYER_ACTION ); data.Prepare();
+	data.Initialize( CMSG_PLAYER_ACTION, 1 );
 	data << (uint8) 0x07;
 	player->GetSession()->SendPacket(&data);
 	
-	data.clear(); data.SetOpcode( 0x29 ); data.Prepare();
+	data.Initialize( 0x29, 1 );
 	data << (uint8) 0x0E;
 	player->GetSession()->SendPacket(&data);
 
@@ -319,7 +495,7 @@ void WorldSession::HandlePlayerExpressionOpcode( WorldPacket & recv_data )
 	recv_data >> expressionCode;
 
 	WorldPacket data;
-	data.clear(); data.SetOpcode( 0x20 ); data.Prepare();
+	data.Initialize( 0x20, 1 );
 	data << expressionType;
 	data << GetPlayer()->GetAccountId();
 	data << expressionCode;

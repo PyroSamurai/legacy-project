@@ -54,6 +54,8 @@ struct ServerPktHeader
 WorldSocket::WorldSocket(ISocketHandler &sh): TcpSocket(sh), _cmd(0), _remaining(0), _session(NULL)
 {
 	_seed = 0xaca4af;
+
+	m_logPacket = false;
 }
 
 // WorldSocket destructor
@@ -107,6 +109,8 @@ void WorldSocket::SendPacket(WorldPacket *packet)
 	WorldPacket *pck = new WorldPacket(*packet);
 	ASSERT(pck);
 	pck->Finalize();
+	if (m_logPacket)
+		LogPacket(*pck, 0);
 	_sendQueue.add(pck);
 }
 
@@ -132,8 +136,8 @@ void WorldSocket::OnAccept()
 /// Log Client Header
 void WorldSocket::LogHeader(uint16 hdr, uint16 size, uint8 cmd)
 {
-	hdr  = ENCODE(uint16(hdr));
-	size = ENCODE(uint16(size));
+//	hdr  = ENCODE(uint16(hdr));
+//	size = ENCODE(uint16(size));
 	//cmd  = ENCODE(uint8(cmd));
 	sWorldLog.Log("Header: 0x%.2X ", hdr);
 	sWorldLog.Log("Data Size: %u (0x%.4X) ", size - 1, size - 1);
@@ -188,7 +192,6 @@ void WorldSocket::OnRead()
 		{
 			case CMSG_LOGON_CHALLENGE: // Logon Challenge
 			{
-				///- Ignore for now
 				_HandleLogonChallenge();
 				break;
 			}
@@ -254,7 +257,7 @@ void WorldSocket::Update(time_t diff)
 		packet = _sendQueue.next();
 
 		m_send_cnt++;
-		LogPacket(*packet, 0);
+		//LogPacket(*packet, 0);
 
 		if(packet->size())
 			TcpSocket::SendBuf((char*)packet->contents(), packet->size());
@@ -272,18 +275,15 @@ void WorldSocket::SizeError(WorldPacket const& packet, uint32 size) const
 /// Logon Challenge command handler
 void WorldSocket::_HandleLogonChallenge()
 {
-
 	sLog.outString("Entering _HandleLogonChallenge");
+	WorldPacket data;
+
 	///- Send a LOGON_CHALLENGE packet
-	/* Packet # 1 - the logon challenge */
-	WorldPacket data((uint8) 0x01, 5);
-	data.Prepare();
+	data.Initialize( 0x01, 1);
 	data << uint8(0x09) << uint8(0x02);
 	SendPacket(&data);
 
-	data.clear();
-	data.SetOpcode((uint8) 0x14);
-	data.Prepare();
+	data.Initialize( 0x14, 1 );
 	data << (uint8) 0x08;
 	SendPacket(&data);
 }
@@ -291,6 +291,7 @@ void WorldSocket::_HandleLogonChallenge()
 /// Handle the client authentication packet
 void WorldSocket::_HandleAuthSession(WorldPacket& recvPacket)
 {
+	CHECK_PACKET_SIZE(recvPacket, 1+4+4);
 	sLog.outString("Entering _HandleAuthSession");
 
 	// Saved packet for use in Login Opcode
@@ -306,14 +307,15 @@ void WorldSocket::_HandleAuthSession(WorldPacket& recvPacket)
 	savedPacket >> patchVer;
 	savedPacket >> password;
 
-	QueryResult *result = loginDatabase.PQuery("SELECT * FROM accounts WHERE accountid = '%u' AND password = '%s' AND online = 0", accountId, password.c_str());
+	QueryResult *result = loginDatabase.PQuery("SELECT * FROM accounts WHERE accountid = '%u' AND password = md5('%s') AND online = 0", accountId, password.c_str());
 
 	///- Stop if the account is not found
 	if( !result )
 	{
 		sLog.outString("Invalid user login");
 		WorldPacket packet;
-		packet.SetOpcode( SMSG_AUTH_LOGON ); packet.Prepare();
+		packet.Initialize( SMSG_AUTH_LOGON, 1 );
+		//packet.SetOpcode( SMSG_AUTH_LOGON ); packet.Prepare();
 		packet << (uint16) 0x0006;
 		SendPacket(&packet);
 
@@ -324,14 +326,20 @@ void WorldSocket::_HandleAuthSession(WorldPacket& recvPacket)
 
 	loginDatabase.PExecute("UPDATE accounts set online = 1 WHERE accountid = '%u'", accountId);
 
-	result = CharacterDatabase.PQuery("SELECT * FROM characters WHERE accountid = '%u' AND psswd = '%s' AND online = 0", accountId, password.c_str());
+	result = CharacterDatabase.PQuery("SELECT * FROM characters WHERE accountid = '%u' AND psswd = md5('%s') AND online = 0", accountId, password.c_str());
+
+	_session = new WorldSession(accountId, this);
+	
+	ASSERT(_session);
+	sWorld.AddSession(_session);
 
 	///- Create new character challenge if character is not found
 	if( !result )
 	{
 		sLog.outString("Creating new Character for Player");
 		WorldPacket packet;
-		packet.SetOpcode( 0x01 ); packet.Prepare();
+		//packet.SetOpcode( 0x01 ); packet.Prepare();
+		packet.Initialize( 0x01 );
 		packet << (uint8) 0x03;
 		packet << (uint8) 0x00;
 		SendPacket(&packet);
@@ -339,11 +347,6 @@ void WorldSocket::_HandleAuthSession(WorldPacket& recvPacket)
 		return;
 
 	}
-
-	_session = new WorldSession(accountId, this);
-	
-	ASSERT(_session);
-	sWorld.AddSession(_session);
 
 	///- do small delay
 #ifdef WIN32
@@ -356,365 +359,8 @@ void WorldSocket::_HandleAuthSession(WorldPacket& recvPacket)
 
 }
 
-void WorldSocket::_SendInitializePacket(uint32 accountId)
-{
-	WorldPacket data(1);
-
-	/*
-	data.clear();
-	data.SetOpcode(1);
-	data << data.GetHeader() << data.GuessSize() << data.GetOpcode();
-	data << uint8(0x09) << uint8(0x02);
-	data.Finalize();
-	SendPacket(&data);
-	*/
-
-	/* Packet # 2 */
-	data.clear();
-	data.SetOpcode(0x14);
-	data << data.GetHeader() << data.GuessSize() << data.GetOpcode();
-	data << uint8(0x8);
-	data.Finalize();
-	SendPacket(&data);
-
-	// Packet # 3 (repeat packet # 2 ???)
-	SendPacket(&data);
-
-	// Packet # 4
-	// Player data
-	QueryResult *result = loginDatabase.PQuery(
-		"select * from Player where userid = %u", accountId);
-	Field* f = result->Fetch();
-	data.clear();
-	data.SetOpcode(3);
-	data << data.GetHeader();
-	data << uint16(0); // length
-	data << data.GetOpcode();
-
-
-	data << uint32(accountId);
-	data << f[3].GetUInt8();  // gender
-	data << (uint16) 0x00; // fix dr aming
-	data << f[10].GetUInt16(); // map id
-	data << f[11].GetUInt16(); // pos x
-	data << f[12].GetUInt16(); // pos y
-	data << BLANK << BLANK << BLANK;
-	//data << f[40].GetUInt32(); // color 1
-	data << (uint32) 0x1A7B3A34;
-	//data << f[41].GetUInt32(); // color 2
-	data << (uint32) 0x1A7DAE3E;
-
-	// equipment weared
-	uint8 equip_cnt = 0;
-	uint16 equip[6];
-	for (int i = 0; i < 6; i++) {
-		if (f[34 + i].GetUInt16()) {
-			equip[i] = f[34 + i].GetUInt16();
-			equip_cnt++;
-		}
-	}
-
-	data << equip_cnt;
-	for (int i = 0; i < equip_cnt; i++) {
-		data << equip[i];
-	}
-
-	data << BLANK << BLANK << BLANK << BLANK << BLANK << BLANK << BLANK;
-	std::string nick = f[7].GetCppString();
-	for (int i = 0; nick[i] != '\0'; i++) {
-		data << uint8(nick[i]);
-	}
-
-	data.Finalize();
-	SendPacket(&data);
-
-	/* Packet # 5 GM Info */
-	data.clear();
-	data.SetOpcode(0x0E);
-	data << data.GetHeader() << data.GuessSize() << data.GetOpcode();
-	data << (uint32) 0x00006505;
-	data << BLANK;
-	data << uint8(2);
-	data << (uint8) 0x47 << (uint8) 0x4D; // G M nick
-	data << (uint8) 0x07 << (uint8) 0x01 << BLANK << BLANK;
-	data << (uint8) 0x1C << (uint8) 0xAF << (uint8) 0x7D << (uint8) 0x1A;
-	data << (uint8) 0x1C << (uint8) 0xAF << (uint8) 0x7D;
-	data << (uint8) 0x1A << BLANK;
-	data.Finalize();
-	SendPacket(&data);
-
-	/* Packet # 6 Unknown */
-	data.clear();
-	data.SetOpcode(0x21);
-	data << data.GetHeader() << data.GuessSize() << data.GetOpcode();
-	data << (uint8) 0x02 << BLANK << (uint8) 0x01;
-	data.Finalize();
-	SendPacket(&data);
-
-	/* Packet # 7 Current Player Data */
-	data.clear();
-	data.SetOpcode(0x05);
-	data << data.GetHeader() << data.GuessSize() << data.GetOpcode();
-	data << (uint8) 0x03;        // unknown
-	data << f[4].GetUInt8();     // element
-
-	data << f[13].GetUInt16();   // current hp
-	data << f[14].GetUInt16();   // current sp
-
-	data << f[18].GetUInt16();   // int
-	data << f[19].GetUInt16();   // atk
-	data << f[20].GetUInt16();   // def
-	data << f[23].GetUInt16();   // agi
-	data << f[21].GetUInt16();   // hpx
-	data << f[22].GetUInt16();   // spx
-	data << f[9].GetUInt8();     // level
-	data << f[17].GetUInt32();   // total xp
-	data << f[30].GetUInt16();   // sisa skill
-	data << f[32].GetUInt16();   // sisa stat
-	data << BLANK << uint8(7) << uint8(1) << BLANK;
-	data << (uint16) ((f[21].GetUInt16() * 4) + 80 + f[9].GetUInt8()); // max hp
-	data << (uint16) ((f[22].GetUInt16() * 2) + 60 + f[9].GetUInt8()); // max sp
-
-	data << f[25].GetUInt32();   // atk bonus
-	data << f[26].GetUInt32();   // def bonus
-	data << f[24].GetUInt32();   // int bonus
-	data << f[29].GetUInt32();   // agi bonus
-	data << f[27].GetUInt32();   // hpx bonus
-	data << f[28].GetUInt32();   // spx bonus
-
-	/* unknown fields - TODO: Identify */
-
-	data << (uint8) 0xF4 << (uint8) 0x01;
-	data << (uint8) 0xF4 << (uint8) 0x01;
-	data << (uint8) 0xF4 << (uint8) 0x01;
-	data << (uint8) 0xF4 << (uint8) 0x01;
-	data << (uint8) 0xF4 << (uint8) 0x01;
-
-	data << (uint16) 0x00;
-	data << 0x0101;
-
-
-	data << (uint32) 0x00 << (uint32) 0x00 << uint32(0x00) << uint32(0x00);
-	data << (uint32) 0x00 << (uint32) 0x00 << uint32(0x00) << uint32(0x00);
-	data << (uint32) 0x00 << (uint8) 0x00;
-	//data << f[7].GetCppString();
-
-	data.Finalize();
-	SendPacket(&data);
-
-	/* Packet # 8 */
-	data.clear();
-	data.SetOpcode(23);
-	data << data.GetHeader() << data.GuessSize() << data.GetOpcode();
-	data << (uint8) 0x05;
-	data << (uint8) 0x01;
-	data << (uint8) 0x0C;
-	data << (uint8) 0x7D;
-	data << (uint8) 0x31;
-	data << (uint32) 0x00 << (uint32) 0x00;
-	data.Finalize();
-	SendPacket(&data);
-
-	/* Packet # 9 */
-	data.clear();
-	data.SetOpcode(24);
-	data << data.GetHeader();
-	data << data.GuessSize();
-	data << data.GetOpcode();
-	data << (uint8) 0x07 << (uint8) 0x03 << (uint8) 0x04;
-	data.Finalize();
-	SendPacket(&data);
-
-	/* Packet # 10 */
-	data.clear();
-	data.SetOpcode(26);
-	data << data.GetHeader();
-	data << data.GuessSize();
-	data << data.GetOpcode();
-	data << (uint8) 0x04;
-	data << (uint32) 0x00 << (uint32) 0x00;
-	data.Finalize();
-	SendPacket(&data);
-
-	/* Packet # 11 */
-	data.clear();
-	data.SetOpcode(0x29);
-//	data << data.GetHeader() << data.GuessSize() << data.GetOpcode();
-
-	data << (uint32) (0x00E344F4 ^ 0xADADADAD) << (uint32) 0x01010529;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x02000000 << (uint32) 0x00000001;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000103 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00010400;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x01050000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint32) 0x00000000;
-	data << (uint32) 0x00000000 << (uint16) 0x0000 << (uint8) 0x00;
-
-	data.Finalize();
-	SendPacket(&data);
-
-	/* Packet # 12 */
-	data.clear();
-	data.SetOpcode(0x16);
-	data << data.GetHeader() << data.GuessSize() << data.GetOpcode();
-
-	data << (uint16) 0x0104 << (uint8) 0x00 << (uint32) 0x024E0000;
-	data << (uint32) 0x0000021C;
-	data << (uint8)  0x00 << (uint16) 0x0000 << (uint32) 0x00000002;
-	data << (uint32) 0x01B80366 << (uint32) 0x00000000 << (uint8) 0x00;
-	data << (uint16) 0x0003 << (uint8) 0x00 << (uint32) 0xCC03B600;
-	data << (uint32) 0x00000001 << (uint32) 0x00040000 << (uint8) 0x00;
-	data << (uint16) 0x9600 << (uint8) 0x05 << (uint32) 0x00000294;
-	data << (uint32) 0x05000000 << (uint32) 0x36000000 << (uint8) 0x01;
-	data << (uint16) 0x0244 << (uint8) 0x00 << (uint32) 0x00000000;
-	data << (uint32) 0x00000006 << (uint32) 0x025800E6 << (uint8) 0x00;
-	data << (uint32) 0x00000000;
-
-	data.Finalize();
-	SendPacket(&data);
-
-	/* Packet # 13 */
-	data.clear();
-	data.SetOpcode(0x0B);
-	data << data.GetHeader() << data.GuessSize() << data.GetOpcode();
-	data << (uint32) 0xF24B0204 << (uint32) 0x00000001 << (uint8) 0x00;
-	data.Finalize();
-	SendPacket(&data);
-
-	/* Packet # 14 */
-	data.clear();
-	data.SetOpcode(0x05);
-	data << data.GetHeader() << data.GuessSize() << data.GetOpcode();
-	data << (uint8) 0x04;
-	data.Finalize();
-	SendPacket(&data);
-
-	/* Packet # 15 */
-	data.clear();
-	data.SetOpcode(0x0F);
-	data << data.GetHeader() << data.GuessSize() << data.GetOpcode();
-	data << (uint8) 0x0A;
-	data.Finalize();
-	SendPacket(&data);
-
-	/* Packet # 19 */
-	/* #end system broadcast message */
-	data.clear();
-	data.SetOpcode(0x02);
-	data << data.GetHeader() << data.GuessSize() << data.GetOpcode();
-	data << (uint8) 0x0B << (uint32) 0x00;
-	data << (uint32) 0x6E652320;
-	data << (uint8) 0x64;
-	data.Finalize();
-	SendPacket(&data);
-
-	/* Packet # 20 */
-	data.clear();
-	data.SetOpcode(0x27);
-	data << data.GetHeader() << data.GuessSize() << data.GetOpcode();
-	data << (uint32) 0x0000091F << (uint32) 0x000CDA00;
-	data << (uint32) 0x27160000 << (uint32) 0x11000000;
-	data << (uint32) 0x00000032 << (uint32) 0x0001D20F;
-	data << (uint32) 0x025A0100 << (uint32) 0xDB050000;
-	data << (uint32) 0x12000002 << (uint32) 0x0000037F;
-	data << (uint32) 0x00040F03 << (uint32) 0x05310E00;
-	data << (uint8)  0x00;
-	data << (uint32) 0x05480800 << (uint32) 0x70500000;
-	data << (uint32) 0x0C000005;
-	data.Finalize();
-	SendPacket(&data);
-
-	/* Packet # 21 */
-	data.clear();
-	data.SetOpcode(0x23);
-	data << data.GetHeader() << data.GuessSize() << data.GetOpcode();
-	data << (uint32) 0x0003E804 << (uint32) 0x00000000;
-	data << (uint32) 0x209C3800 << (uint32) 0x00000000;
-	data << (uint8)  0x00;
-	data << (uint32) 0x00CB46E3 << (uint32) 0x40F40000;
-	data.Finalize();
-	SendPacket(&data);
-
-	return;
-}
-
-void WorldSocket::_ChangeMap(const uint16 mapid, const uint16 pos_x, const uint16 pos_y)
-{
-	WorldPacket data(1);
-	data.clear();
-	data.SetOpcode(0x14);
-	data << data.GetHeader() << data.GuessSize() << data.GetOpcode();
-	data << (uint8) 0x07;
-	data.Finalize();
-	SendPacket(&data);
-
-	data.clear();
-	data.SetOpcode(0x29);
-	data << data.GetHeader() << data.GuessSize() << data.GetOpcode();
-	data << (uint8) 0x14;
-	data.Finalize();
-	SendPacket(&data);
-
-	data.clear();
-	data.SetOpcode(0x0C);
-	data << data.GetHeader() << data.GuessSize() << data.GetOpcode();
-	data << (uint8) 0x6D << (uint8) 0x82 << (uint8) 0x03 << (uint8) 0x00;
-	data << (uint16) mapid;
-	data << (uint16) pos_x;
-	data << (uint16) pos_y;
-	data << (uint16) 0x0001;
-	data.Finalize();
-	SendPacket(&data);
-
-}
-
-void WorldSocket::_EndForNow()
-{
-	WorldPacket data(1);
-	data.clear();
-	data.SetOpcode(ENCODE((uint8) 171));
-	data.Prepare();
-	data << ENCODE((uint8) 175);
-	SendPacket(&data);
-
-	data.clear();
-	data.SetOpcode(ENCODE((uint8) 185));
-	data.Prepare();
-	data << ENCODE((uint8) 165);
-	SendPacket(&data);
-}
-
-void WorldSocket::_SendFixedPacket()
-{
-}
-
-void WorldSocket::_HandleAddOnPacket()
-{
-}
-	
 /// Send Player Info
-void WorldSocket::_HandlePlayerInfo(uint32 accountId, std::string password)
+void WorldSocket::SendMotd()
 {
 	WorldPacket data(1);
 
@@ -722,27 +368,19 @@ void WorldSocket::_HandlePlayerInfo(uint32 accountId, std::string password)
 	// 89 233 len-int16 175 166 173 173 173 173 getStr("Motd")
 	std::string motd;
 	motd = "Welcome to LeGACY - MMORPG Server Object.";
-	data.clear();
-	data.SetOpcode(2);
+	data.Initialize( 0x02, 1 );
 	data << data.GetHeader();
-	data << uint16(0); // guess
-	data << uint8(2);
-	data << uint8(11);
+	data << uint8 (11);
 	data << uint32(0);
 	data << motd;
-	data.Finalize();
 	SendPacket(&data);
 
 	motd = "This server is still under heavy development.";
-	data.clear();
-	data.SetOpcode(2);
+	data.Initialize( 0x02, 1 );
 	data << data.GetHeader();
-	data << uint16(0); // guess
-	data << uint8(2);
 	data << uint8(11);
 	data << uint32(0);
 	data << motd;
-	data.Finalize();
 	SendPacket(&data);
 	/* end MOTD */
 
@@ -751,11 +389,8 @@ void WorldSocket::_HandlePlayerInfo(uint32 accountId, std::string password)
 	// 149 49 141 173 173 173 173 173 78 235 102 173 173 173 89 237
 	uint32 point;
 	point = 1000;
-	data.clear();
-	data.SetOpcode(35);
+	data.Initialize( 37, 1 );
 	data << data.GetHeader();
-	data << uint16(0); // guess
-	data << uint8(37);
 	data << uint8(4);
 	data << uint32(point);
 	data << uint32(0);
@@ -766,7 +401,6 @@ void WorldSocket::_HandlePlayerInfo(uint32 accountId, std::string password)
 	data << uint16(0);
 	data << uint8(0);
 	data << ENCODE(uint8(89)) << ENCODE(uint8(237));
-	data.Finalize();
 	SendPacket(&data);
 
 	/* end Voucher Point */

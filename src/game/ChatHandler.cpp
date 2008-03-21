@@ -53,7 +53,7 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
 	sLog.outString("Message from '%s' contains '%s'", GetPlayer()->GetName(),
 			msg.c_str());
 
-	data.clear(); data.SetOpcode( 0x02 ); data.Prepare();
+	data.Initialize( 0x02, 1 );
 	data << (uint8) chatType;
 	data << GetPlayer()->GetAccountId();
 

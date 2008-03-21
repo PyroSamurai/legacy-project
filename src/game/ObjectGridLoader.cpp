@@ -53,7 +53,7 @@ template<> void addUnitState(Creature *obj, CellPair const& cell_pair)
 {
 	Cell cell(cell_pair);
 
-	//obj->SetCurrentCell(cell);
+	obj->SetCurrentCell(cell);
 }
 
 template <class T>
@@ -63,7 +63,7 @@ void LoadHelper(CellGuidSet const& guid_set, CellPair &cell, GridRefManager<T> &
 	{
 		T* obj = new T(NULL);
 		uint32 guid = *i_guid;
-		sLog.outString("LoadHelper::Object Creating GUID %u", guid);
+		sLog.outString(" >> LoadHelper::Object Creating GUID %u", guid);
 		
 		if(!obj->LoadFromDB(guid, 0)) //map->GetInstanceId()))
 		{
@@ -71,9 +71,9 @@ void LoadHelper(CellGuidSet const& guid_set, CellPair &cell, GridRefManager<T> &
 			continue;
 		}
 		//obj->SetInstanceId(map->GetInstanceId());
-		//obj->GetGridRef().link(&m, obj);
+		obj->GetGridRef().link(&m, obj);
 
-		sLog.outString("LoadHelper::Adding Object to World GUID(%u) MAPID(%u)", obj->GetGUIDLow(), ((Creature*) obj)->GetMapId()); 
+		//sLog.outString("    >> LoadHelper::Adding Object to World GUID(%u) MAPID(%u)", obj->GetGUIDLow(), ((Creature*) obj)->GetMapId()); 
 		addUnitState(obj,cell);
 		obj->AddToWorld();
 		++count;

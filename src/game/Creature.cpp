@@ -31,7 +31,7 @@
 
 #include "MapManager.h"
 #include "CreatureAI.h"
-//#include "CreatureAISelector.h"
+#include "CreatureAISelector.h"
 
 
 // apply implementation of the singletons
@@ -45,13 +45,13 @@ m_itemsLoaded( false ),
 m_respawnTime( 0 ),
 m_respawnDelay( 25 ),
 m_isPet( false ),
-m_defaultMovementType( IDLE_MOTION_TYPE )
+m_defaultMovementType( IDLE_MOTION_TYPE ),
+m_AI_locked(false)
 {
 	m_valuesCount = UNIT_END;
 
 	for(int i = 0; i < 2; ++i) respawn_cord[i] = 0;
 	//for(int i = 0; i < 4; ++i) m_spells[i] = 0;
-	sLog.outString("Creature Constructor");
 }
 
 Creature::~Creature()
@@ -82,51 +82,32 @@ void Creature::RemoveFromWorld()
 
 void Creature::Update(uint32 diff)
 {
-	Unit::Update( diff );
-	/*
+	//sLog.outString("***************** Creature Update *****************");
 	switch( m_deathState )
 	{
-		case JUST_DIED:
-			// Dont must be called, see Creature::setDeathState JUST_DIED -> CORPSE promoting.
-			sLog.outError("Creature (GUIDLow: %u Entry: %u ) in wrong state: JUST_DEAD (1)", GetGUIDLow(), GetEntry());
-			break;
-
 		case DEAD:
 		{
 			if( m_respawnTime <= time(NULL) )
 			{
 				DEBUG_LOG("Respawning...");
-				m_respawnTime = 0;
-
-				CreatureInfo const *cinfo = objmgr.GetCreatureTemplate(this->GetEntry());
-
-				SetHealth(GetMaxHealth());
-				setDeathState( ALIVE );
-				clearUnitState(UNIT_STAT_ALL_STATE);
-				i_motionMaster.Clear();
-				MapManager::Instance().GetMap(GetMapId(), this)->Add(this);
+				clearUnitState(UNIT_STATE_ALL_STATE);
 			}
-		}
+			break;
 		case ALIVE:
 		{
 			Unit::Update( diff );
-
+			
 			// creature can be dead after Unit::Update call
 			if(!isAlive())
 				break;
-
-			// do not allow the AI to be changed during update
-			m_AI_locked = true;
-			i_AI->UpdateAI(diff);
-			m_AI_locked = false;
 		}
 		default:
 			break;
+		}
 	}
-	*/
 }
 
-/*
+
 bool Creature::AIM_Initialize()
 {
 	// make sure nothing can change the AI during AI update
@@ -143,7 +124,7 @@ bool Creature::AIM_Initialize()
 		delete oldAI;
 	return true;
 }
-*/
+
 
 bool Creature::Create(uint32 guidlow, uint16 mapid, uint16 x, uint16 y, uint32 Entry, uint32 team, const CreatureData *data)
 {
@@ -152,7 +133,7 @@ bool Creature::Create(uint32 guidlow, uint16 mapid, uint16 x, uint16 y, uint32 E
 	SetMapId(mapid);
 	Relocate(x, y);
 
-	sLog.outString("Creature::Create GUID(%u) MAPID(%u) ENTRY(%u)", guidlow, GetMapId(), Entry);
+	sLog.outString("    Creature::Create GUID(%u) MAPID(%u) ENTRY(%u)", guidlow, GetMapId(), Entry);
 
 	return CreateFromProto(guidlow, Entry, team, data);
 }
@@ -167,7 +148,7 @@ void Creature::sendPreparedGossip(Player* player)
 	if(!player)
 		return;
 
-	uint8 mapNpcId = (GetGUIDLow() / 100) - GetMapId();
+	uint8 mapNpcId = GetMapNpcId();//(GetGUIDLow() / 100) - GetMapId();
 	player->PlayerTalkClass->SendGossipMenu( GetNpcTextId(), mapNpcId );
 }
 /*
@@ -386,9 +367,6 @@ bool Creature::CreateFromProto(uint32 guidlow, uint32 Entry, uint32 team, const 
 
 	SetUInt32Value(OBJECT_FIELD_ENTRY, Entry);
 
-	sLog.outString("Creature FIELD_ENTRY %u", GetEntry());
-
-	sLog.outString("Creature::CreateFromProto ENTRY(%u) MAPID(%u)", Entry, GetMapId());
 	CreatureInfo const *cinfo = objmgr.GetCreatureTemplate(Entry);
 	if(!cinfo)
 	{
@@ -396,26 +374,35 @@ bool Creature::CreateFromProto(uint32 guidlow, uint32 Entry, uint32 team, const 
 		return false;
 	}
 
+	SetUInt16Value(UNIT_FIELD_DISPLAYID, cinfo->modelid);
 	SetName(GetCreatureInfo()->Name);
-	sLog.outString("Creature::CreateFromProto NAME('%s') MAPID(%u) SCRIPTNAME('%s')", GetName(), GetMapId(), GetCreatureInfo()->ScriptName);
+	sLog.outString(" >> Creature::CreateFromProto '%s' %u '%s'", GetName(), GetMapId(), GetCreatureInfo()->ScriptName);
 
-	//SelectLevel(cinfo);
+	SetUInt16Value(UNIT_FIELD_HP, cinfo->hp);
+	SetUInt16Value(UNIT_FIELD_SP, cinfo->sp);
+	SetUInt16Value(UNIT_FIELD_HP_MAX, cinfo->hp);
+	SetUInt16Value(UNIT_FIELD_SP_MAX, cinfo->sp);
+	SetUInt16Value(UNIT_FIELD_INT, cinfo->stat_int);
+	SetUInt16Value(UNIT_FIELD_ATK, cinfo->stat_atk);
+	SetUInt16Value(UNIT_FIELD_DEF, cinfo->stat_def);
+	SetUInt16Value(UNIT_FIELD_AGI, cinfo->stat_agi);
 
-	//SetUInt32Value(UNIT_NPC_FLAGS, cinfo->npcflag);
 
-	//SetUInt32Value(UNIT_FIELD_FLAGS, cinfo->Flags);
-	//SetUInt32Value(UNIT_DYNAMIC_FLAGS, cinfo->dynamicflags);
+	SetUInt8Value(UNIT_FIELD_LEVEL, cinfo->level);
+	SetUInt8Value(UNIT_FIELD_ELEMENT, cinfo->element);
 
-	//SetCanModifyStats(true);
-	//UpdateAllStats();
-/*
-	m_spells[0] = cinfo->spell1;
-	m_spells[1] = cinfo->spell2;
-	m_spells[2] = cinfo->spell3;
-	m_spells[3] = cinfo->spell4;
-*/
+
+	SetUInt32Value(UNIT_NPC_FLAGS, cinfo->npcflag);
+	if(isVendor()) sLog.outString(" >> '%s' is Vendor", GetName()); 
+	if(isTrainer()) sLog.outString(" >> '%s' is Trainer", GetName()); 
+	if(isQuestGiver()) sLog.outString(" >> '%s' is QuestGiver", GetName());
+	if(isGossip()) sLog.outString(" >> '%s' is Gossip", GetName());
+	if(isBanker()) sLog.outString(" >> '%s' is Banker", GetName());
+	if(isInnKeeper()) sLog.outString(" >> '%s' is InnKeeper", GetName());
+	if(isServiceProvider()) sLog.outString(" >> '%s' is ServiceProvider", GetName());
+
 	// checked at loading
-	//m_defaultMovementType = MovementGeneratorType(cinfo->MovementType);
+	m_defaultMovementType = MovementGeneratorType(cinfo->MovementType);
 
 	// Notify the map's instance data.
 	// Only works if you create the object in it, not if it is moves to that map
@@ -446,7 +433,6 @@ bool Creature::LoadFromDB(uint32 guid, uint32 InstanceId)
 //	if (InstanceId != 0) guid = objmgr.GenerateLogGuid(HIGHGUID_UNIT);
 //	SetInstanceId(InstanceId);
 
-	sLog.outString("Creature::LoadFromDB CreatureData MAPID(%u) ENTRY(%u)", data->mapid, data->id);
 	uint32 team = 0;
 	if(!Create(guid, data->mapid, data->posX, data->posY, data->id, team, data))
 		return false;
@@ -468,6 +454,7 @@ bool Creature::LoadFromDB(uint32 guid, uint32 InstanceId)
 	respawn_cord[1] = data->spawn_posy;
 
 	m_respawnDelay = data->spawntimesecs;
+*/
 	m_deathState = (DeathState)data->deathState;
 	if(m_deathState == JUST_DIED)   // Don't must be set to JUST_DEAD, see Creature::setDeathState JUST_DIED -> CORPSE promoting
 	{
@@ -480,7 +467,7 @@ bool Creature::LoadFromDB(uint32 guid, uint32 InstanceId)
 		sLog.outErrorDb("Creature (GUIDLow: %u Entry: %u) in wrong state: %d. State set to ALIVE.", GetGUIDLow(), GetEntry());
 		m_deathState = ALIVE;
 	}
-
+/*
 	m_respawnTime = objmgr.GetCreatureRespawnTime(m_DBTableGuid, GetInstanceId());
 	if(m_respawnTime > time(NULL))     // not ready to respawn
 		m_deathState = DEAD;
@@ -489,12 +476,11 @@ bool Creature::LoadFromDB(uint32 guid, uint32 InstanceId)
 		m_respawnTime = 0;
 		objmgr.SaveCreatureRespawnTime(m_DBTableGuid, GetInstanceId(), 0);
 	}
-
+*/
 	// checked at creature_template loading
-	m_defeaultMovementType = MovementGeneratorType(data->movementType);
+	m_defaultMovementType = MovementGeneratorType(data->movementType);
 
 	AIM_Initialize();
-	*/
 	return true;
 }
 
@@ -688,3 +674,16 @@ bool Creature::HasSpell(uint32 spellID) const
 	return i < CREATURE_MAX_SPELLS;     // break before end of iteration of known spells
 }
 */
+
+uint8 Creature::GetMapNpcId()
+{
+	uint32 guidlow = GetGUIDLow();
+	uint16 mapid   = GetMapId();
+	uint8  mapnpcid = guidlow - (mapid * MAP_NPCID_MULTIPLIER);
+
+	//sLog.outString(" ********* ");
+	//sLog.outString(" Creature::GetMapNpcId guidlow %u mapid %u mapnpcid %u", guidlow, mapid, mapnpcid);
+
+	return mapnpcid;
+
+}

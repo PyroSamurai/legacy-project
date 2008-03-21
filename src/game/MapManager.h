@@ -45,7 +45,9 @@ class MapDestination
 		uint16 DestY;
 };
 
-typedef HM_NAMESPACE::hash_map<MapDoor*, MapDestination*> Map2DestType;
+
+///- TODO Change to MapMatrix
+typedef HM_NAMESPACE::hash_map<MapDoor*, MapDestination*> MapMatrixType;
 
 
 class LEGACY_DLL_DECL MapManager : public LeGACY::Singleton<MapManager, LeGACY::ClassLevelLockable<MapManager, ZThread::Mutex> >
@@ -64,25 +66,27 @@ class LEGACY_DLL_DECL MapManager : public LeGACY::Singleton<MapManager, LeGACY::
 		void Initialize(void);
 		void Update(time_t);
 
+		void MoveAllCreaturesInMoveList();
+
 		bool CanPlayerEnter(uint32 mapid, Player* player);
 
-		void AddMap2Dest(MapDoor* mapDoor, MapDestination* mapDest);
-		MapDestination* FindMap2Dest(MapDoor* mapDoor);
+		void AddMapMatrix(MapDoor* mapDoor, MapDestination* mapDest);
+		MapDestination* FindMapMatrix(MapDoor* mapDoor);
 		void ClearDoorDatabase()
 		{
-			m_map2Dest.clear();
+			m_mapMatrix.clear();
 			/*
-			while(!m_map2Dest.empty())
+			while(!m_mapMatrix.empty())
 			{
-				Map2DestType::iterator itr = m_map2Dest.begin();
-				m_map2Dest.erase(itr);
+				MapMatrixType::iterator itr = m_mapMatrix.begin();
+				m_mapMatrix.erase(itr);
 			}
 			*/
-			sLog.outString("Map2Dest size: %u", m_map2Dest.size());
+			sLog.outString("MapMatrix size: %u", m_mapMatrix.size());
 		}
-		size_t GetMap2DestCount()
+		size_t GetMapMatrixCount()
 		{
-			return m_map2Dest.size();
+			return m_mapMatrix.size();
 		}
 
 	private:
@@ -104,13 +108,13 @@ class LEGACY_DLL_DECL MapManager : public LeGACY::Singleton<MapManager, LeGACY::
 			return (iter == i_maps.end() ? NULL : iter->second);
 		}
 
-		Map2DestType m_map2Dest;
+		MapMatrixType m_mapMatrix;
 
 
-		MapDestination* _findMap2Dest(MapDoor* mapDoor)
+		MapDestination* _findMapMatrix(MapDoor* mapDoor)
 		{
 			HM_NAMESPACE::hash_map<MapDoor*, MapDestination*>::iterator itr;
-			for(itr = m_map2Dest.begin(); itr != m_map2Dest.end(); ++itr)
+			for(itr = m_mapMatrix.begin(); itr != m_mapMatrix.end(); ++itr)
 			{
 				MapDoor *map = itr->first;
 				if ((map->MapId == mapDoor->MapId) &&

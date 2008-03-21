@@ -45,9 +45,7 @@ ChatCommand * ChatHandler::getCommandTable()
 // Note: target_guid used only in CHAT_MSG_WHISPER_INFORM mode (in this case channelName ignored)
 void ChatHandler::FillMessageData( WorldPacket *data, WorldSession* session, uint8 type, const char *channelName, uint64 target_guid, std::string msg, Unit* speaker)
 {
-	data->clear();
-	data->SetOpcode( 0x02 );
-	data->Prepare();
+	data->Initialize( 0x02, 1 );
 	*data << type;
 	*data << session->GetPlayer()->GetAccountId();
 //	*data << msg.c_str();

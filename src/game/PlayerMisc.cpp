@@ -22,16 +22,62 @@
 
 #define _BLANK_4__ (uint32) 0x00000000
 
+void Player::SendMotd()
+{
+	WorldPacket data;
+
+	/* MOTD */
+	// 89 233 len-int16 175 166 173 173 173 173 getStr("Motd")
+	std::string motd;
+	motd = "Welcome to LeGACY - MMORPG Server Object.";
+	data.Initialize( 0x02, 1 );
+	data << uint8 (0x0B);
+	data << uint32(0x00000000);
+	data << motd;
+	GetSession()->SendPacket(&data);
+
+	motd = "This server is still under heavy development.";
+	data.Initialize( 0x02, 1 );
+	data << uint8 (0x0B);
+	data << uint32(0x00000000);
+	data << motd;
+	GetSession()->SendPacket(&data);
+
+	SendVoucherInfo();
+}
+
+void Player::SendVoucherInfo()
+{
+	WorldPacket data;
+	/* Voucher Point */
+	// 89 233 183 173 142 169 Point2-uint32 173 173 173 173
+	// 149 49 141 173 173 173 173 173 78 235 102 173 173 173 89 237
+	uint32 point;
+	point = 1000;
+	data.Initialize( 35, 1 );
+	data << uint8(4);
+	data << uint32(point);
+	data << uint32(0);
+	data << ENCODE(uint8(149)) << ENCODE(uint8(49)) << ENCODE(uint8(141));
+	data << uint32(0);
+	data << uint8(0);
+	data << ENCODE(uint8(78)) << ENCODE(uint8(235)) << ENCODE(uint8(102));
+	data << uint16(0);
+	data << uint8(0);
+	data << ENCODE(uint8(89)) << ENCODE(uint8(237));
+	GetSession()->SendPacket(&data);
+}
+
 void Player::SendUnknownImportant()
 {
 	WorldPacket data;
-	data.clear(); data.SetOpcode( 0x18 ); data.Prepare();
+	data.Initialize( 0x18, 1 );
 	data << (uint8 ) 0x07 << (uint8 ) 0x03 << (uint8 ) 0x04;
 	GetSession()->SendPacket(&data);
 
 	UpdateCurrentGold();
 
-	data.clear(); data.SetOpcode( 0x29 ); data.Prepare();
+	data.Initialize( 0x29, 1 );
 	data << (uint8 ) 0x05 << (uint8 ) 0x01 << (uint8 ) 0x01;
 	data << _BLANK_4__ << _BLANK_4__;
 	data << _BLANK_4__ << _BLANK_4__ << _BLANK_4__ << _BLANK_4__;
@@ -49,52 +95,10 @@ void Player::SendUnknownImportant()
 	data << _BLANK_4__ << _BLANK_4__ << _BLANK_4__ << _BLANK_4__;
 	data << _BLANK_4__ << (uint16) 0x00 << (uint8 ) 0x00;
 	GetSession()->SendPacket(&data);
-/*
-	data.clear(); data.SetOpcode( 0x16 ); data.Prepare();
-	//data << (uint32) 0x00000104 << (uint32) 0x1C024E00 << (uint8 ) 0x02 << (uint16) 0x0000;
-	
-	data << (uint8 ) 0x04; // number of npc in map
-
-	data << (uint8 ) 0x01;   // npc id
-	data << (uint16) 0x0000;
-	data << (uint8 ) 0x00;
-	data << (uint16) 0x011A; // npc pos x 024E
-	data << (uint16) 0x0163; // npc pos y 021C
-	data << (uint32) 0x00000000;
-	data << (uint8 ) 0x00;
-	
-
-	//data << (uint32) 0x02000000 << (uint32) 0x66000000 << (uint32) 0x0001B803 << _BLANK_4__;
-	data << (uint8 ) 0x02;   // npc id
-	data << (uint16) 0x0000;
-	data << (uint8 ) 0x00;
-	data << (uint16) 0x00B6; // pos x 0366
-	data << (uint16) 0x0203; // pos y 01B8
-	data << (uint32) 0x00000000;
-	data << (uint8 ) 0x00;
-
-
-	//data << (uint32) 0x00000003 << (uint32) 0x01CC03B6 << _BLANK_4__ << (uint32) 0x00000400;
-	data << (uint8 ) 0x03;
-	data << (uint16) 0x0000;
-	data << (uint8 ) 0x00;
-	data << (uint16) 0x01B6; // 03B6;
-	data << (uint16) 0x0203; // 01CC;
-	data << (uint32) 0x00000000;
-	data << (uint8 ) 0x00;
-*/
-/*
-	data << (uint8) 0x04;
-	data << (uint8) 0x00;
-	data << (uint32) 0x94059600 << (uint32) 0x00000002 << (uint32) 0x00050000 << (uint32) 0x01360000;
-	data << (uint32) 0x00000244 << (uint32) 0x00060000 << (uint32) 0xE6000000 << (uint32) 0x00025800;
-	data << _BLANK_4__;
-*/
-//	GetSession()->SendPacket(&data);
 
 	UpdateMap2Npc();
 
-	data.clear(); data.SetOpcode( 0x0B ); data.Prepare();
+	data.Initialize( 0x0B, 1 );
 	data << (uint32) 0xF24B0204 <<(uint32)  0x00000001 << (uint8 ) 0x00;
 	GetSession()->SendPacket(&data);
 
@@ -116,7 +120,7 @@ void Player::UpdateMap2Npc()
 	int count = 0;
 
 	WorldPacket data;
-	data.clear(); data.SetOpcode( 0x16 ); data.Prepare();
+	data.Initialize( 0x16, 1 );
 	data << (uint8) 0x04;
 	do
 	{

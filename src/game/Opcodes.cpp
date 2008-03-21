@@ -29,8 +29,8 @@ const char* g_clntOpcodeNames[] =
 	"CMSG_UNKNOWN_5",                         // 5
 	"CMSG_PLAYER_MOVE",                       // 6
 	"CMSG_UNKNOWN_7",                         // 7
-	"CMSG_PLAYER_ENTER_DOOR2",                // 8
-	"CMSG_UNKNOWN_9",                         // 9
+	"CMSG_PLAYER_AREA_TRIGGER",               // 8
+	"CMSG_CHAR_CREATE",                       // 9
 	"CMSG_UNKNOWN_10",                        // 10
 	"CMSG_UNKNOWN_11",                        // 11
 	"CMSG_PLAYER_ENTER_MAP_COMPLETED",        // 12
@@ -54,6 +54,24 @@ const char* g_clntOpcodeNames[] =
 	"CMSG_UNKNOWN_30",                        // 30
 	"CMSG_UNKNOWN_31",                        // 31
 	"CMSG_PLAYER_EXPRESSION",                 // 32
+	"CMSG_UNKNOWN_33",                        // 33
+	"CMSG_UNKNOWN_34",                        // 34
+	"CMSG_UNKNOWN_35",                        // 35
+	"CMSG_UNKNOWN_36",                        // 36
+	"CMSG_UNKNOWN_37",                        // 37
+	"CMSG_UNKNOWN_38",                        // 38
+	"CMSG_UNKNOWN_39",                        // 39
+	"CMSG_UNKNOWN_40",                        // 40
+	"CMSG_UNKNOWN_41",                        // 41
+	"CMSG_UNKNOWN_42",                        // 42
+	"CMSG_UNKNOWN_43",                        // 43
+	"CMSG_UNKNOWN_44",                        // 44
+	"CMSG_UNKNOWN_45",                        // 45
+	"CMSG_UNKNOWN_46",                        // 46
+	"CMSG_UNKNOWN_47",                        // 47
+	"CMSG_UNKNOWN_48",                        // 48
+	"CMSG_UNKNOWN_49",                        // 49
+	"CMSG_PLAYER_ATTACK",                     // 50
 };
 
 const char* g_svrOpcodeNames[] =

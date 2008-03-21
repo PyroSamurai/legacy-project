@@ -34,7 +34,7 @@ class Player;
 #define MAX_NUMBER_OF_GRIDS      64
 
 //#define SIZE_OF_GRIDS            533.33333f
-#define SIZE_OF_GRIDS            30000
+#define SIZE_OF_GRIDS            5000
 #define CENTER_GRID_ID           (MAX_NUMBER_OF_GRIDS/2)
 
 #define CENTER_GRID_OFFSET       (SIZE_OF_GRIDS/2)
@@ -52,7 +52,7 @@ class Player;
 #define TOTAL_NUMBER_OF_CELLS_PER_MAP (MAX_NUMBER_OF_GRIDS*MAX_NUMBER_OF_CELLS)
 
 //#define MAP_RESOLUTION 256
-#define MAP_RESOLUTION 256000
+#define MAP_RESOLUTION 256
 
 #define MAP_SIZE                 (SIZE_OF_GRIDS*MAX_NUMBER_OF_GRIDS)
 #define MAP_HALFSIZE             (MAP_SIZE/2)

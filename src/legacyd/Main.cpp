@@ -47,6 +47,7 @@ DatabaseMysql loginDatabase;     ///< Accessor to the login database
 /// Launch the legacy server
 int main(int argc, char **argv)
 {
+	//return 0;
 	///- Command line parsing to get the configuration file name
 	char const* cfg_file = _LEGACYD_CONFIG;
 	if (!sConfig.SetSource(cfg_file))

@@ -27,6 +27,7 @@
 #include "Player.h"
 
 #include "GossipDef.h"
+#include "BattleSystem.h"
 
 #include "MapManager.h"
 #include "GridNotifiers.h"
@@ -50,6 +51,11 @@ Player::Player (WorldSession *session): Unit( 0 )
 
 	m_GMFlags = 0;
 
+	for(uint8 petslot = 0; petslot < MAX_PET_SLOT; petslot++)
+	{
+		m_petSlot[petslot] = NULL;
+	}
+
 	m_nextSave = sWorld.getConfig(CONFIG_INTERVAL_SAVE);
 
 	// randomize first save time in range [CONFIG_INTERVAL_SAVE] around [CONFIG_INTERVAL_SAVE]
@@ -59,15 +65,18 @@ Player::Player (WorldSession *session): Unit( 0 )
 	m_dontMove = false;
 
 	PlayerTalkClass = new PlayerMenu( GetSession() );
+	PlayerBattleClass = new BattleSystem( GetSession() );
 }
 
 Player::~Player ()
 {
 	if( GetSession()->PlayerLogout() )
 	{
-		WorldPacket data;
 		sLog.outDebug( "Player '%s' is logged out", GetName());
-		data.clear(); data.SetOpcode( 0x01 ); data.Prepare();
+
+		WorldPacket data;
+
+		data.Initialize( 0x01, 1 );
 		data << (uint8) 0x01;
 		data << GetAccountId();
 		SendMessageToSet(&data, false);
@@ -95,6 +104,11 @@ void Player::Update( uint32 p_time )
 		return;
 
 	Unit::Update( p_time );
+
+	if(PlayerBattleClass->isActionTimedOut())
+	{
+		PlayerBattleClass->UpdateBattleAction();
+	}
 
 	if(m_nextSave > 0)
 	{
@@ -140,11 +154,30 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder)
 		return false;
 	}
 
+	Object::_Create( guid, HIGHGUID_PLAYER );
+
+	// overwrite possible wrong/corrupted guid
+	SetUInt64Value(OBJECT_FIELD_GUID,MAKE_GUID(guid,HIGHGUID_PLAYER));
+
+	// TODO: cleaup invetory here see mangos Player.cpp
+
+
+
+
+
+
+
+
+
+
+
+
 	m_name = f[FD_CHARNAME].GetCppString();
 
-	sLog.outDebug("Load Basic value of player %s is: ", m_name.c_str());
+	sLog.outDebug(">> Load Basic value of player %s is: ", m_name.c_str());
 
 	m_element = f[FD_ELEMENT].GetUInt8();
+	SetUInt8Value(UNIT_FIELD_ELEMENT, f[FD_ELEMENT].GetUInt8());
 	m_gender  = f[FD_GENDER].GetUInt8();
 	m_reborn  = f[FD_REBORN].GetUInt8();
 
@@ -154,42 +187,67 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder)
 
 	m_face       = f[FD_FACE].GetUInt8();
 	m_hair       = f[FD_HAIR].GetUInt8();
-	m_hair_color = f[FD_HAIR_COLOR].GetUInt32();
-	m_skin_color = f[FD_SKIN_COLOR].GetUInt32();
+	m_hair_color_R = f[FD_HAIR_COLOR_R].GetUInt8();
+	m_hair_color_G = f[FD_HAIR_COLOR_G].GetUInt8();
+	m_hair_color_B = f[FD_HAIR_COLOR_B].GetUInt8();
+	m_skin_color_R = f[FD_SKIN_COLOR_R].GetUInt8();
+	m_skin_color_G = f[FD_SKIN_COLOR_G].GetUInt8();
+	m_skin_color_B = f[FD_SKIN_COLOR_B].GetUInt8();
+	m_shirt_color = f[FD_SHIRT_COLOR].GetUInt8();
+	m_misc_color = f[FD_MISC_COLOR].GetUInt8();
 
 	m_eq_head   = f[FD_EQ_HEAD].GetUInt16();
 	m_eq_body   = f[FD_EQ_BODY].GetUInt16();
 	m_eq_wrist  = f[FD_EQ_WRIST].GetUInt16();
 	m_eq_weapon = f[FD_EQ_WEAPON].GetUInt16();
 	m_eq_shoe   = f[FD_EQ_SHOE].GetUInt16();
-	m_eq_accsr  = f[FD_EQ_ACCSR].GetUInt16();
+	m_eq_accsr  = f[FD_EQ_SPECIAL].GetUInt16();
 
 	m_hp        = f[FD_HP].GetUInt16();
+	SetUInt16Value(UNIT_FIELD_HP, f[FD_HP].GetUInt16());
 	m_sp        = f[FD_SP].GetUInt16();
+	SetUInt16Value(UNIT_FIELD_SP, f[FD_SP].GetUInt16());
 
 	m_stat_int  = f[FD_ST_INT].GetUInt16();
+	SetUInt16Value(UNIT_FIELD_INT, f[FD_ST_INT].GetUInt16());
+
 	m_stat_atk  = f[FD_ST_ATK].GetUInt16();
+	SetUInt16Value(UNIT_FIELD_ATK, f[FD_ST_ATK].GetUInt16());
+
 	m_stat_def  = f[FD_ST_DEF].GetUInt16();
+	SetUInt16Value(UNIT_FIELD_DEF, f[FD_ST_DEF].GetUInt16());
+
 	m_stat_agi  = f[FD_ST_AGI].GetUInt16();
+	SetUInt16Value(UNIT_FIELD_AGI, f[FD_ST_AGI].GetUInt16());
+
 	m_stat_hpx  = f[FD_ST_HPX].GetUInt16();
+	SetUInt16Value(UNIT_FIELD_HPX, f[FD_ST_HPX].GetUInt16());
+
 	m_stat_spx  = f[FD_ST_SPX].GetUInt16();
+	SetUInt16Value(UNIT_FIELD_SPX, f[FD_ST_SPX].GetUInt16());
 
 	m_level     = f[FD_LEVEL].GetUInt8();
-	m_xp_gain   = f[FD_XP_GAIN].GetUInt32();
-	m_skill     = f[FD_SKILL_GAIN].GetUInt16() - f[FD_SKILL_USED].GetUInt16();
-//	if (m_skill < 0) m_skill = 0;
-	m_stat      = f[FD_STAT_GAIN].GetUInt16() - f[FD_STAT_USED].GetUInt16();
-//	if (m_stat < 0) m_stat = 0;
+	SetUInt8Value(UNIT_FIELD_LEVEL, f[FD_LEVEL].GetUInt8());
 
-	m_hp_max    = (f[FD_ST_HPX].GetUInt16() * 4) + 80 + m_level;
-	m_sp_max    = (f[FD_ST_SPX].GetUInt16() * 2) + 60 + m_level;
-	
-	m_atk_bonus = f[FD_ST_ATK_BONUS].GetUInt32();
-	m_def_bonus = f[FD_ST_DEF_BONUS].GetUInt32();
-	m_int_bonus = f[FD_ST_INT_BONUS].GetUInt32();
-	m_agi_bonus = f[FD_ST_AGI_BONUS].GetUInt32();
-	m_hpx_bonus = f[FD_ST_HPX_BONUS].GetUInt32();
-	m_spx_bonus = f[FD_ST_SPX_BONUS].GetUInt32();
+	m_rank      = f[FD_RANK].GetUInt8();
+
+	m_xp_gain   = f[FD_XP_GAIN].GetUInt32();
+	m_skill     = f[FD_SKILL_GAIN].GetUInt16();
+	m_stat      = f[FD_STAT_GAIN].GetUInt16();
+
+	///- TODO: Calculate from equipment weared
+	m_atk_mod   = 0;
+	m_def_mod   = 0;
+	m_int_mod   = 0;
+	m_agi_mod   = 0;
+	m_hpx_mod   = 0;
+	m_spx_mod   = 0;
+
+	///- Calculation must be after hpx & spx modifier applied
+	m_hp_max    = ((f[FD_ST_HPX].GetUInt16() + m_hpx_mod) * 4) + 80 + m_level;
+	SetUInt16Value(UNIT_FIELD_HP_MAX, ((f[FD_ST_HPX].GetUInt16() + m_hpx_mod) * 4) + 80 + GetUInt8Value(UNIT_FIELD_LEVEL));
+	m_sp_max    = ((f[FD_ST_SPX].GetUInt16() + m_spx_mod) * 2) + 60 + m_level;
+	SetUInt16Value(UNIT_FIELD_SP_MAX, ((f[FD_ST_SPX].GetUInt16() + m_spx_mod) * 4) + 80 + GetUInt8Value(UNIT_FIELD_LEVEL));
 
 	m_gold_hand = f[FD_GOLD_IN_HAND].GetUInt32();
 	m_gold_bank = f[FD_GOLD_IN_BANK].GetUInt32();
@@ -199,6 +257,11 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder)
 	m_unk3      = f[FD_UNK3].GetUInt16();
 	m_unk4      = f[FD_UNK4].GetUInt16();
 	m_unk5      = f[FD_UNK5].GetUInt16();
+
+	sLog.outString(" - Name    : %s", GetName());
+	sLog.outString(" - Level   : %u", m_level);
+	sLog.outString(" - Element : %u", m_element);
+	sLog.outString(" - HP & SP : %u/%u %u/%u", m_hp, m_hp_max, m_sp, m_sp_max);
 	
 	Object::_Create( guid, HIGHGUID_PLAYER );
 	return true;
@@ -206,12 +269,48 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder)
 
 void Player::SaveToDB()
 {
+	CharacterDatabase.BeginTransaction();
+	CharacterDatabase.PExecute("UPDATE characters SET mapid = '%u', pos_x = '%u', pos_y = '%u' WHERE accountid = '%u'", GetMapId(), GetPositionX(), GetPositionY(), GetAccountId());
+
+	//std::ostringstream ss;
+	//ss << "INSERT INTO characters (guid, accountid, charname, mapid, pos_x, pos_y, online
+	CharacterDatabase.CommitTransaction();
+}
+
+bool Player::LoadPet()
+{
+	QueryResult *result = CharacterDatabase.PQuery("select * from character_pet where owner = '%u'", GetGUIDLow());
+
+	if(!result)
+		return false;
+
+	uint8 petslot = 0;
+	do
+	{
+		Field *f = result->Fetch();
+		uint32 petguid = f[0].GetUInt32();
+		Pet *pet = new Pet(this);
+		if(!pet->LoadPetFromDB(this, petguid))
+		{
+			delete pet;
+			continue;
+		}
+
+		m_petSlot[petslot++] = pet;
+		sLog.outString(" - Slot %u pet Entry %u Model %u '%s'", petslot, pet->GetEntry(), pet->GetModelId(), pet->GetName()); 
+		if(petslot > MAX_PET_SLOT)
+			break;
+
+	} while( result->NextRow() );
+
+	delete result;
+
+	return true;
 }
 
 void Player::BuildUpdateBlockVisibilityPacket(WorldPacket *data)
 {
-//	WorldPacket data ( (uint8) 0x03, 5);   // Player Info
-	data->clear(); data->SetOpcode( 0x03 ); data->Prepare();
+	data->Initialize( 0x03, 1 );
 
 	*data << GetAccountId();
 	*data << m_gender;
@@ -223,8 +322,14 @@ void Player::BuildUpdateBlockVisibilityPacket(WorldPacket *data)
 	*data << (uint8) 0x00;
 	*data << m_hair;
 	*data << m_face;
-	*data << m_skin_color;
-	*data << m_hair_color;
+	*data << m_hair_color_R;
+	*data << m_hair_color_G;
+	*data << m_hair_color_B;
+	*data << m_skin_color_R;
+	*data << m_skin_color_G;
+	*data << m_skin_color_B;
+	*data << m_shirt_color;
+	*data << m_misc_color;
 
 	uint8  equip_cnt = 0;
 	uint16 equip[6];
@@ -242,15 +347,12 @@ void Player::BuildUpdateBlockVisibilityPacket(WorldPacket *data)
 	*data << m_reborn;
 	*data << m_name.c_str();
 
-//	GetSession()->SendPacket(&data);
 }
 
 void Player::BuildUpdateBlockVisibilityForOthersPacket(WorldPacket *data)
 {
-
-	data->clear(); data->SetOpcode( 0x03 ); data->Prepare();
+	data->Initialize( 0x03, 1 );
 	*data << GetAccountId();
-	//*data << (uint8) 0x01 << (uint8) 0x01;
 	*data << m_gender;
 	*data << m_element;
 	*data << m_level;
@@ -261,8 +363,14 @@ void Player::BuildUpdateBlockVisibilityForOthersPacket(WorldPacket *data)
 	*data << (uint8) 0x00;// << (uint16) 0x0000;
 	*data << m_hair;
 	*data << m_face;
-	*data << m_skin_color;
-	*data << m_hair_color;
+	*data << m_hair_color_R;
+	*data << m_hair_color_G;
+	*data << m_hair_color_B;
+	*data << m_skin_color_R;
+	*data << m_skin_color_G;
+	*data << m_skin_color_B;
+	*data << m_shirt_color;
+	*data << m_misc_color;
 
 	uint8  equip_cnt = 0;
 	uint16 equip[6];
@@ -289,109 +397,250 @@ void Player::SendInitialPacketsBeforeAddToMap()
 	BuildUpdateBlockVisibilityPacket(&data);
 	GetSession()->SendPacket(&data);
 
+	UpdatePetCarried();
+	UpdatePet();
+
 	BuildUpdateBlockStatusPacket(&data);
 	GetSession()->SendPacket(&data);
 
-	// TODO: Move to Broadcast handler
-	/*
-	data.clear(); data.SetOpcode( 0x21 ); data.Prepare();
-	data << (uint8) 0x02 << (uint8) 0x00 << (uint8) 0x01;
-	GetSession()->SendPacket(&data);
-	*/
+	//SendMotd();
 
 	AllowPlayerToMove();
 	SendUnknownImportant();
-
 }
 
 void Player::SendInitialPacketsAfterAddToMap()
 {
-	UpdateCurrentStatus();
+	UpdatePlayer();
 	UpdateCurrentGold();
+}
+
+void Player::UpdatePetCarried()
+{
+	WorldPacket data;
+
+	data.Initialize( 0x0F );
+	data << (uint8 ) 0x08;
+	uint8 petcount = 0;
+	for(uint8 slot = 0; slot < MAX_PET_SLOT; slot++)
+	{
+		Pet* pet = m_petSlot[slot];
+		if( !pet )
+			continue;
+
+		petcount++;
+		data << (uint8 ) petcount;
+		data << (uint16) pet->GetModelId(); // pet npc id ;
+		data << (uint32) 0; // pet total xp 0x010D9A19
+
+		data << (uint8 ) pet->GetUInt8Value(UNIT_FIELD_LEVEL); // pet level
+
+		data << pet->GetUInt16Value(UNIT_FIELD_HP);  // pet current hp
+		data << pet->GetUInt16Value(UNIT_FIELD_SP);  // pet current sp
+		data << pet->GetUInt16Value(UNIT_FIELD_INT); // pet base stat int
+		data << pet->GetUInt16Value(UNIT_FIELD_ATK); // pet base stat atk
+		data << pet->GetUInt16Value(UNIT_FIELD_DEF); // pet base stat def
+		data << pet->GetUInt16Value(UNIT_FIELD_AGI); // pet base stat agi
+		data << pet->GetUInt16Value(UNIT_FIELD_HPX); // pet base stat hpx
+		data << pet->GetUInt16Value(UNIT_FIELD_SPX); // pet base stat spx
+
+		data << (uint8 ) 5;    // stat point left ?
+		data << (uint8 ) pet->GetLoyalty(); // pet loyalty
+		data << (uint8 ) 0x01; // unknown
+		data << (uint16) pet->GetSkillPoint(); //skill point
+
+		std::string tmpname = pet->GetName();
+		data << (uint8 ) tmpname.size(); //name length
+		data << tmpname.c_str();
+
+		data << (uint8 ) pet->GetSkillLevel(0); //level skill #1
+		data << (uint8 ) pet->GetSkillLevel(1); //level skill #2
+		data << (uint8 ) pet->GetSkillLevel(2); //level skill #3
+
+		uint8 durability = 0xFF;
+		data << (uint16) pet->GetUInt16Value(UNIT_FIELD_EQ_HEAD);
+		data << (uint8 ) durability;
+		data << (uint32) 0 << (uint16) 0 << (uint8 ) 0; // unknown 7 byte
+
+		data << (uint16) pet->GetUInt16Value(UNIT_FIELD_EQ_BODY);
+		data << (uint8 ) durability;
+		data << (uint32) 0 << (uint16) 0 << (uint8 ) 0; // unknown 7 byte
+
+		data << (uint16) pet->GetUInt16Value(UNIT_FIELD_EQ_WRIST);
+		data << (uint8 ) durability;
+		data << (uint32) 0 << (uint16) 0 << (uint8 ) 0; // unknown 7 byte
+
+		data << (uint16) pet->GetUInt16Value(UNIT_FIELD_EQ_WEAPON);
+		data << (uint8 ) durability;
+		data << (uint32) 0 << (uint16) 0 << (uint8 ) 0; // unknown 7 byte
+
+		data << (uint16) pet->GetUInt16Value(UNIT_FIELD_EQ_SHOE);
+		data << (uint8 ) durability;
+		data << (uint32) 0 << (uint16) 0 << (uint8 ) 0; // unknown 7 byte
+
+		data << (uint16) pet->GetUInt16Value(UNIT_FIELD_EQ_SPECIAL);
+		data << (uint8 ) durability;
+		data << (uint32) 0 << (uint16) 0 << (uint8 ) 0; // unknown 7 byte
+
+		data << (uint16) 0x00;
+	}
+
+	if( !petcount )
+		return;
+
+	GetSession()->SendPacket(&data);
 }
 
 void Player::BuildUpdateBlockStatusPacket(WorldPacket *data)
 {
 
-	data->clear(); data->SetOpcode( 0x05 ); data->Prepare();
+	data->Initialize( 0x05, 1 );
 	*data << (uint8) 0x03;                   // unknown
-	*data << m_element;
+	*data << m_element; // uint8
 	
-	*data << m_hp;
-	*data << m_sp;
+	*data << m_hp; // uint16
+	*data << m_sp; // uint16
 
-	*data << m_stat_int;
-	*data << m_stat_atk;
-	*data << m_stat_def;
-	*data << m_stat_agi;
-	*data << m_stat_hpx;
-	*data << m_stat_spx;
+	*data << (uint16) m_stat_int; //uint16
+	*data << (uint16) m_stat_atk; //uint16
+	*data << (uint16) m_stat_def; //uint16
+	*data << (uint16) m_stat_agi; //uint16
+	*data << (uint16) m_stat_hpx; //uint16
+	*data << (uint16) m_stat_spx; //uint16
 
-	*data << m_level;
-	*data << m_xp_gain;
-	*data << m_skill;
-	*data << m_stat;
+	*data << (uint8 ) m_level; // uint8
+	*data << (uint32) m_xp_gain; //uint32
+	*data << (uint16) m_skill; //uint16
+	*data << (uint16) m_stat; // uint16
 
-	*data << (uint8) 0x00 << (uint8) 0x07 << (uint8) 0x01 << (uint8) 0x00;
+	*data << (uint32) 0; //m_rank;
 
-	*data << m_hp_max;
-	*data << m_sp_max;
+	*data << (uint16) m_hp_max; // alogin use 32bit, while eXtreme use 16bit
+	*data << (uint16) m_sp_max;
+	*data << (uint16) 0;
 
-	*data << m_atk_bonus;
-	*data << m_def_bonus;
-	*data << m_int_bonus;
-	*data << m_agi_bonus;
-	*data << m_hpx_bonus;
-	*data << m_spx_bonus;
+	*data << (uint32) m_atk_mod;
+	*data << (uint32) m_def_mod;
+	*data << (uint32) m_int_mod;
+	*data << (uint32) m_agi_mod;
+	*data << (uint32) m_hpx_mod;
+	*data << (uint32) m_spx_mod;
 
-	/* unknow fields - TODO: Identify */
-	/*
-	*data << (uint8) 0xF4 << (uint8) 0x01;
-	*data << (uint8) 0xF4 << (uint8) 0x01;
-	*data << (uint8) 0xF4 << (uint8) 0x01;
-	*data << (uint8) 0xF4 << (uint8) 0x01;
-	*data << (uint8) 0xF4 << (uint8) 0x01;
-	*/
-	*data << m_unk1;
+	*data << m_unk1; // this is Dong Wu moral 
 	*data << m_unk2;
 	*data << m_unk3;
 	*data << m_unk4;
 	*data << m_unk5;
-	
-
 
 	*data << (uint16) 0x00;
-	*data << (uint16) 0x0101;
+	*data << (uint16) 0x0000; //0x0101; // auto attack data ?
 
 	*data << (uint32) 0x00 << (uint32) 0x00 << uint32(0x00) << uint32(0x00);
 	*data << (uint32) 0x00 << (uint32) 0x00 << uint32(0x00) << uint32(0x00);
 	*data << (uint32) 0x00 << (uint8 ) 0x00;
+
+	///- Try to identify skill info packet
+	*data << (uint16) 0x0000 << (uint8 ) 0x00;
+	*data << (uint16) 11001; // Submerge
+	*data << (uint8 ) 10;
+	*data << (uint16) 14001; // Investigation
+	*data << (uint8 ) 1;
 }
 
-void Player::UpdateCurrentStatus()
+void Player::UpdatePlayer()
+{
+
+	///- TODO: Update only when changes
+	//_updatePlayer( 0x1B, 1, m_stat_int );
+	//_updatePlayer( 0x1C, 1, m_stat_atk );
+	//_updatePlayer( 0x1D, 1, m_stat_def );
+	//_updatePlayer( 0x1E, 1, m_stat_agi );
+	//_updatePlayer( 0x1F, 1, m_stat_hpx );
+	//_updatePlayer( 0x20, 1, m_stat_spx );
+
+	//_updatePlayer( 0x23, 1, m_level );
+	//_updatePlayer( 0x24, 1, m_xp_gain );
+	//_updatePlayer( 0x25, 1, m_skill );
+	//_updatePlayer( 0x26, 1, m_stat );
+
+	//_updatePlayer( 0x40, 1, 100 ); // loyalty
+
+
+	///- This always updated before engaging
+	_updatePlayer( 0x19, 1, m_hp );
+	_updatePlayer( 0x1A, 1, m_sp );
+
+	_updatePlayer( 0xCF, 1, m_hpx_mod );
+	_updatePlayer( 0xD0, 1, m_spx_mod );
+	_updatePlayer( 0xD2, 1, m_atk_mod );
+	_updatePlayer( 0xD3, 1, m_def_mod );
+	_updatePlayer( 0xD4, 1, m_int_mod );
+	_updatePlayer( 0xD6, 1, m_agi_mod );
+}
+
+void Player::_updatePlayer(uint8 flagStatus, uint8 modifier, uint16 value)
 {
 	WorldPacket data;
-	data.clear(); data.SetOpcode( 0x08 ); data.Prepare();
-	data << (uint8) 0x01;    // Update status for Character
-	data << (uint8) 0x19;    // update status for Current Health
-	data << (uint8) 0x01;    // positive value
-	data << m_hp;            // value of health
-	data << (uint16) 0x0000; // unknown value
+	data.Initialize( 0x08 );
+	data << (uint8 ) 0x01;            // flag status for main character
+	data << flagStatus;               // flag status fields
+	data << modifier;                 // +/- modifier
+	data << value;                    // value modifier
+	data << (uint32) 0 << (uint16) 0;
 	GetSession()->SendPacket(&data);
+}
 
-	data.clear(); data.SetOpcode( 0x08 ); data.Prepare();
-	data << (uint8) 0x01;    // Update status for Character
-	data << (uint8) 0x1A;    // update status for Current Health
-	data << (uint8) 0x01;    // positive value
-	data << m_sp;            // value of health
-	data << (uint16) 0x0000; // unknown value
+void Player::UpdatePet()
+{
+	for(uint8 slot = 0; slot < MAX_PET_SLOT; slot++)
+	{
+		Pet* pet = m_petSlot[slot];
+		if( !pet )
+			continue;
+		_updatePet(slot+1, 0xCF, 1, 0);
+		_updatePet(slot+1, 0x19, 1, pet->GetUInt16Value(UNIT_FIELD_HP));
+		_updatePet(slot+1, 0xD0, 1, 0);
+		_updatePet(slot+1, 0x1A, 1, pet->GetUInt16Value(UNIT_FIELD_SP));
+		_updatePet(slot+1, 0xD2, 1, 0);
+		_updatePet(slot+1, 0xD3, 1, 0);
+		_updatePet(slot+1, 0xD4, 1, 0);
+		_updatePet(slot+1, 0xD6, 1, 0);
+	}
+}
+
+void Player::UpdatePet(uint8 slot)
+{
+	Pet* pet = m_petSlot[slot];
+	if( !pet )
+		return;
+	_updatePet(slot, 0xCF, 1, 0);
+	_updatePet(slot, 0x19, 1, 0);//pet->GetUInt16Value(UNIT_FIELD_HP));
+	_updatePet(slot, 0xD0, 1, 0);
+	_updatePet(slot, 0x1A, 1, 0);//pet->GetUInt16Value(UNIT_FIELD_SP));
+	_updatePet(slot, 0xD2, 1, 0);
+	_updatePet(slot, 0xD3, 1, 0);
+	_updatePet(slot, 0xD4, 1, 0);
+	_updatePet(slot, 0xD6, 1, 0);
+}
+
+void Player::_updatePet(uint8 slot, uint8 flagStatus, uint8 modifier, uint32 value)
+{
+	WorldPacket data;
+	data.Initialize( 0x08 );
+	data << (uint8 ) 0x02 << (uint8 ) 0x04;
+	data << slot; // pet slot number
+	data << (uint8 ) 0x00;
+	data << flagStatus;
+	data << modifier;
+	data << value;
+	data << (uint32) 0;
 	GetSession()->SendPacket(&data);
 }
 
 void Player::UpdateCurrentEquipt()
 {
 	WorldPacket data;
-	data.clear(); data.SetOpcode( 0x05 ); data.Prepare();
+	data.Initialize( 0x05, 1 );
 	data << (uint8) 0x00;
 	data << GetAccountId();
 
@@ -411,7 +660,7 @@ void Player::UpdateCurrentEquipt()
 void Player::UpdateCurrentGold()
 {
 	WorldPacket data;
-	data.clear(); data.SetOpcode( 0x1A ); data.Prepare();
+	data.Initialize( 0x1A, 1 );
 	data << (uint8 ) 0x04;
 	data << (uint32) m_gold_hand; // gold
 	data << (uint32) 0x00000000;
@@ -421,30 +670,34 @@ void Player::UpdateCurrentGold()
 void Player::Send0504()
 {
 	///- tell the client to wait for request
-	WorldPacket data; data.clear(); data.SetOpcode(0x05);
-	data.Prepare(); data << (uint8) 0x04;
+	WorldPacket data;
+	data.Initialize( 0x05, 1 );
+	data << (uint8) 0x04;
 	GetSession()->SendPacket(&data);
 }
 
 void Player::Send0F0A()
 {
-	WorldPacket data; data.clear(); data.SetOpcode(0x0F);
-	data.Prepare(); data << (uint8) 0x0A;
+	WorldPacket data;
+	data.Initialize( 0x0F, 1 );
+	data << (uint8) 0x0A;
 	GetSession()->SendPacket(&data);
 }
 
 void Player::Send0602()
 {
-	WorldPacket data; data.clear(); data.SetOpcode(0x06);
-	data.Prepare(); data << (uint8) 0x02;
+	WorldPacket data;
+	data.Initialize( 0x06, 1 );
+	data << (uint8) 0x02;
 	GetSession()->SendPacket(&data);
 }
 
 void Player::Send1408()
 {
 	///- tell the client request is completed
-	WorldPacket data; data.clear(); data.SetOpcode(0x14);
-	data.Prepare(); data << (uint8) 0x08;
+	WorldPacket data;
+	data.Initialize( 0x14, 1 );
+	data << (uint8) 0x08;
 	GetSession()->SendPacket(&data);
 }
 
@@ -460,7 +713,7 @@ void Player::EndOfRequest()
 
 void Player::BuildUpdateBlockTeleportPacket(WorldPacket* data)
 {
-	data->clear(); data->SetOpcode( 0x0C ); data->Prepare();
+	data->Initialize( 0x0C, 1 );
 	*data << GetAccountId();
 	*data << GetTeleportTo();
 	*data << GetPositionX();
@@ -492,10 +745,32 @@ void Player::SendDelayResponse(const uint32 ml_seconds)
 
 void Player::UpdateVisibilityOf(WorldObject* target)
 {
+	/* this is working one */
+	/*
 	sLog.outString("Player::UpdateVisibilityOf '%s' to '%s'",
 		GetName(), target->GetName());
-	//target->SendUpdateToPlayer(this);
+	target->SendUpdateToPlayer(this);
 	SendUpdateToPlayer((Player*) target);
+	*/
+	if(HaveAtClient(target))
+	{
+		//if(!target->isVisibleForInState(this, true))
+		{
+			//target->DestroyForPlayer(this);
+			m_clientGUIDs.erase(target->GetGUID());
+
+		}
+	}
+	else
+	{
+		//if(target->isVisibleForInState(this,false))
+		{
+			if(!target->isType(TYPE_PLAYER))
+				return;
+
+			target->SendUpdateToPlayer(this);
+		}
+	}
 }
 
 void Player::TeleportTo(uint16 mapid, uint16 pos_x, uint16 pos_y)
@@ -521,7 +796,7 @@ void Player::TeleportTo(uint16 mapid, uint16 pos_x, uint16 pos_y)
 void Player::SendMapChanged()
 {
 	WorldPacket data;
-	data.clear(); data.SetOpcode( 0x0C ); data.Prepare();
+	data.Initialize( 0x0C, 1 );
 	data << GetAccountId();
 	data << GetMapId();
 	data << GetPositionX();
@@ -529,18 +804,8 @@ void Player::SendMapChanged()
 	data << (uint8) 0x01 << (uint8) 0x00;
 	GetSession()->SendPacket(&data);
 
-	///- Unknown data after map changed
-	/*
-	data.clear(); data.SetOpcode( 0x18 ); data.Prepare();
-	data << (uint32) 0x00584808 << (uint32) 0x05000200;
-	GetSession()->SendPacket(&data);
-	*/
 
 	Send0504();  // This is important, maybe tell the client to Wait Cursor
-
-	/*
-	UpdateCurrentEquipt();
-	*/
 
 	Map* map = MapManager::Instance().GetMap(GetMapId(), this);
 	map->Add(this);
@@ -554,7 +819,8 @@ void Player::UpdateRelocationToSet()
 {
 	///- Send Relocation Message to Set
 	WorldPacket data;
-	data.clear(); data.SetOpcode( 0x06 ); data.Prepare();
+
+	data.Initialize( 0x06, 1 );
 	data << (uint8) 0x01;
 	data << GetAccountId();
 	data << (uint8) 0x05;

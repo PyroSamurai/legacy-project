@@ -53,11 +53,11 @@ void PlayerMenu::SendGossipMenu( uint16 textId, uint8 mapNpcId )
 void PlayerMenu::SendTalking( uint16 textId, uint8 mapNpcId )
 {
 	WorldPacket data;
-	data.clear(); data.SetOpcode( 0x06 ); data.Prepare();
+	data.Initialize( 0x06, 1 );
 	data << (uint8) 0x02;
 	pSession->SendPacket(&data);
 
-	data.clear(); data.SetOpcode( 0x14 ); data.Prepare();
+	data.Initialize( 0x14, 1 );
 	data << (uint8) 0x01;
 	data << (uint16) 0x0000;
 	data << (uint16) 0x0001;
@@ -69,7 +69,7 @@ void PlayerMenu::SendTalking( uint16 textId, uint8 mapNpcId )
 	data << textId;
 	pSession->SendPacket(&data);
 
-	data.clear(); data.SetOpcode( 0x05 ); data.Prepare();
+	data.Initialize( 0x05, 1 );
 	data << (uint32) 0x025FFE02 << (uint16) 0x3900 << (uint8) 0x4A;
 	//pSession->SendPacket(&data);
 

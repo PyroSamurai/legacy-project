@@ -27,9 +27,17 @@ class Unit;
 
 enum MovementGeneratorType
 {
-	IDLE_MOTION_TYPE   = 0,    // IdleMovementGenerator.h
+	IDLE_MOTION_TYPE     = 0, // IdleMovementGenerator.h
 
-	RANDOM_MOTION_TYPE = 1,    // RandomMovementGenerator.h
+	RANDOM_MOTION_TYPE   = 1, // RandomMovementGenerator.h
+
+	MAX_DB_MOTION_TYPE   = 2, // *** this & below motion can't be set in DB
+
+	ANIMAL_RANDOM_MOTION_TYPE = MAX_DB_MOTION_TYPE, // void
+
+	TARGETED_MOTION_TYPE = 3, // TargetedMovementGenerator.h
+
+	HOME_MOTION_TYPE     = 4  // HomeMovementGenerator.h
 };
 
 class LEGACY_DLL_SPEC MotionMaster : private std::stack<MovementGenerator *>
@@ -48,10 +56,24 @@ class LEGACY_DLL_SPEC MotionMaster : private std::stack<MovementGenerator *>
 
 		using Impl::top;
 		using Impl::empty;
+		using Impl::size;
+
+		typedef Impl::container_type::const_iterator const_iterator;
+		const_iterator begin() const { return Impl::c.begin(); }
+		const_iterator end() const { return Impl::c.end(); }
 
 		void UpdateMotion(const uint32 &diff);
 
+		void Clear(bool reset = true);
+
+		void MovementExpired(bool reset = true);
+
 		void Idle(void);
+
+		void TargetedHome();
+
+		void Mutate(MovementGenerator *m);
+
 
 	private:
 		Unit *i_owner;

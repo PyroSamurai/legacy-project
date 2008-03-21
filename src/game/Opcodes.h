@@ -30,8 +30,8 @@ enum ClientOpcodes
 	CMSG_UNKNOWN_5                                            = 5,
 	CMSG_PLAYER_MOVE        /* -------------------> */        = 6,
 	CMSG_UNKNOWN_7                                            = 7,
-	CMSG_PLAYER_ENTER_DOOR2                                   = 8,
-	CMSG_UNKNOWN_9                                            = 9,
+	CMSG_PLAYER_AREA_TRIGGER                                  = 8,
+	CMSG_CHAR_CREATE                                          = 9,
 	CMSG_UNKNOWN_10                                           = 10,
 	CMSG_UNKNOWN_11                                           = 11,
 	CMSG_PLAYER_ENTER_MAP_COMPLETED                           = 12,
@@ -55,9 +55,27 @@ enum ClientOpcodes
 	CMSG_UNKNOWN_30                                           = 30,
 	CMSG_UNKNOWN_31                                           = 31,
 	CMSG_PLAYER_EXPRESSION                                    = 32,
+	CMSG_UNKNOWN_33                                           = 33,
+	CMSG_UNKNOWN_34                                           = 34,
+	CMSG_UNKNOWN_35                                           = 35,
+	CMSG_UNKNOWN_36                                           = 36,
+	CMSG_UNKNOWN_37                                           = 37,
+	CMSG_UNKNOWN_38                                           = 38,
+	CMSG_UNKNOWN_39                                           = 39,
+	CMSG_UNKNOWN_40                                           = 40,
+	CMSG_UNKNOWN_41                                           = 41,
+	CMSG_UNKNOWN_42                                           = 42,
+	CMSG_UNKNOWN_43                                           = 43,
+	CMSG_UNKNOWN_44                                           = 44,
+	CMSG_UNKNOWN_45                                           = 45,
+	CMSG_UNKNOWN_46                                           = 46,
+	CMSG_UNKNOWN_47                                           = 47,
+	CMSG_UNKNOWN_48                                           = 48,
+	CMSG_UNKNOWN_49                                           = 49,
+	CMSG_PLAYER_ATTACK                                        = 50,
 };
 // if you add new server opcode .. Do NOT forget to change the following define MAX_SVR_OPCODE_ID and also add new client opcode to table in opcodes.cpp
-#define MAX_CLNT_OPCODE_ID 33
+#define MAX_CLNT_OPCODE_ID 51
 
 enum OpCodes
 {
@@ -119,7 +137,12 @@ enum FriendsResult
 enum NPCFlags
 {
 	UNIT_NPC_FLAG_NONE                                  = 0x00000000,
-	UNIT_NPC_FLAG_GOSSIP                                = 0x00000001
+	UNIT_NPC_FLAG_GOSSIP                                = 0x00000001,
+	UNIT_NPC_FLAG_QUESTGIVER                            = 0x00000002,
+	UNIT_NPC_FLAG_TRAINER                               = 0x00000004,
+	UNIT_NPC_FLAG_VENDOR                                = 0x00000008,
+	UNIT_NPC_FLAG_INNKEEPER                             = 0x00000010,
+	UNIT_NPC_FLAG_BANKER                                = 0x00000020
 };
 
 #endif
