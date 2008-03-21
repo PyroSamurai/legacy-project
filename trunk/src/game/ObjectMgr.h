@@ -133,7 +133,7 @@ class ObjectMgr
 	
 
 		Player* GetPlayer(const char* name) const { return ObjectAccessor::Instance().FindPlayerByName(name); }
-		Player* GetPlayer(uint64 guid) const { return ObjectAccessor::FindPlayer(guid); }
+		Player* GetPlayer(uint32 guid) const { return ObjectAccessor::FindPlayer(guid); }
 
 
 		static ItemPrototype const* GetItemPrototype(uint32 id) { return sItemStorage.LookupEntry<ItemPrototype>(id); }
@@ -179,12 +179,25 @@ class ObjectMgr
 
 		CreatureData const* GetCreatureData(uint32 guid) const
 		{
-			sLog.outString("ObjectMgr::GetCreatureData %u", guid);
+			sLog.outString("    >> ObjectMgr::GetCreatureData %u", guid);
 			CreatureDataMap::const_iterator itr = mCreatureDataMap.find(guid);
 			if(itr==mCreatureDataMap.end()) return NULL;
 			return &itr->second;
 		}
 
+		void LoadPetNumber();
+
+		void SetHighestGuids();
+
+		uint32 GenerateLowGuid(HighGuid guidhigh);
+
+	protected:
+		uint32 m_hiCharGuid;
+		uint32 m_hiCreatureGuid;
+		uint32 m_hiItemGuid;
+		uint32 m_hiGoGuid;
+
+		uint32 m_hiPetNumber;
 
 	private:
 

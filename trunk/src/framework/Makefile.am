@@ -45,6 +45,8 @@ liblegacyframework_a_SOURCES = \
 	Utilities/LinkedReference/Reference.h \
 	Utilities/ByteConverter.h \
 	Utilities/Callback.h \
+	Utilities/EventProcessor.cpp \
+	Utilities/EventProcessor.h \
 	Utilities/HashMap.h \
 	Utilities/LinkedList.h \
 	Utilities/TypeList.h

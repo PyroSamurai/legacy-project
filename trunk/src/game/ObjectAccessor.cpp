@@ -54,7 +54,7 @@ ObjectAccessor::ObjectAccessor() {}
 ObjectAccessor::~ObjectAccessor() {}
 
 Creature*
-ObjectAccessor::GetNPCIfCanInteractWith(Player const &player, uint32 guid, uint32 npcflagmas)
+ObjectAccessor::GetNPCIfCanInteractWith(Player const &player, uint64 guid, uint32 npcflagmask)
 {
 	// unit checks
 	if (!guid)
@@ -71,11 +71,11 @@ ObjectAccessor::GetNPCIfCanInteractWith(Player const &player, uint32 guid, uint3
 
 
 Creature*
-ObjectAccessor::GetCreature(WorldObject const &u, uint32 guid)
+ObjectAccessor::GetCreature(WorldObject const &u, uint64 guid)
 {
 	sLog.outString("ObjectAccessor::GetCreature %u", guid);
 	Creature * ret = GetObjectInWorld(guid, (Creature*)NULL);
-	//if(ret && ret->GetMapId() != u.GetMapId()) ret = NULL;
+	if(ret && ret->GetMapId() != u.GetMapId()) ret = NULL;
 	if(ret)
 	{
 		sLog.outString("ret is not NULL GUID(%u) MAPID(%u)", ret->GetGUIDLow(), ret->GetMapId());
@@ -88,21 +88,35 @@ ObjectAccessor::GetCreature(WorldObject const &u, uint32 guid)
 }
 
 Unit*
-ObjectAccessor::GetUnit(WorldObject const &u, uint32 accountId)
+ObjectAccessor::GetUnit(WorldObject const &u, uint64 guid)
 {
-	return FindPlayer(accountId);
+	if(GUID_HIPART(guid)==HIGHGUID_PLAYER)
+		return FindPlayer(guid);
+
+	return GetCreature(u, guid);
+}
+
+Pet*
+ObjectAccessor::GetPet(uint64 guid)
+{
+	return GetObjectInWorld(guid, (Pet*)NULL);
 }
 
 Player*
-ObjectAccessor::FindPlayer(uint32 accountId)
+ObjectAccessor::FindPlayer(uint64 guid)
 {
-	return GetObjectInWorld(accountId, (Player*)NULL);
+	return GetObjectInWorld(guid, (Player*)NULL);
 }
 
 Player*
 ObjectAccessor::FindPlayerByName(const char *name)
 {
 	//TODO: Player Guard
+	HashMapHolder<Player>::MapType& m = HashMapHolder<Player>::GetContainer();
+	HashMapHolder<Player>::MapType::iterator iter = m.begin();
+	for(; iter != m.end(); ++iter)
+		if( ::strcmp(name, iter->second->GetName()) == 0 )
+			return iter->second;
 	return NULL;
 }
 
@@ -216,6 +230,43 @@ ObjectAccessor::RemoveUpdateObject(Object *obj)
 	std::set<Object *>::iterator iter = i_objects.find(obj);
 	if( iter != i_objects.end() )
 		i_objects.erase( iter );
+}
+
+void ObjectAccessor::AddObjectToRemoveList(WorldObject *obj)
+{
+	if(!obj) return;
+
+	Guard guard(i_removeGuard);
+	i_objectsToRemove.insert(obj);
+}
+
+void ObjectAccessor::DoDelayedMovesAndRemoves()
+{
+	MapManager::Instance().MoveAllCreaturesInMoveList();
+	RemoveAllObjectsInRemoveList();
+}
+
+void ObjectAccessor::RemoveAllObjectsInRemoveList()
+{
+	if(i_objectsToRemove.empty())
+		return;
+
+	Guard guard(i_removeGuard);
+
+	while(!i_objectsToRemove.empty())
+	{
+		WorldObject* obj = *i_objectsToRemove.begin();
+		i_objectsToRemove.erase(i_objectsToRemove.begin());
+		switch(obj->GetTypeId())
+		{
+			case TYPEID_UNIT:
+				//MapManager::Instance().GetMap(obj->GetMapId(), obj)->Remove((Creature*)obj,true);
+				break;
+			default:
+				sLog.outError("Non-grid object (TypeId: %u) in grid object removing list, ignored.", obj->GetTypeId());
+				break;
+		}
+	}
 }
 
 /// Define the static member of HashMapHolder

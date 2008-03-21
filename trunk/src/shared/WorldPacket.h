@@ -34,17 +34,20 @@ class WorldPacket : public ByteBuffer
         WorldPacket()                                       : ByteBuffer(0), m_opcode(0)
         {
         }
-        explicit WorldPacket(uint16 opcode, size_t res=200) : ByteBuffer(res), m_opcode(opcode) { }
+        explicit WorldPacket(uint16 opcode, size_t res=200) : ByteBuffer(res), m_opcode(opcode), m_prepared(false) { }
                                                             // copy constructor
         WorldPacket(const WorldPacket &packet)              : ByteBuffer(packet), m_opcode(packet.m_opcode)
         {
         }
 
-        void Initialize(uint16 opcode, size_t newres=200)
+        void Initialize(uint8 opcode, size_t newres=1)
         {
             clear();
             _storage.reserve(newres);
             m_opcode = opcode;
+			m_prepared = false;
+
+			Prepare();
         }
 
         uint8 GetOpcode() const { return m_opcode; }
@@ -60,9 +63,12 @@ class WorldPacket : public ByteBuffer
 
 		void Prepare()
 		{
+			if( m_prepared )
+				return;
 			append(GetHeader());
 			append(GuessSize());
 			append(GetOpcode());
+			m_prepared = true;
 		}
 
 		///- Finalize packet before sending to socket
@@ -91,8 +97,9 @@ class WorldPacket : public ByteBuffer
 				_storage[i] = ENCODE(_storage[i]);
 			}
  */
-		}
 
+		}
+/*
 void Packed(WorldPacket *packet, uint8 opcode, uint8 value)
 {
 	uint16 newsize, pktsize;
@@ -163,9 +170,10 @@ void Packed(WorldPacket *packet, uint8 opcode, uint16 *value, uint16 size)
 		*packet << (uint16) value[i];
 	}
 }
-
+*/
 
     protected:
         uint8 m_opcode;
+		bool  m_prepared;
 };
 #endif

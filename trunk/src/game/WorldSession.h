@@ -31,6 +31,8 @@ class QueryResult;
 class LoginQueryHolder;
 class CharacterHandler;
 
+class BattleSystem;
+
 #define CHECK_PACKET_SIZE(P,S) if((P).size() < (S)) return SizeError((P),(S));
 
 /// Player session in the World
@@ -70,6 +72,7 @@ class LEGACY_DLL_SPEC WorldSession
 
 		bool Update(uint32 diff);
 		void SetSocket(WorldSocket *sock);
+		void SetLogging(bool newvalue);
 		WorldSocket* GetSocket() { return _socket; }
 
 		uint32 GetAccountId() const { return _accountId; }
@@ -82,15 +85,20 @@ class LEGACY_DLL_SPEC WorldSession
 		void HandlePlayerLoginOpcode(WorldPacket& recvPacket);
 		void HandlePlayerLogin(LoginQueryHolder * holder);
 		void HandleCharCreateOpcode(WorldPacket& recvPacket);
+		void HandleCharCreate(WorldPacket& recvPacket);
+		void HandleCharCreateSelectName(WorldPacket& recvPacket);
 		void HandlePlayerActionOpcode(WorldPacket& recvPacket);
 		void HandlePlayerEnterDoorOpcode(WorldPacket& recvPacket);
 		void HandlePlayerEnterMapCompletedOpcode(WorldPacket& recvPacket);
 		void HandleMessagechatOpcode(WorldPacket& recvPacket);
 		void HandlePlayerExpressionOpcode(WorldPacket& recvPacket);
 
+		void HandlePlayerAttackOpcode(WorldPacket& recvPacket);
 
-		void HandleGossipHelloOpcode(WorldPacket& recvPacket);
 		void HandleUnknownRequest14Opcode(WorldPacket& recvPacket);
+
+		void HandlePlayerClickNpc(WorldPacket& recvPacket);
+
 	private:
 
 		Player *_player;

@@ -35,9 +35,10 @@ enum TYPE
 	TYPE_ITEM          = 2,
 	TYPE_CONTAINER     = 6,
 	TYPE_UNIT          = 8,
-	TYPE_PLAYER        = 16,
-	TYPE_GAMEOBJECT    = 32,
-	TYPE_AREATRIGGER   = 64
+	TYPE_PET           = 16,
+	TYPE_PLAYER        = 32,
+	TYPE_GAMEOBJECT    = 64,
+	TYPE_AREATRIGGER   = 128
 };
 
 enum TYPEID
@@ -46,9 +47,10 @@ enum TYPEID
 	TYPEID_ITEM        = 1,
 	TYPEID_CONTAINER   = 2,
 	TYPEID_UNIT        = 3,
-	TYPEID_PLAYER      = 4,
-	TYPEID_GAMEOBJECT  = 5,
-	TYPEID_AREATRIGGER = 6
+	TYPEID_PET         = 4,
+	TYPEID_PLAYER      = 5,
+	TYPEID_GAMEOBJECT  = 6,
+	TYPEID_AREATRIGGER = 7
 };
 
 uint32 GuidHigh2TypeId(uint32 guid_hi);
@@ -101,6 +103,18 @@ class LEGACY_DLL_SPEC Object
 			return m_int32Values[ index ];
 		}
 
+		const uint8& GetUInt8Value( uint16 index ) const
+		{
+			ASSERT( index < m_valuesCount || PrintIndexError( index, false) );
+			return m_uint8Values[ index ];
+		}
+
+		const uint16& GetUInt16Value( uint16 index ) const
+		{
+			ASSERT( index < m_valuesCount || PrintIndexError( index, false) );
+			return m_uint16Values[ index ];
+		}
+
 		const uint32& GetUInt32Value( uint16 index ) const
 		{
 			ASSERT( index < m_valuesCount || PrintIndexError( index, false) );
@@ -119,6 +133,8 @@ class LEGACY_DLL_SPEC Object
 		}
 
 		void SetInt32Value(  uint16 index,         int32  value );
+		void SetUInt8Value(  uint16 index,         uint8  value );
+		void SetUInt16Value( uint16 index,        uint16  value );
 		void SetUInt32Value( uint16 index,        uint32  value );
 		void SetUInt64Value( uint16 index,  const uint64 &value );
 		void SetFloatValue(  uint16 index,         float  value );
@@ -174,6 +190,9 @@ class LEGACY_DLL_SPEC Object
 			float  *m_floatValues;
 		};
 
+		uint8  *m_uint8Values;
+		uint16 *m_uint16Values;
+
 		uint32 *m_uint32Values_mirror;
 
 		uint16 m_valuesCount;
@@ -218,8 +237,10 @@ class LEGACY_DLL_SPEC WorldObject : public Object
 		uint16 GetMapId() const { return m_mapId; }
 
 		const char* GetName() const { return m_name.c_str(); }
+		uint8 GetNameSize() const { return m_name.size(); }
 		void SetName(std::string newname) { m_name = newname; }
 
+		virtual void SendMessageToSet(WorldPacket *data, bool self);
 
 		bool IsInMap(const WorldObject* obj) const { return GetMapId()==obj->GetMapId(); }
 		// main visibility check function in normal case (ignore grey zone distance check)

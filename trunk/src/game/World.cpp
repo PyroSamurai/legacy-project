@@ -30,6 +30,7 @@
 #include "Chat.h"
 #include "MapManager.h"
 #include "ScriptCalls.h"
+#include "CreatureAIRegistry.h"
 #include "Policies/SingletonImp.h"
 #include "Database/DatabaseImpl.h"
 #include "WorldSocket.h"
@@ -97,6 +98,8 @@ void World::SetInitialWorldSettings()
 	m_timers[WUPDATE_OBJECTS].SetInterval(0);
 	m_timers[WUPDATE_SESSIONS].SetInterval(0);
 
+	///- Initialize static helper structures
+	AIRegistry::Initialize();
 
 	///- Initialize MapManager
 	sLog.outString( "Starting Map System" );
@@ -111,9 +114,9 @@ void World::SetInitialWorldSettings()
 
 void World::RefreshDoorDatabase()
 {
-	sLog.outString("Resfreshing Map2Dest database");
+	sLog.outString("Resfreshing MapMatrix database");
 	MapManager::Instance().ClearDoorDatabase();
-	QueryResult* resultMap2Map = loginDatabase.PQuery("select * from map2map");
+	QueryResult* resultMap2Map = loginDatabase.PQuery("select * from map_matrix");
 	//where x != 0 and y != 0");
 	do
 	{
@@ -125,11 +128,11 @@ void World::RefreshDoorDatabase()
 		uint16 destY   = f[5].GetUInt16();
 		MapDoor* mapDoor = new MapDoor(srcMap, door);
 		MapDestination* mapDest = new MapDestination(destMap, destX, destY);
-		MapManager::Instance().AddMap2Dest(mapDoor, mapDest);
+		MapManager::Instance().AddMapMatrix(mapDoor, mapDest);
 		//MapManager::Instance().AddMap2Door(mapDoor, destMap);
 	//	delete mapDoor;
 	} while( resultMap2Map->NextRow() );
-	sLog.outString("Map2Dest loaded: %u rows", MapManager::Instance().GetMap2DestCount());
+	sLog.outString(">> Loaded %u MapMatrix definitions", MapManager::Instance().GetMapMatrixCount());
 }
 
 void World::InitResultQueue()
@@ -181,6 +184,9 @@ void World::Update(time_t diff)
 
 	// execute callbacks from sql queries that were queued recently
 	UpdateResultQueue();
+
+	///- Move all creatures with "delayed move" and remove and delete all object with "delayed remove"
+	ObjectAccessor::Instance().DoDelayedMovesAndRemoves();
 }
 
 WorldSession * World::FindSession(uint32 id) const

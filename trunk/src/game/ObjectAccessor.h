@@ -53,17 +53,17 @@ class HashMapHolder
 
 		static void Insert(T* o)
 		{
-			sLog.outString("Insert Object GUID(%u) in Map %u", o->GetGUIDLow(), o->GetMapId());
-			m_objectMap[o->GetGUIDLow()] = o;
+			//sLog.outString(" ++ Insert Object GUID(%u)", o->GetGUID());
+			m_objectMap[o->GetGUID()] = o;
 		}
 		static void Remove(T* o)
 		{
 			Guard guard(i_lock);
-			typename MapType::iterator itr = m_objectMap.find(o->GetGUIDLow());
+			typename MapType::iterator itr = m_objectMap.find(o->GetGUID());
 			if(itr != m_objectMap.end())
 				m_objectMap.erase(itr);
 		}
-		static T* Find(uint32 guid)
+		static T* Find(uint64 guid)
 		{
 			typename MapType::iterator itr = m_objectMap.find(guid);
 			return (itr != m_objectMap.end()) ? itr->second : NULL;
@@ -119,15 +119,15 @@ class LEGACY_DLL_DECL ObjectAccessor : public LeGACY::Singleton<ObjectAccessor, 
 
 	public:
 
-		template<class T> static T* GetObjectInWorld(uint32 guid, T* /*fake*/)
+		template<class T> static T* GetObjectInWorld(uint64 guid, T* /*fake*/)
 		{
-			sLog.outString("ObjectAccessor::GetObjectInWorld <T> GUID(%u)", guid);
+		//	sLog.outString("ObjectAccessor::GetObjectInWorld <T> GUID(%u)", guid);
 			return HashMapHolder<T>::Find(guid);
 		}
 
-		static Unit* GetObjectInWorld(uint32 guid, Unit* /*fake*/)
+		static Unit* GetObjectInWorld(uint64 guid, Unit* /*fake*/)
 		{
-			sLog.outString("ObjectAccessor::GetObjectInWorld Unit GUID(%u)", guid);
+		//	sLog.outString("ObjectAccessor::GetObjectInWorld Unit GUID(%u)", guid);
 			if(GUID_HIPART(guid) == HIGHGUID_PLAYER)
 				return (Unit*)HashMapHolder<Player>::Find(guid);
 
@@ -143,14 +143,14 @@ class LEGACY_DLL_DECL ObjectAccessor : public LeGACY::Singleton<ObjectAccessor, 
 			CellPair p = LeGACY::ComputeCellPair(x,y);
 			if(p.x_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP || p.y_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP )
 			{
-				sLog.outError("ObjectAccessor::GetObjectInWorld: invalid coordinates supplied X: %u Y:%u grid cell [%u:%u]", x, y, p.x_coord, p.y_coord);
+				//sLog.outError("ObjectAccessor::GetObjectInWorld: invalid coordinates supplied X: %u Y:%u grid cell [%u:%u]", x, y, p.x_coord, p.y_coord);
 				return NULL;
 			}
 
 			CellPair q = LeGACY::ComputeCellPair(obj->GetPositionX(), obj->GetPositionY());
 			if(q.x_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP || q.y_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP )
 			{
-				sLog.outError("ObjectAccessor::GetObjectInWorld: object "I64FMTD" has invalid coordinates X:%u Y:%u grid cell [%u:%u]", obj->GetGUID(), obj->GetPositionX(), obj->GetPositionY(), q.x_coord, q.y_coord);
+				//sLog.outError("ObjectAccessor::GetObjectInWorld: object "I64FMTD" has invalid coordinates X:%u Y:%u grid cell [%u:%u]", obj->GetGUID(), obj->GetPositionX(), obj->GetPositionY(), q.x_coord, q.y_coord);
 				return NULL;
 			}
 
@@ -161,28 +161,24 @@ class LEGACY_DLL_DECL ObjectAccessor : public LeGACY::Singleton<ObjectAccessor, 
 			else return NULL;
 		}
 
-		static Unit* GetUnit(WorldObject const &, uint32);
-
-		static Player* GetPlayer(Unit const &, uint32 accountId) { return FindPlayer(accountId); }
-
-
-		static Creature* GetCreature(WorldObject const &, uint32);
-		static Creature* GetNPCIfCanInteractWith(Player const &player, uint32 guid, uint32 npcflagmask);
-
-
+		static Creature* GetNPCIfCanInteractWith(Player const &player, uint64 guid, uint32 npcflagmask);
+		static Creature* GetCreature(WorldObject const &, uint64);
+		static Unit* GetUnit(WorldObject const &, uint64);
+		static Pet* GetPet(Unit const &, uint64 guid) { return GetPet(guid); }
+		static Player* GetPlayer(Unit const &, uint64 guid) { return FindPlayer(guid); }
 		static GameObject* GetGameObject(Unit const &, uint64);
 
-
-		static Player* FindPlayer(uint32);
+		static Pet* GetPet(uint64 guid);
+		static Player* FindPlayer(uint64);
 
 		Player* FindPlayerByName(const char *name);
 
 		template<class T> void AddObject(T *object)
 		{
-			sLog.outString("ObjectAccessor::AddObject GUID(%u) MAPID(%u)", object->GetGUIDLow(), object->GetMapId());
-			sLog.outString("HashMapHolder<T> Size: %u", HashMapHolder<T>::Size()); 
+			//sLog.outString(" ++ ObjectAccessor::AddObject GUID(%u)",object->GetGUID());
+			//sLog.outString("    ++ HashMapHolder<T> Size: %u", HashMapHolder<T>::Size()); 
 			HashMapHolder<T>::Insert(object);
-			sLog.outString("HashMapHolder<T> Size: %u", HashMapHolder<T>::Size()); 
+			//sLog.outString("    ++ HashMapHolder<T> Size: %u", HashMapHolder<T>::Size()); 
 		}
 
 		template<class T> void RemoveObject(T *object)
@@ -206,18 +202,23 @@ class LEGACY_DLL_DECL ObjectAccessor : public LeGACY::Singleton<ObjectAccessor, 
 		void AddUpdateObject(Object *obj);
 		void RemoveUpdateObject(Object *obj);
 
+		void AddObjectToRemoveList(WorldObject *obj);
+
+		void DoDelayedMovesAndRemoves();
+
 		void Update(uint32 diff);
 
 
 		static void UpdateObject(Object* obj, Player* exceptPlayer);
 	private:
+		void RemoveAllObjectsInRemoveList();
 
 		typedef ZThread::FastMutex LockType;
 		typedef LeGACY::GeneralLock<LockType > Guard;
 
 		void _update(void);
 		std::set<Object *> i_objects;
-		//std::set<WorldObject *> i_objectsToRemove;
+		std::set<WorldObject *> i_objectsToRemove;
 		LockType i_playerGuard;
 		LockType i_updateGuard;
 		LockType i_removeGuard;

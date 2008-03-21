@@ -63,6 +63,15 @@ typedef RGuard<GridRWLock, ZThread::Lockable> GridReadGuard;
 typedef WGuard<GridRWLock, ZThread::Lockable> GridWriteGuard;
 typedef LeGACY::SingleThreaded<GridRWLock>::Lock NullGuard;
 
+struct CreatureMover
+{
+	CreatureMover() : x(0), y(0) {}
+	CreatureMover(uint16 _x, uint16 _y) : x(_x), y(_y) {}
+
+	uint16 x, y;
+};
+
+typedef HM_NAMESPACE::hash_map<Creature*, CreatureMover> CreatureMoveList;
 
 class LEGACY_DLL_DECL Map : public GridRefManager<NGridType>, public LeGACY::ObjectLevelLockable<Map, ZThread::Mutex>
 {
@@ -80,6 +89,10 @@ class LEGACY_DLL_DECL Map : public GridRefManager<NGridType>, public LeGACY::Obj
 		virtual void Update(const uint32&);
 
 		void MessageBroadcast(Player *, WorldPacket *, bool to_self, bool own_team_only = false);
+
+		void CreatureRelocation(Creature *creature, uint16 x, uint16 y);
+
+		virtual void MoveAllCreaturesInMoveList();
 
 		void MessageBroadcast(WorldObject *, WorldPacket *);
 
@@ -103,6 +116,12 @@ class LEGACY_DLL_DECL Map : public GridRefManager<NGridType>, public LeGACY::Obj
 		void LoadMap(uint16, int x, int y);
 
 		void SendInitSelf( Player * player );
+
+		void PlayerRelocationNotify(Player* player, Cell cell, CellPair cellpair);
+		void CreatureRelocationNotify(Creature *creature, Cell newcell, CellPair newval);
+		void AddCreatureToMoveList(Creature *c, uint16 x, uint16 y);
+
+		CreatureMoveList i_creaturesToMove;
 
 		bool loaded(const GridPair &) const;
 		void EnsureGridLoadedForPlayer(const Cell&, Player*, bool add_player);

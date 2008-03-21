@@ -23,6 +23,7 @@
 #include "WorldPacket.h"
 #include "Player.h"
 #include "UpdateData.h"
+#include "CreatureAI.h"
 
 
 ///template<class T>
@@ -42,6 +43,31 @@ LeGACY::PlayerRelocationNotifier::Visit(PlayerMapType &m)
 
 	}
 }
+
+inline void PlayerCreatureRelocationWorker(Player* pl, Creature* c)
+{
+	// update creature visibility at player/creature move
+	pl->UpdateVisibilityOf(c);
+
+	// Creature AI reaction
+	if(!c->hasUnitState(UNIT_STATE_CHASE | UNIT_STATE_SEARCHING | UNIT_STATE_FLEEING))
+	{
+		//if( c->AI() && c->AI()->isVisible(pl) && !c->IsInEvadeMode() )
+			c->AI()->MoveInLineOfSight(pl);
+	}
+}
+
+inline void
+LeGACY::PlayerRelocationNotifier::Visit(CreatureMapType &m)
+{
+	if(!i_player.isAlive()) // || i_player.isInFlight())
+		return;
+
+	for(CreatureMapType::iterator iter=m.begin(); iter != m.end(); ++iter)
+		if( iter->getSource()->isAlive())
+			PlayerCreatureRelocationWorker(&i_player, iter->getSource());
+}
+
 
 inline void
 LeGACY::ObjectUpdater::Visit(CreatureMapType &m)

@@ -27,6 +27,7 @@
 #include "ObjectMgr.h"
 #include "WorldSession.h"
 #include "Util.h"
+#include "MapManager.h"
 #include "ObjectAccessor.h"
 
 #include "GridNotifiers.h"
@@ -41,6 +42,8 @@ Object::Object()
 	m_objectTypeId    = TYPEID_OBJECT;
 	m_objectType      = TYPE_OBJECT;
 
+	m_uint8Values     = 0;
+	m_uint16Values    = 0;
 	m_uint32Values    = 0;
 	m_uint32Values_mirror = 0;
 	m_valuesCount     = 0;
@@ -65,6 +68,8 @@ Object::~Object()
 			sLog.outError("Object::~Object - guid="I64FMTD", typeid=%d deleted but still in world!!", GetGUID(), GetTypeId());
 		}
 
+	//	delete [] m_uint8Values;
+	//	delete [] m_uint16Values;
 		delete [] m_uint32Values;
 		delete [] m_uint32Values_mirror;
 	}
@@ -72,6 +77,12 @@ Object::~Object()
 
 void Object::_InitValues()
 {
+	m_uint8Values = new uint8[ m_valuesCount ];
+	memset(m_uint8Values, 0, m_valuesCount*sizeof(uint8));
+
+	m_uint16Values = new uint16[ m_valuesCount ];
+	memset(m_uint16Values, 0, m_valuesCount*sizeof(uint16));
+
 	m_uint32Values = new uint32[ m_valuesCount ];
 	memset(m_uint32Values, 0, m_valuesCount*sizeof(uint32));
 
@@ -79,10 +90,14 @@ void Object::_InitValues()
 	memset(m_uint32Values_mirror, 0, m_valuesCount*sizeof(uint32));
 
 	m_objectUpdated = false;
+
 }
 
 void Object::_Create( uint32 guidlow, HighGuid guidhigh )
 {
+	if(!m_int32Values) _InitValues();
+	if(!m_uint8Values) _InitValues();
+	if(!m_uint16Values) _InitValues();
 	if(!m_uint32Values) _InitValues();
 
 	SetUInt32Value( OBJECT_FIELD_GUID, guidlow );
@@ -92,11 +107,50 @@ void Object::_Create( uint32 guidlow, HighGuid guidhigh )
 	m_PackGUID.appendPackGUID(GetGUID());
 }
 
-
 bool Object::PrintIndexError(uint32 index, bool set) const
 {
-	sLog.outError("ERROR: Object::PrintIndexError");
+	sLog.outError("ERROR: Attempt %s non-existed value field: %u (count: %u) for object typeid: %u type mask: %u",(set ? "set value to" : "get value from"),index,m_valuesCount,GetTypeId(),m_objectType);
+
+	// assert must fail after function call
 	return false;
+}
+
+void Object::SetUInt8Value( uint16 index, uint8 value)
+{
+	ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
+
+	if(m_uint8Values[ index ] != value)
+	{
+		m_uint8Values[ index ] = value;
+
+		if(m_inWorld)
+		{
+			if(!m_objectUpdated)
+			{
+				ObjectAccessor::Instance().AddUpdateObject(this);
+				m_objectUpdated = true;
+			}
+		}
+	}
+}
+
+void Object::SetUInt16Value( uint16 index, uint16 value )
+{
+	ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
+
+	if(m_uint16Values[ index ] != value)
+	{
+		m_uint16Values[ index ] = value;
+
+		if(m_inWorld)
+		{
+			if(!m_objectUpdated)
+			{
+				ObjectAccessor::Instance().AddUpdateObject(this);
+				m_objectUpdated = true;
+			}
+		}
+	}
 }
 
 void Object::SetUInt32Value( uint16 index, uint32 value )
@@ -106,6 +160,25 @@ void Object::SetUInt32Value( uint16 index, uint32 value )
 	if(m_uint32Values[ index ] != value)
 	{
 		m_uint32Values[ index ] = value;
+
+		if(m_inWorld)
+		{
+			if(!m_objectUpdated)
+			{
+				ObjectAccessor::Instance().AddUpdateObject(this);
+				m_objectUpdated = true;
+			}
+		}
+	}
+}
+
+void Object::SetUInt64Value( uint16 index, const uint64 &value )
+{
+	ASSERT( index + 1 < m_valuesCount || PrintIndexError( index, true ) );
+	if(*((uint64*)&(m_uint32Values[ index ])) != value)
+	{
+		m_uint32Values[ index ] = *((uint32*)&value);
+		m_uint32Values[ index + 1 ] = *(((uint32*)&value) + 1);
 
 		if(m_inWorld)
 		{
@@ -160,7 +233,24 @@ void Object::BuildCreateUpdateBlockForPlayer(WorldPacket *data, Player *target) 
 		target->GetName());
 }
 
+bool Object::LoadValues(const char* data)
+{
+	if(!m_uint32Values) _InitValues();
 
+	Tokens tokens = StrSplit(data, " ");
+
+	if(tokens.size() != m_valuesCount)
+		return false;
+
+	Tokens::iterator iter;
+	int index;
+	for( iter = tokens.begin(), index = 0; index < m_valuesCount; ++iter, ++index)
+	{
+		m_uint32Values[index] = atol((*iter).c_str());
+	}
+
+	return true;
+}
 
 WorldObject::WorldObject( WorldObject *instantiator )
 {
@@ -195,3 +285,7 @@ void Object::SendUpdateObjectToAllExcept(Player* exceptPlayer)
 }
 */
 
+void WorldObject::SendMessageToSet(WorldPacket *data, bool /*toSelf*/)
+{
+	MapManager::Instance().GetMap(m_mapId, this)->MessageBroadcast(this, data);
+}

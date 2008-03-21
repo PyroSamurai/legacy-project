@@ -34,8 +34,11 @@
 #include <string>
 #include <vector>
 
+#define MAX_PET_SLOT 4
+
 class Creature;
 class PlayerMenu;
+class BattleSystem;
 
 // used at player loading query list preparing, and later result selection
 enum PlayerLoginQueryIndex
@@ -57,14 +60,14 @@ enum CharacterFields
 	FD_CHARNAME,
 	FD_REBORN,
 	FD_LEVEL,
+	FD_RANK,
 	FD_MAPID,
 	FD_POSX,
 	FD_POSY,
 	FD_HP,
 	FD_SP,
-	FD_HP_MAX,
-	FD_SP_MAX,
 	FD_XP_GAIN,
+	FD_XP_TNL,
 
 	FD_ST_INT,
 	FD_ST_ATK,
@@ -73,33 +76,31 @@ enum CharacterFields
 	FD_ST_SPX,
 	FD_ST_AGI,
 
-	FD_ST_INT_BONUS,
-	FD_ST_ATK_BONUS,
-	FD_ST_DEF_BONUS,
-	FD_ST_HPX_BONUS,
-	FD_ST_SPX_BONUS,
-	FD_ST_AGI_BONUS,
-
 	FD_SKILL_GAIN,
-	FD_SKILL_USED,
-
 	FD_STAT_GAIN,
-	FD_STAT_USED,
 
 	FD_EQ_HEAD,
 	FD_EQ_BODY,
 	FD_EQ_WRIST,
 	FD_EQ_WEAPON,
 	FD_EQ_SHOE,
-	FD_EQ_ACCSR,
+	FD_EQ_SPECIAL,
 
-	FD_HAIR_COLOR,
-	FD_SKIN_COLOR,
+	FD_HAIR_COLOR_R,
+	FD_HAIR_COLOR_G,
+	FD_HAIR_COLOR_B,
+	FD_SKIN_COLOR_R,
+	FD_SKIN_COLOR_G,
+	FD_SKIN_COLOR_B,
+	FD_SHIRT_COLOR,
+	FD_MISC_COLOR,
 
 	FD_ONLINE_STATUS,
 
 	FD_GOLD_IN_HAND,
 	FD_GOLD_IN_BANK,
+
+	FD_SECURITY_LEVEL,
 
 	FD_UNK1,
 	FD_UNK2,
@@ -158,6 +159,10 @@ class LEGACY_DLL_SPEC Player : public Unit
 		bool HaveAtClient(WorldObject const* u) { return u==this || m_clientGUIDs.find(u->GetGUID())!=m_clientGUIDs.end(); }
 
 		uint32 GetAccountId() { return m_session->GetAccountId(); };
+		Pet* GetPet(uint8 slot)
+		{
+			return m_petSlot[slot];
+		}
 
 		bool Create ( uint32 guidlow, WorldPacket &data );
 	
@@ -175,6 +180,8 @@ class LEGACY_DLL_SPEC Player : public Unit
 		void TeleportTo(uint16 mapid, uint16 pos_x, uint16 pos_y);
 		void SendInitialPacketsBeforeAddToMap();
 		void SendInitialPacketsAfterAddToMap();
+		void SendMotd();
+		void SendVoucherInfo();
 		void SendMapChanged();
 
 		void AllowPlayerToMove();
@@ -192,6 +199,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 		/***                  LOAD SYSTEM                      ***/
 		/*********************************************************/
 		bool LoadFromDB(uint32 accountId, SqlQueryHolder *holder);
+		bool LoadPet();
 
 
 		/*********************************************************/
@@ -216,6 +224,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 
 		uint32 GetTeam() const { return m_team; }
 
+		uint32 GetTeamGuid(uint8 index) const { return 0; }
 
 		/*********************************************************/
 		/***                VARIOUS SYSTEM                     ***/
@@ -230,14 +239,21 @@ class LEGACY_DLL_SPEC Player : public Unit
 		uint16 GetLastPositionY() { return m_lastPositionY; }
 		void UpdateVisibilityOf(WorldObject* target);
 		void UpdateRelocationToSet();
-		void UpdateCurrentStatus();
+		void UpdatePlayer();
+		void _updatePlayer(uint8 flagStatus, uint8 modifier, uint16 value);
+		void UpdatePet();
+		void UpdatePet(uint8 slot);
+		void _updatePet(uint8 slot, uint8 flagStatus, uint8 modifier, uint32 value);
+
 		void UpdateCurrentEquipt();
 		void UpdateCurrentGold();
+		void UpdatePetCarried();
 
 
 
 
 		PlayerMenu* PlayerTalkClass;
+		BattleSystem* PlayerBattleClass;
 
 
 		void TalkedToCreature( uint32 entry, uint64 guid);
@@ -267,8 +283,14 @@ class LEGACY_DLL_SPEC Player : public Unit
 		uint8  m_gender;
 		uint8  m_face;
 		uint8  m_hair;
-		uint32 m_hair_color;
-		uint32 m_skin_color;
+		uint8  m_hair_color_R;
+		uint8  m_hair_color_G;
+		uint8  m_hair_color_B;
+		uint8  m_skin_color_R;
+		uint8  m_skin_color_G;
+		uint8  m_skin_color_B;
+		uint8  m_shirt_color;
+		uint8  m_misc_color;
 
 		uint16 m_eq_head, m_eq_body, m_eq_wrist, m_eq_weapon, m_eq_shoe, m_eq_accsr;
 
@@ -276,6 +298,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 
 		uint16 m_stat_int, m_stat_atk, m_stat_def, m_stat_agi, m_stat_hpx, m_stat_spx;
 		uint8  m_level;
+		uint32 m_rank;
 		uint32 m_xp_gain;
 		uint16 m_skill;
 		uint16 m_stat;
@@ -283,7 +306,10 @@ class LEGACY_DLL_SPEC Player : public Unit
 		uint16 m_hp_max;
 		uint16 m_sp_max;
 
-		uint32 m_atk_bonus, m_def_bonus, m_int_bonus, m_agi_bonus, m_hpx_bonus, m_spx_bonus;
+		///- TODO: Fix
+		//   We will need this to be signed
+		//   modifiers can have negative value
+		uint32 m_atk_mod, m_def_mod, m_int_mod, m_agi_mod, m_hpx_mod, m_spx_mod;
 
 		uint32 m_gold_hand;
 		uint32 m_gold_bank;
@@ -296,6 +322,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 
 	private:
 		GridReference<Player> m_gridRef;
+		Pet* m_petSlot[MAX_PET_SLOT];
 };
 
 #endif

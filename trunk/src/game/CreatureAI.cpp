@@ -17,10 +17,10 @@
  */
 
 #include "CreatureAI.h"
-//#include "HateMatrix.h"
+#include "HateMatrix.h"
 
 CreatureAI::~CreatureAI()
 {
 }
 
-//uint32 HateBinder::si_noHateValue=0;
+uint32 HateBinder::si_noHateValue=0;

@@ -33,6 +33,25 @@ class LEGACY_DLL_SPEC CreatureAI
 	public:
 		virtual ~CreatureAI(); 
 
+		// Called if IsVisible(Unit *who) is true at each *who move
+		virtual void MoveInLineOfSight(Unit *) = 0;
+
+		// Called at each attack of m_creature by any victim
+		virtual void AttackStart(Unit *) = 0;
+
+
+
+
+
+
+
+
+		// Is unit visible for MoveInLineOfSight
+		virtual bool IsVisible(Unit *) const = 0;
+
+		// Called at World update tick
+		virtual void UpdateAI(const uint32 diff) = 0;
+
 };
 
 struct SelectableAI : public FactoryHolder<CreatureAI>, public Permissible<Creature>
@@ -50,8 +69,17 @@ struct CreatureAIFactory : public SelectableAI
 	int Permit(const Creature *c) const { return REAL_AI::Permissible(c); }
 };
 
+enum Permitions
+{
+	PERMIT_BASE_NO               = -1,
+	PERMIT_BASE_IDLE             = 1,
+	PERMIT_BASE_REACTIVE         = 100,
+	PERMIT_BASE_PROACTIVE        = 200,
+	PERMIT_BASE_FACTION_SPECIFIC = 400,
+	PERMIT_BASE_SPECIAL          = 800
+};
+
 typedef FactoryHolder<CreatureAI> CreatureAICreator;
 typedef FactoryHolder<CreatureAI>::FactoryHolderRegistry CreatureAIRegistry;
 typedef FactoryHolder<CreatureAI>::FactoryHolderRepository CreatureAIRepository;
-
 #endif

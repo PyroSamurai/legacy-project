@@ -108,13 +108,6 @@ namespace LeGACY
 		template<class SKIP> void Visit(GridRefManager<SKIP> &) {}
 	};
 
-	struct LEGACY_DLL_DECL PlayerRelocationNotifier
-	{
-		Player &i_player;
-		PlayerRelocationNotifier(Player &pl) : i_player(pl) {}
-		template<class T> void Visit(GridRefManager<T> &) {}
-		void Visit(PlayerMapType &);
-	};
 
 	struct LEGACY_DLL_DECL ObjectUpdater
 	{
@@ -126,9 +119,38 @@ namespace LeGACY
 		void Visit(CreatureMapType &);
 	};
 
+
+
+
+
+
+
+	struct LEGACY_DLL_DECL PlayerRelocationNotifier
+	{
+		Player &i_player;
+		PlayerRelocationNotifier(Player &pl) : i_player(pl) {}
+		template<class T> void Visit(GridRefManager<T> &) {}
+		void Visit(PlayerMapType &);
+		void Visit(CreatureMapType &);
+	};
+
+	struct LEGACY_DLL_DECL CreatureRelocationNotifier
+	{
+		Creature &i_creature;
+		CreatureRelocationNotifier(Creature &c) : i_creature(c) {}
+		template<class T> void Visit(GridRefManager<T> &) {}
+		#ifdef WIN32
+		template<> void Visit(PlayerMapType &);
+		#endif
+	};
+
+
+
 	#ifndef WIN32
 	template<> void PlayerRelocationNotifier::Visit<Creature>(CreatureMapType &);
 	template<> void PlayerRelocationNotifier::Visit<Player>(PlayerMapType &);
+	template<> void CreatureRelocationNotifier::Visit<Player>(PlayerMapType &);
+	template<> void CreatureRelocationNotifier::Visit<Creature>(CreatureMapType &);
 	#endif
 
 }

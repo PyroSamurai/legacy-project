@@ -263,7 +263,7 @@ bool DatabaseMysql::DirectExecute(const char* sql)
 		else
 		{
 #ifdef LEGACY_DEBUG
-			sLog.outDebug("[%u ms] SQL: %s", getMSTime - _s, sql );
+			sLog.outDebug("[%u ms] SQL: %s", getMSTime() - _s, sql );
 #endif
 		}
 		// end guarded block

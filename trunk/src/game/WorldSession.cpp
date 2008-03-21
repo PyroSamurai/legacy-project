@@ -68,6 +68,9 @@ void WorldSession::FillOpcodeHandlerHashTable()
 	objmgr.opcodeTable[ CMSG_AUTH_RESPONSE ] = OpcodeHandler(STATUS_NOT_LOGGEDIN,
 			&WorldSession::HandlePlayerLoginOpcode );
 
+	objmgr.opcodeTable[ CMSG_CHAR_CREATE ] = OpcodeHandler(STATUS_LOGGEDIN,
+			&WorldSession::HandleCharCreateOpcode );
+
 	objmgr.opcodeTable[ CMSG_PLAYER_MOVE ] = OpcodeHandler(STATUS_LOGGEDIN,
 			&WorldSession::HandleMovementOpcodes );
 
@@ -85,6 +88,9 @@ void WorldSession::FillOpcodeHandlerHashTable()
 
 	objmgr.opcodeTable[ CMSG_UNKNOWN_14 ] = OpcodeHandler(STATUS_LOGGEDIN,
 			&WorldSession::HandleUnknownRequest14Opcode );
+
+	objmgr.opcodeTable[ CMSG_PLAYER_ATTACK ] = OpcodeHandler(STATUS_LOGGEDIN,
+			&WorldSession::HandlePlayerAttackOpcode );
 }
 
 void WorldSession::SizeError(WorldPacket const& packet, uint32 size) const
@@ -134,11 +140,11 @@ bool WorldSession::Update(uint32 /*diff*/)
 
 		if (iter == objmgr.opcodeTable.end())
 		{
-			sLog.outError( "SESSION: received unhandled opcode %s (0x%.2X)",
-				LookupNameClient(packet->GetOpcode(), g_clntOpcodeNames),
-				packet->GetOpcode());
+			//sLog.outError( "SESSION: received unhandled opcode %s (0x%.2X)",
+			//	LookupNameClient(packet->GetOpcode(), g_clntOpcodeNames),
+			//	packet->GetOpcode());
 
-				GetPlayer()->EndOfRequest();
+				//GetPlayer()->EndOfRequest();
 		}
 		else
 		{
@@ -163,7 +169,7 @@ bool WorldSession::Update(uint32 /*diff*/)
 				LookupNameClient(packet->GetOpcode(), g_clntOpcodeNames),
 				packet->GetOpcode());
 
-				GetPlayer()->EndOfRequest();
+				//GetPlayer()->EndOfRequest();
 					
 			}
 			
@@ -210,4 +216,9 @@ void WorldSession::LogoutPlayer(bool Save)
 	m_playerRecentlyLogout = true;
 	LogoutRequest(0);
 
+}
+
+void WorldSession::SetLogging(bool newvalue)
+{
+	_socket->SetLogging(newvalue);
 }
