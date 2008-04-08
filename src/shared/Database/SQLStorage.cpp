@@ -47,10 +47,11 @@ const char CreatureModelfmt[]="iffii";
 const char CreatureInfoAddonInfofmt[]="iiiiiis";
 const char EquipmentInfofmt[]="iiiiiiiiii";
 const char GameObjectInfofmt[]="iiisiifiiiiiiiiiiiiiiiiiiiiiiiis";
-const char ItemPrototypefmt[]="iiiisiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiffiffiffiffiffiiiiiiiiiifiiifiiiiiifiiiiiifiiiiiifiiiiiifiiiisiiiiiiiiiiiiiiiiiiiiiiiiiiifsiiiii";
+const char ItemPrototypefmt[]="iissiissiiiiiisiiiiiiiiiiiiiiiiiiiiiiiiiiii";
 const char PageTextfmt[]="isi";
 const char SpellThreatfmt[]="ii";
 const char InstanceTemplatefmt[]="iiiiiiffffs";
+const char SpellPrototypefmt[]="isiiiiiiii";
 
 SQLStorage sCreatureStorage(CreatureInfofmt,"entry","creature_template");
 SQLStorage sCreatureDataAddonStorage(CreatureDataAddonInfofmt,"guid","creature_addon");
@@ -62,6 +63,7 @@ SQLStorage sItemStorage(ItemPrototypefmt,"entry","item_template");
 SQLStorage sPageTextStore(PageTextfmt,"entry","page_text");
 SQLStorage sSpellThreatStore(SpellThreatfmt,"entry","spell_threat");
 SQLStorage sInstanceTemplate(InstanceTemplatefmt,"map","instance_template");
+SQLStorage sSpellStorage(SpellPrototypefmt,"entry","spell_template");
 
 void SQLStorage::Free ()
 {
@@ -123,7 +125,7 @@ void SQLStorage::Load ()
     if(iNumFields!=result->GetFieldCount())
     {
         RecordCount = 0;
-        sLog.outError("Error in %s table, probably sql file format was updated (there should be %d fields in sql).\n",table,iNumFields);
+        sLog.outError("Error in %s table field count %u, probably sql file format was updated (there should be %d fields in sql).\n",table,result->GetFieldCount(), iNumFields);
         delete result;
         exit(1);                                            // Stop server at loading broken or non-compatiable table.
     }
@@ -149,11 +151,11 @@ void SQLStorage::Load ()
 				by++;
 				printf("BYTE count %u\n", by);
 			}
-		printf("Numfields %u sc %u bo %u so %u by %u\n", iNumFields, sc, bo, so, by);
+		//printf("Numfields %u sc %u bo %u so %u by %u\n", iNumFields, sc, bo, so, by);
         recordsize=(iNumFields-sc-bo-so-by)*4+sc*sizeof(char*)+bo*sizeof(bool)+(so*sizeof(uint16))+(by*sizeof(uint8));
     }
 
-	printf("recordsize: %u\n", recordsize);
+	//printf("recordsize: %u\n", recordsize);
 
     char** newIndex=new char*[maxi];
     memset(newIndex,0,maxi*sizeof(char*));
