@@ -32,8 +32,8 @@
 
 
 /// WorldSession constructor
-WorldSession::WorldSession(uint32 id, WorldSocket *sock) :
-	_socket(sock), _accountId(id), _player(NULL), m_playerLoading(false), m_playerLogout(false), m_playerRecentlyLogout(false)
+WorldSession::WorldSession(uint32 id, WorldSocket *sock, uint32 sec) :
+	_socket(sock), _security(sec), _accountId(id), _player(NULL), m_playerLoading(false), m_playerLogout(false), m_playerRecentlyLogout(false)
 {
 	FillOpcodeHandlerHashTable();
 }
@@ -91,6 +91,15 @@ void WorldSession::FillOpcodeHandlerHashTable()
 
 	objmgr.opcodeTable[ CMSG_PLAYER_ATTACK ] = OpcodeHandler(STATUS_LOGGEDIN,
 			&WorldSession::HandlePlayerAttackOpcode );
+
+	objmgr.opcodeTable[ CMSG_PET_COMMAND ] = OpcodeHandler(STATUS_LOGGEDIN,
+			&WorldSession::HandlePetCommandOpcodes );
+
+	objmgr.opcodeTable[ CMSG_USE_INVENTORY_ITEM ] = OpcodeHandler(STATUS_LOGGEDIN, 
+			&WorldSession::HandleUseItemOpcodes );
+
+	objmgr.opcodeTable[ CMSG_GROUP_COMMAND ] = OpcodeHandler(STATUS_LOGGEDIN,
+			&WorldSession::HandleGroupOpcodes );
 }
 
 void WorldSession::SizeError(WorldPacket const& packet, uint32 size) const

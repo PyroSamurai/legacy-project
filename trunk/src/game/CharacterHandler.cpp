@@ -30,6 +30,7 @@
 #include "ObjectAccessor.h"
 #include "Database/DatabaseImpl.h"
 #include "Encoder.h"
+#include "GossipDef.h"
 
 #include "BattleSystem.h"
 
@@ -58,6 +59,12 @@ bool LoginQueryHolder::Initialize()
 
 	res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADFROM, "SELECT * FROM characters WHERE accountid = '%u'", m_accountId);
 
+	res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADPET, "SELECT id, petslot FROM character_pet WHERE owner = '%u' ORDER BY petslot", GUID_LOPART(m_guid));
+
+	res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADINVENTORY, "SELECT entry, pet, slot, item, item_template, item_instance.* FROM character_inventory JOIN item_instance ON character_inventory.item = item_instance.guid WHERE character_inventory.guid = '%u' ORDER BY slot", GUID_LOPART(m_guid));
+
+	res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADSPELL, "SELECT entry, level FROM character_spell where owner = '%u' ORDER BY entry", GUID_LOPART(m_guid));
+
 	return res;
 }
 
@@ -71,7 +78,7 @@ class CharacterHandler
 	public:
 		void HandlePlayerLoginCallback(QueryResult * /*dummy*/, SqlQueryHolder * holder)
 		{
-//			sLog.outString("CharacterHandler::HandlePlayerLoginCallback");
+			sLog.outString("CharacterHandler::HandlePlayerLoginCallback");
 			if(!holder) return;
 			WorldSession *session = sWorld.FindSession(((LoginQueryHolder*)holder)->GetAccountId());
 			if(!session)
@@ -305,6 +312,7 @@ void WorldSession::HandlePlayerLoginOpcode( WorldPacket & recv_data )
 	LoginQueryHolder *holder = new LoginQueryHolder(accountId, playerGuid);
 	if(!holder->Initialize())
 	{
+		sLog.outDebug("HOLDER: Deleting holder");
 		delete holder;    // delete all unprocessed queries
 		m_playerLoading = false;
 		return;
@@ -316,6 +324,8 @@ void WorldSession::HandlePlayerLoginOpcode( WorldPacket & recv_data )
 
 void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 {
+	sLog.outDebug( "WORLD: HandlePlayerLogin" );
+
 	uint64 playerGuid = holder->GetGuid();
 
 	Player* pCurrChar = new Player(this);
@@ -331,11 +341,8 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 	else
 		SetPlayer(pCurrChar);
 
-	sLog.outDebug("Adding player %s to Map.", pCurrChar->GetName());
+	sLog.outDebug("** Adding player %s to Map.", pCurrChar->GetName());
 
-
-
-	pCurrChar->LoadPet();
 	pCurrChar->SendInitialPacketsBeforeAddToMap();
 
 	Map* map = MapManager::Instance().GetMap(pCurrChar->GetMapId(), pCurrChar);
@@ -348,7 +355,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 	CharacterDatabase.PExecute("UPDATE characters SET online = 1 WHERE guid = '%u'", pCurrChar->GetGUIDLow());
 
 	std::string IP_str = _socket ? _socket->GetRemoteAddress().c_str() : "-";
-	sLog.outString("Account: %d (IP: %s) Login Character:[%s] (guid:%u)", GetAccountId(), IP_str.c_str(), pCurrChar->GetName(), pCurrChar->GetGUID());
+	sLog.outString("** Account: %d (IP: %s) Login Character:[%s] (guid:%u)", GetAccountId(), IP_str.c_str(), pCurrChar->GetName(), pCurrChar->GetGUID());
 
 //	pCurrChar->SetInGameTime( getMSTime() );
 
@@ -391,9 +398,16 @@ void WorldSession::HandlePlayerActionOpcode( WorldPacket & recv_data )
 		}
 		case 0x06:
 		{
-			///- Close Dialog
-			// TODO: Handle next dialog if any
-			GetPlayer()->EndOfRequest();
+			///- Close Dialog if not talking to anyone
+			if(!GetPlayer()->PlayerTalkClass->IsMenuOpened())
+			{
+				GetPlayer()->EndOfRequest();
+			}
+
+			GetPlayer()->PlayerTalkClass->CloseMenu();
+			// Send prepared dialog if any
+			//GetPlayer()->PlayerTalkClass->SendPreparedDialog();
+			//GetPlayer()->PlayerTalkClass->SetTalking(false);
 			break;
 		}
 
@@ -401,6 +415,12 @@ void WorldSession::HandlePlayerActionOpcode( WorldPacket & recv_data )
 		case CMSG_PLAYER_AREA_TRIGGER:
 		{
 			HandlePlayerEnterDoorOpcode( recv_data );
+			break;
+		}
+
+		case 0x09:
+		{
+			HandlePlayerSelectDialogOpcodes( recv_data );
 			break;
 		}
 
@@ -441,8 +461,8 @@ void WorldSession::HandlePlayerEnterDoorOpcode( WorldPacket & recv_data )
 	///- Temporary update door position
 	if(player->GetName() == "Eleven")
 	{
-		CharacterDatabase.PExecute("UPDATE map_matrix set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
-		//CharacterDatabase.PExecute("UPDATE map_matrix set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u AND x = 0 AND y = 0", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
+		WorldDatabase.PExecute("UPDATE map_matrix set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
+		//WorldDatabase.PExecute("UPDATE map_matrix set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u AND x = 0 AND y = 0", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
 	}
 
 	///- Send Enter Door action response

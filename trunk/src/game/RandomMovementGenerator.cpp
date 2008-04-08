@@ -23,7 +23,7 @@ template<>
 void
 RandomMovementGenerator<Creature>::Initialize(Creature &creature)
 {
-	sLog.outDebug(" $$ RandomMovementGenerator::Initialize");
+//	sLog.outDebug(" $$ RandomMovementGenerator::Initialize");
 	uint16 x, y;
 
 	creature.GetRespawnCoord(x, y);
@@ -70,7 +70,7 @@ RandomMovementGenerator<Creature>::Update(Creature &creature, const uint32 &diff
 			uint16 y = i_waypoints[i_nextMove][1];
 			creature.addUnitState(UNIT_STATE_ROAMING);
 			creature.SendMonsterMove(x, y, 0);
-			sLog.outDebug("****** RandomMovementGenerator<Creature>::Update *******");
+//			sLog.outDebug("****** RandomMovementGenerator<Creature>::Update *******");
 			i_nextMoveTime.Reset(urand(10000, 12000-1));
 		}
 		else
