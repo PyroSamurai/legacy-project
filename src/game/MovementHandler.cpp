@@ -28,8 +28,8 @@
 
 void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
 {
-//	sLog.outDebug( "WORLD: Recvd CMSG_PLAYER_MOVE Message" );
-	// TODO: CHECK_PACKET_SIZE
+	sLog.outDebug( "WORLD: Recvd CMSG_PLAYER_MOVE Message" );
+	CHECK_PACKET_SIZE( recv_data, 1+1+2+2+2 );
 	
 	if(GetPlayer()->GetDontMove())
 		return;

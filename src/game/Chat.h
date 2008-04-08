@@ -21,6 +21,8 @@
 
 #include "SharedDefines.h"
 
+#include <stdarg.h>
+
 class ChatHandler;
 class WorldSession;
 class Player;
@@ -43,22 +45,48 @@ class ChatHandler
 		explicit ChatHandler(Player* player) : m_session(player->GetSession()){}
 		~ChatHandler() {}
 
-		static void FillMessageData( WorldPacket *data, WorldSession* session, uint8 type, const char *channelName, uint64 target_guid, std::string msg, Unit *speaker);
+		static void FillMessageData( WorldPacket *data, WorldSession* session, uint8 type, const char *channelName, uint64 target_guid, const char *message, Unit *speaker);
 
-		void FillMessageData( WorldPacket *data, uint8 type, uint64 target_guid, std::string msg)
+		void FillMessageData( WorldPacket *data, uint8 type, uint64 target_guid, const char *message)
 		{
-			FillMessageData( data, m_session, type, NULL, target_guid, msg, NULL );
+			FillMessageData( data, m_session, type, NULL, target_guid, message, NULL );
 		}
 
-		void FillSystemMessageData( WorldPacket *data, std::string msg )
+		void FillSystemMessageData( WorldPacket *data, const char* message )
 		{
-			FillMessageData( data, CHAT_MSG_SYSTEM, 0, msg );
+			FillMessageData( data, CHAT_MSG_GM, 0, message );
 		}
 
 //		Player* getSelectedPlayer();
 //		Unit*   getSelectedUnit();
 
 		WorldSession * m_session;
+
+		void SendSysMessage(const char *str);
+		void PSendSysMessage(const char *format, ...) ATTR_PRINTF(2,3);
+
+		int ParseCommands(const char* text);
+
+
+	protected:
+		bool hasStringAbbr(const char* s1, const char* s2);
+		bool ExecuteCommandInTable(ChatCommand *table, const char* text);
+
+		ChatCommand* getCommandTable();
+
+		///- LEVEL 0
+		bool HandleUnstuckCommand(const char* args);
+
+		///- LEVEL 1
+		bool HandleLookupAreaCommand(const char* args);
+
+		///- LEVEL 2
+		bool HandleGetItemState(const char* args);
+		bool HandleWarpCommand(const char* args);
+
+		///- LEVEL 3
+		bool HandleNpcTalkCommand(const char* args);
+		bool HandleNpcInfoCommand(const char* args);
 
 		// common global flag
 		static bool load_command_table;
