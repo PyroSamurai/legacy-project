@@ -18,9 +18,8 @@
 AM_CPPFLAGS = -I$(top_builddir)/src/shared \
 			  -I$(srcdir) \
 			  -I$(srcdir)/../../framework \
-			  -fpermissive
-
-#			  -I$(srcdir)/../../../dep/include
+			  -fpermissive \
+			  -I$(srcdir)/../../../dep/include
 
 noinst_LIBRARIES = liblegacyconfig.a
 
