@@ -36,10 +36,29 @@ class Bag : public Item
 		~Bag();
 
 
+
+
+		Item* GetItemByPos( uint8 slot ) const {}
+		uint32 GetItemCount( uint32 item, Item* eItem = NULL ) const {}
+
+
+
+		bool IsEmpty() const {}
+
 	protected:
 
 		// Bag Storage space
 		Item* m_bagslot[MAX_BAG_SIZE];
 };
+/*
+inline Item* NewItemOrBag(ItemPrototype const * proto)
+{
+	return (proto->InventoryType == INVTYPE_BAG) ? new Bag : new Item;
+}
+*/
+inline Item* NewItem(ItemPrototype const * proto)
+{
+	return new Item;
+}
 
 #endif

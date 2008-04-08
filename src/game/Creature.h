@@ -20,6 +20,7 @@
 #define __LEGACY_CREATURE_H
 
 #include "Common.h"
+#include "GossipDef.h"
 #include "Unit.h"
 #include "ItemPrototype.h"
 #include "Database/DatabaseEnv.h"
@@ -30,7 +31,7 @@ class WorldSession;
 class CreatureAI;
 class Player;
 class WorldSession;
-
+/*
 enum Gossip_Option
 {
 	GOSSIP_OPTION_NONE         = 0,  // UNIT_NPC_FLAG_NONE = 0
@@ -50,7 +51,7 @@ struct GossipOption
 	uint32 Action;
 	std::string Option;
 };
-
+*/
 struct CreatureItem
 {
 	CreatureItem(uint32 _item, uint32 _maxcount, uint32 _incrtime)
@@ -234,14 +235,14 @@ class LEGACY_DLL_SPEC Creature : public Unit
 		CreatureInfo const *GetCreatureInfo() const;
 
 
-		uint32 GetGossipTextId(uint32 action, uint32 zoneid);
-		uint32 GetNpcTextId();
+		uint16 GetNpcTextId();
+		GossipItem GetNpcGossip(uint32 sequence, uint32 action); 
 
 
 
 		void prepareGossipMenu( Player *pPlayer, uint32 gossipid );
 		void sendPreparedGossip( Player* player );
-
+		void OnGossipSelect(Player* player, uint32 sequence, uint32 option);
 
 		uint32 GetGossipCount( uint32 gossipid );
 
@@ -249,7 +250,7 @@ class LEGACY_DLL_SPEC Creature : public Unit
 
 		void Say(const char* text, const uint32 language, const uint64 TargetGuid) { MonsterSay(text, language, TargetGuid); }
 
-		uint32 m_spells[CREATURE_MAX_SPELLS];
+		//uint32 m_spells[CREATURE_MAX_SPELLS];
 
 
 		GridReference<Creature> &GetGridRef() { return m_gridRef; }
@@ -269,6 +270,7 @@ class LEGACY_DLL_SPEC Creature : public Unit
 		bool m_gossipOptionLoaded;
 		GossipOptionList m_goptions;
 		uint16 m_NPCTextId;
+		uint16 m_NPCTextId_seq[10];
 
 		uint16 respawn_cord[3];
 

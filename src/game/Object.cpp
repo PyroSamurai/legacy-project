@@ -213,7 +213,7 @@ void Object::SendUpdateToPlayer(Player* player)
 void Object::BuildCreateUpdateBlockForPlayer(WorldPacket *data, Player *target) const
 {
 	if(!target) {
-		DEBUG_LOG("Object::BuildCreateUpdateBlockForPlayer Target is invalid");
+	//	DEBUG_LOG("Object::BuildCreateUpdateBlockForPlayer Target is invalid");
 		return;
 	}
 /*
@@ -229,8 +229,16 @@ void Object::BuildCreateUpdateBlockForPlayer(WorldPacket *data, Player *target) 
 	((Player*)this)->BuildUpdateBlockVisibilityForOthersPacket(data);
 */
 	target->BuildUpdateBlockVisibilityForOthersPacket(data);
-	DEBUG_LOG("Object::BuildCreateUpdateBlockForPlayer for '%s'",
-		target->GetName());
+	//DEBUG_LOG("Object::BuildCreateUpdateBlockForPlayer for '%s'", target->GetName());
+}
+
+void Object::DestroyForPlayer(Player *target) const
+{
+	ASSERT(target);
+
+	//WorldPacket data(SMSG_DESTROY_OBJECT, 8);
+	//data << GetGUID();
+	//target->GetSession()->SendPacket( &data );
 }
 
 bool Object::LoadValues(const char* data)

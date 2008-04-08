@@ -40,7 +40,7 @@ class LEGACY_DLL_SPEC WorldSession
 {
 	friend class CharacterHandler;
 	public:
-		WorldSession(uint32 id, WorldSocket *sock);
+		WorldSession(uint32 id, WorldSocket *sock, uint32 sec);
 		~WorldSession();
 
 		bool PlayerLogout() const { return m_playerLogout; }
@@ -75,8 +75,11 @@ class LEGACY_DLL_SPEC WorldSession
 		void SetLogging(bool newvalue);
 		WorldSocket* GetSocket() { return _socket; }
 
+		uint32 GetSecurity() const { return _security; }
 		uint32 GetAccountId() const { return _accountId; }
 		Player* GetPlayer() const { return _player; }
+
+		void SetSecurity(uint32 security) { _security = security; }
 		void SetPlayer(Player *plr) { _player = plr; }
 
 	protected:
@@ -93,23 +96,31 @@ class LEGACY_DLL_SPEC WorldSession
 		void HandleMessagechatOpcode(WorldPacket& recvPacket);
 		void HandlePlayerExpressionOpcode(WorldPacket& recvPacket);
 
+		void HandleUseItemOpcodes(WorldPacket& recvPacket);
+
 		void HandlePlayerAttackOpcode(WorldPacket& recvPacket);
+		void HandlePetCommandOpcodes(WorldPacket& recvPacket);
+
+		void HandleGroupOpcodes(WorldPacket& recvPacket);
 
 		void HandleUnknownRequest14Opcode(WorldPacket& recvPacket);
 
 		void HandlePlayerClickNpc(WorldPacket& recvPacket);
+		void HandlePlayerSelectDialogOpcodes(WorldPacket& recvPacket);
 
 	private:
 
 		Player *_player;
 		WorldSocket *_socket;
 
+		uint32 _security;
+		uint32 _accountId;
+
 		time_t _logoutTime;
 		bool m_playerLoading;  // code processed in LoginPlayer
 		bool m_playerLogout;   // code processed in LogoutPlayer
 		bool m_playerRecentlyLogout;
 
-		uint32 _accountId;
 
 		void FillOpcodeHandlerHashTable();
 		ZThread::LockedQueue<WorldPacket*,ZThread::FastMutex> _recvQueue;

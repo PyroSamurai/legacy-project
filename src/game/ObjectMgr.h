@@ -21,7 +21,7 @@
 
 #include "Log.h"
 #include "Object.h"
-#include "Bag.h"
+//#include "Bag.h"
 #include "Creature.h"
 #include "Player.h"
 #include "DynamicObject.h"
@@ -40,10 +40,11 @@
 #include <map>
 
 extern SQLStorage sCreatureStorage;
-extern SQLStorage sEquipmentStorage;
-extern SQLStorage sGOStorage;
-extern SQLStorage sPageTextStorage;
+//extern SQLStorage sEquipmentStorage;
+//extern SQLStorage sGOStorage;
+//extern SQLStorage sPageTextStorage;
 extern SQLStorage sItemStorage;
+extern SQLStorage sSpellStorage;
 
 class Item;
 
@@ -139,6 +140,7 @@ class ObjectMgr
 		static ItemPrototype const* GetItemPrototype(uint32 id) { return sItemStorage.LookupEntry<ItemPrototype>(id); }
 
 
+		uint32 GetPlayerGuidByAccountId(const uint32 acc_id) const;
 
 		void LoadGameObjectScripts();
 		void LoadQuestEndScripts() {}
@@ -152,6 +154,8 @@ class ObjectMgr
 
 		void LoadCreatureTemplates();
 		void LoadCreatures();
+		void LoadItemPrototypes();
+		void LoadSpellPrototypes();
 
 
 
@@ -167,6 +171,7 @@ class ObjectMgr
 
 
 		CreatureInfo const *GetCreatureTemplate( uint32 id );
+		SpellInfo const *GetSpellTemplate( uint16 id );
 
 
 
