@@ -31,8 +31,8 @@
 
 // Format is YYYYMMDDRR where RR is the change in the conf file
 // for that day.
-#ifndef _LEGACYCONFVERSION
-#define _LEGACYCONFVERSION 2008040601
+#ifndef _LEGACYDCONFVERSION
+#define _LEGACYDCONFVERSION 2008040601
 #endif
 
 #if PLATFORM == PLATFORM_WIN32
