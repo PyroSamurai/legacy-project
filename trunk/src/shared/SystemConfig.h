@@ -29,6 +29,12 @@
 #endif
 #endif
 
+// Format is YYYYMMDDRR where RR is the change in the conf file
+// for that day.
+#ifndef _LEGACYDCONFVERSION
+#define _LEGACYDCONFVERSION 2008040601
+#endif
+
 #if PLATFORM == PLATFORM_WIN32
 #	define _FULLVERSION "/" _VERSION " (Win32)"
 #	define _LEGACYD_CONFIG "legacyd.conf"

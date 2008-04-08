@@ -149,7 +149,10 @@ void Log::outDebugInLine( const char * str, ...)
 		va_start(ap, str);
 		vfprintf(logfile, str, ap);
 		va_end(ap);
+		fflush(logfile);
 	}
+
+	fflush(stdout);
 }
 
 void Log::outDebug( const char * str, ...)
