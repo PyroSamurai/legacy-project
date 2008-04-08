@@ -22,55 +22,92 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 #include "Util.h"
-
-
-
-
-
-
-
-
+#include "Creature.h"
 
 PlayerMenu::PlayerMenu( WorldSession *Session )
 {
 	pSession = Session;
+	m_menuOpen = false;
+}
+
+void PlayerMenu::InitTalking()
+{
+	WorldPacket data;
+	data.Initialize( 0x06 );
+	data << (uint8 ) 0x02;
+	pSession->SendPacket(&data); // sent only at 1st gossip hello
+}
+
+void PlayerMenu::SendGossipMenu( uint8 map_npcid, uint16 textId )
+{
+	SendTalking(map_npcid, textId);
 }
 
 void PlayerMenu::ClearMenus()
 {
 }
 
-void PlayerMenu::SendGossipMenu( uint16 textId, uint8 mapNpcId )
+void PlayerMenu::SendTalking( uint8 map_npcid, uint16 textId, uint8 dialog_type)
 {
-	// Send Gossip Option if available
-	
+	// 1A -- Opcode money related
+	// 1  -- 1 byte +/-
+	// value -- 4 byte money value
 
+	WorldPacket data;
+	pSession->SetLogging(true);
+	data.Initialize( dialog_type ); //0x1B;
+	data << (uint8 ) textId; //0x01;
+	//pSession->SendPacket(&data);
+	pSession->SetLogging(false);
+	data.Initialize( 0x14 );
+	data << (uint8 ) 0x09;
+	//pSession->SendPacket(&data);
+	//return;
 
-	// else send default gossip text id
-	SendTalking( textId, mapNpcId );
+	switch( dialog_type )
+	{
+		case 0x02:
+		{
+			data.Initialize( 0x1B );
+			data << (uint8 ) 0x03;
+			pSession->SendPacket(&data);
+			data.Initialize( 0x14 );
+			data << (uint8 ) 0x09;
+			pSession->SendPacket(&data);
+			break;
+		}
+
+		case 0x01:
+		case 0x06:
+		default:
+		{
+			pSession->GetPlayer()->IncTalkedSequence();
+			data.Initialize( 0x14 );
+			data << (uint8 ) 0x01;
+			data << (uint16) 0x0000;
+			data << (uint8 ) 0x00;
+			data << (uint8 ) 0x01; // 01
+			data << (uint8 ) dialog_type; // 01 Plain Dialog, 06 Select Dialog
+			data << (uint8 ) 0x03; // 03
+			data << (uint8 ) map_npcid;
+			data << (uint16) 0x0000;
+			data << (uint16) 0x0000;
+			data << (uint16) 0x0000;
+			data << (uint16) textId;
+			pSession->SendPacket(&data);
+			break;
+		}
+	}
 }
 
-void PlayerMenu::SendTalking( uint16 textId, uint8 mapNpcId )
+void PlayerMenu::SendMenu(uint8 map_npcid, uint16 textId)
 {
-	WorldPacket data;
-	data.Initialize( 0x06, 1 );
-	data << (uint8) 0x02;
-	pSession->SendPacket(&data);
+	m_menuOpen = true;
+	SendTalking(map_npcid, textId, GOSSIP_TYPE_SELECT);
+}
 
-	data.Initialize( 0x14, 1 );
-	data << (uint8) 0x01;
-	data << (uint16) 0x0000;
-	data << (uint16) 0x0001;
-	data << (uint16) 0x0301;
-	data << mapNpcId;
-	data << (uint16) 0x0000;
-	data << (uint16) 0x0000;
-	data << (uint16) 0x0000;
-	data << textId;
-	pSession->SendPacket(&data);
-
-	data.Initialize( 0x05, 1 );
-	data << (uint32) 0x025FFE02 << (uint16) 0x3900 << (uint8) 0x4A;
-	//pSession->SendPacket(&data);
-
+void PlayerMenu::SendSellMenu(uint8 map_npcid, uint16 textId)
+{
+	m_menuOpen = true;
+	SendTalking(map_npcid, textId, GOSSIP_TYPE_INVENTORY);
 }

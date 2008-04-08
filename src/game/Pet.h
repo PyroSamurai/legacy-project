@@ -21,7 +21,10 @@
 
 #include "ObjectDefines.h"
 #include "Creature.h"
-#include "Unit.h"
+//#include "Unit.h"
+//#include "Spell.h"
+
+class Unit;
 
 enum PetType
 {
@@ -31,6 +34,7 @@ enum PetType
 };
 
 #define MAX_PET_SKILL 4
+#define MAX_PET_ITEMS 6
 
 class Pet : public Creature
 {
@@ -47,6 +51,9 @@ class Pet : public Creature
 		uint8 GetSlotPosition() { return m_slotPosition; }
 		void SetSlotPosition(uint8 newslot) { m_slotPosition = newslot; }
 
+		bool isBattle() { return m_battle == 1; }
+		void SetBattle(uint8 mode) { m_battle = mode; }
+
 		uint8 GetLoyalty() const { return m_loyalty; }
 		void SetLoyalty(uint8 loyalty) { m_loyalty = loyalty; }
 
@@ -56,28 +63,38 @@ class Pet : public Creature
 		uint16 GetStatPoint() const { return m_statPoint; }
 		void SetStatPoint(uint16 point) { m_statPoint = point; }
 
-		uint16 GetSkill(uint8 index) { return m_skill[ index ]; }
-		void SetSkill(uint8 index, uint16 skill) { m_skill[ index ] = skill; }
+		//uint16 GetSkill(uint8 index) { return m_skill[ index ]; }
+		//void SetSkill(uint8 index, uint16 skill) { m_skill[ index ] = skill; }
 
-		uint8 GetSkillLevel(uint8 index) { return m_skillLevel[ index ]; }
-		void SetSkillLevel(uint8 index, uint8 level) { m_skillLevel[ index ] = level; }
+		//uint8 GetSkillLevel(uint8 index) { return m_skillLevel[ index ]; }
+		//void SetSkillLevel(uint8 index, uint8 level) { m_skillLevel[ index ] = level; }
 
+		void SetEquip(uint8 slot, Item *pItem, bool swap);
+		Item* GetEquip(uint8 slot) { return m_items[slot]; }
+		uint16 GetEquipModelId(uint8 slot) const;
 
+		uint32 GetOwnerAccountId() const;
+
+		void DumpPet();
 	protected:
 
 	private:
 		void SaveToDB(); // overwrited of Creature::SaveToDB
 		void DeleteFromDB(); // overwrited of Creature::DeleteFromDB
 
+		Item* m_items[MAX_PET_ITEMS];
+
 		PetType m_petType;
 		uint8   m_loyalty;
 		uint8   m_slotPosition;
+		uint8   m_battle;
 
 		uint16  m_skillPoint;
 		uint16  m_statPoint;
 
 		uint16  m_skill[MAX_PET_SKILL];
 		uint8   m_skillLevel[MAX_PET_SKILL];
+
 };
 
 #endif

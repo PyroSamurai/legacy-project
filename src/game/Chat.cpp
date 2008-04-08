@@ -31,22 +31,166 @@
 #include "CellImpl.h"
 
 bool ChatHandler::load_command_table = true;
-/*
+
+
 ChatCommand * ChatHandler::getCommandTable()
 {
-	static ChatCommand lookupCommandTable[] = {
-	{"area", SEC_MODERATOR, &ChatHandler::HandleLookupAreaCommand, "", NULL },
-	{"door", SEC_MODERATOR, &ChatHandler::HandleLookupDoorCommand, "", NULL },
-	{"tele", SEC_MODERATOR, &ChatHandler::HandleLookupTeleCommand, "", NULL }
+	static ChatCommand debugCommandTable[] =
+	{
+		{ "getitemstate", SEC_ADMINISTRATOR, &ChatHandler::HandleGetItemState, "", NULL },
+
 	};
+
+	static ChatCommand lookupCommandTable[] =
+	{
+		{ "area", SEC_MODERATOR, &ChatHandler::HandleLookupAreaCommand, "", NULL }
+	};
+
+	static ChatCommand npcCommandTable[] =
+	{
+		{ "talk", SEC_ADMINISTRATOR, &ChatHandler::HandleNpcTalkCommand, "", NULL },
+		{ "info", SEC_ADMINISTRATOR, &ChatHandler::HandleNpcInfoCommand, "", NULL },
+	};
+
+	static ChatCommand commandTable[] =
+	{
+		{ "debug", SEC_MODERATOR, NULL, "", debugCommandTable },
+		{ "lookup", SEC_ADMINISTRATOR, NULL, "", lookupCommandTable },
+		{ "npc", SEC_ADMINISTRATOR, NULL, "", npcCommandTable },
+		{ "warp", SEC_GAMEMASTER, &ChatHandler::HandleWarpCommand, "", NULL },
+		{ "unstuck", SEC_PLAYER, &ChatHandler::HandleUnstuckCommand, "", NULL },
+	};
+
+	if(load_command_table)
+	{
+		load_command_table = false;
+		/*
+		for(uint32 i = 0; commandTable[i].Name != NULL; i++)
+		{
+			if(commandTable[i].ChildCommands != NULL)
+			{
+				ChatCommand *ptable = commandTable[i].ChildCommands;
+				for(uint32 j = 0; ptable[j].Name != NULL; j++)
+				{
+					if(
+		*/
+	}
+
+	return commandTable;
 }
-*/
+
+bool ChatHandler::ExecuteCommandInTable(ChatCommand *table, const char* text)
+{
+	//sLog.outDebug("Executing '%s'", text);
+	char const* oldtext = text;
+	std::string fullcmd = text;
+	std::string cmd = "";
+
+	while(*text != ' ' && *text != '\0')
+	{
+		cmd += *text;
+		text++;
+	}
+
+	while(*text == ' ') text++;
+	
+	if(!cmd.length())
+		return false;
+
+	for(uint32 i = 0; table[i].Name != NULL; i++)
+	{
+		if(strlen(table[i].Name) && !hasStringAbbr(table[i].Name, cmd.c_str()))
+			continue;
+
+		if(table[i].ChildCommands != NULL)
+		{
+			if(!ExecuteCommandInTable(table[i].ChildCommands, text))
+			{
+
+			}
+			return true;
+		}
+
+		// check security level only simple command (without child commands)
+		if(m_session->GetSecurity() < table[i].SecurityLevel)
+			continue;
+
+		if((this->*(table[i].Handler))(strlen(table[i].Name)!=0 ? text : oldtext))
+		{
+
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+bool ChatHandler::hasStringAbbr(const char* s1, const char* s2)
+{
+	for(;;)
+	{
+		if( !*s2 )
+			return true;
+		else if( !*s1 )
+			return false;
+		else if( tolower( *s1 ) != tolower( *s2 ) )
+			return false;
+		s1++; s2++;
+	}
+}
 
 // Note: target_guid used only in CHAT_MSG_WHISPER_INFORM mode (in this case channelName ignored)
-void ChatHandler::FillMessageData( WorldPacket *data, WorldSession* session, uint8 type, const char *channelName, uint64 target_guid, std::string msg, Unit* speaker)
+void ChatHandler::FillMessageData( WorldPacket *data, WorldSession* session, uint8 type, const char *channelName, uint64 target_guid, const char *message, Unit* speaker)
 {
-	data->Initialize( 0x02, 1 );
-	*data << type;
-	*data << session->GetPlayer()->GetAccountId();
-//	*data << msg.c_str();
+	sLog.outDebug("FillMessageData '%s'", message);
+	data->Initialize( 0x02 );
+	*data << (uint8 ) type;
+	*data << (uint32) session->GetPlayer()->GetAccountId();
+	for(int i = 0; message[i] != '\0'; i++)
+		*data << (uint8 ) message[i];
+	//*data << message;
 }
+
+void ChatHandler::SendSysMessage(const char *str)
+{
+	WorldPacket data;
+	FillSystemMessageData(&data, str);
+	m_session->SendPacket(&data);
+}
+
+void ChatHandler::PSendSysMessage(const char *format, ...)
+{
+	va_list ap;
+	char str [1024];
+	va_start(ap, format);
+	vsnprintf(str,1024,format,ap);
+	va_end(ap);
+	SendSysMessage(str);
+}
+
+int ChatHandler::ParseCommands(const char* text)
+{
+	ASSERT(text);
+	ASSERT(*text);
+
+	if(text[0] != '!' && text[0] != '.')
+		return 0;
+
+	// ignore single . and ! in line
+	if(strlen(text) < 2)
+		return 0;
+
+	// ignore messages starting from many dots.
+	if(text[0] == '.' && text[1] == '.' || text[0] == '!' && text[1] == '!')
+		return 0;
+
+	text++;
+
+	//sLog.outDebug("Parsing command '%s'", text);
+	if(!ExecuteCommandInTable(getCommandTable(), text))
+		SendSysMessage("Command not found.");
+
+	return 1;
+}
+

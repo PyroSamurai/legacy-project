@@ -48,14 +48,16 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
 			recv_data >> msg;
 	}
 
+	ChatHandler(this).ParseCommands(msg.c_str());
+
 	WorldPacket data;
 //	ChatHandler::FillMessageData(&data, this, chatType, NULL, target, msg, NULL);
 	sLog.outString("Message from '%s' contains '%s'", GetPlayer()->GetName(),
 			msg.c_str());
 
 	data.Initialize( 0x02, 1 );
-	data << (uint8) chatType;
-	data << GetPlayer()->GetAccountId();
+	data << (uint8 ) chatType;
+	data << (uint32) GetPlayer()->GetAccountId();
 
 	for(size_t i = 0; i < msg.size(); i++)
 	{
@@ -66,7 +68,7 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
 	{
 		case CHAT_MSG_WHISPER:
 		{
-			Player* targetPlayer = ObjectAccessor::FindPlayer(target);
+			Player* targetPlayer = ObjectAccessor::FindPlayerByAccountId(target);
 			if ( !targetPlayer )
 				return;
 			targetPlayer->GetSession()->SendPacket(&data);

@@ -29,11 +29,17 @@ enum Gender
 	GENDER_NONE                      = 2
 };
 
-enum Element
+enum ElementTypes
 {
 	ELEMENT_HEART                    = 0,
-	ELEMENT_EARTH                    = 1
+	ELEMENT_EARTH                    = 1,
+	ELEMENT_WATER                    = 2,
+	ELEMENT_FIRE                     = 3,
+	ELEMENT_WIND                     = 4,
+	ELEMENT_NONE                     = 5,
 };
+
+#define MAX_ELEMENT_ID                 6
 
 enum MapTypes
 {

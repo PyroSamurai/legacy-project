@@ -80,10 +80,8 @@ void WorldSocket::LogPacket(WorldPacket packet, uint8 origin)
 	if( sWorldLog.LogWorld() )
 	{
 		uint8 opcode = (packet.GetOpcode());
-		sWorldLog.Log("Packet Origin: %s ",
-				origin == 0 ? "___SERVER ----->>" : "___CLIENT <<-----");
-		sWorldLog.Log("Packet # %u\n",
-				origin == 0 ? m_send_cnt : m_recv_cnt);
+		sWorldLog.Log("Packet Origin: %s \n", origin == 0 ? "___SERVER ----->>" : "___CLIENT <<-----");
+//		sWorldLog.Log("Packet # %u\n", origin == 0 ? m_send_cnt : m_recv_cnt);
 		sWorldLog.Log("SOCKET: %u LENGTH: %u OPCODE: %s (0x%.2X)(%u) \nData:\n",
 				(uint32)GetSocket(),
 				packet.size(),
@@ -139,9 +137,9 @@ void WorldSocket::LogHeader(uint16 hdr, uint16 size, uint8 cmd)
 //	hdr  = ENCODE(uint16(hdr));
 //	size = ENCODE(uint16(size));
 	//cmd  = ENCODE(uint8(cmd));
-	sWorldLog.Log("Header: 0x%.2X ", hdr);
-	sWorldLog.Log("Data Size: %u (0x%.4X) ", size - 1, size - 1);
-	sWorldLog.Log("Command %u (0x%.2X)\n", cmd, cmd);
+//	sWorldLog.Log("Header: 0x%.2X ", hdr);
+//	sWorldLog.Log("Data Size: %u (0x%.4X) ", size - 1, size - 1);
+//	sWorldLog.Log("Command %u (0x%.2X)\n", cmd, cmd);
 }
 
 /// Read the client transmitted data
@@ -324,14 +322,23 @@ void WorldSocket::_HandleAuthSession(WorldPacket& recvPacket)
 		return;
 	}
 
+	///- kick already loaded player with same account (if any) and remove session
+	if(!sWorld.RemoveSession(accountId))
+	{
+		return;
+	}
+
 	loginDatabase.PExecute("UPDATE accounts set online = 1 WHERE accountid = '%u'", accountId);
 
-	result = CharacterDatabase.PQuery("SELECT * FROM characters WHERE accountid = '%u' AND psswd = md5('%s') AND online = 0", accountId, password.c_str());
+	Field* f = result->Fetch();
+	uint32 security = f[2].GetUInt32();
 
-	_session = new WorldSession(accountId, this);
+	_session = new WorldSession(accountId, this, security);
 	
 	ASSERT(_session);
 	sWorld.AddSession(_session);
+
+	result = CharacterDatabase.PQuery("SELECT * FROM characters WHERE accountid = '%u' AND psswd = md5('%s') AND online = 0", accountId, password.c_str());
 
 	///- Create new character challenge if character is not found
 	if( !result )

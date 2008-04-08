@@ -47,24 +47,51 @@ void WorldSession::HandlePlayerAttackOpcode( WorldPacket & recv_data )
 	recv_data >> tgt_row;
 	recv_data >> skill;
 
+	Player* battleMaster = _player->GetBattleMaster();
+
+	if( !battleMaster )
+		return;
+
+	BattleSystem* engine = battleMaster->PlayerBattleClass;
+
+	if( !engine )
+		return;
+
 	BattleAction* action = new BattleAction(atk_col, atk_row, skill, tgt_col, tgt_row);
-	GetPlayer()->PlayerBattleClass->AddBattleAction(action);
-	GetPlayer()->PlayerBattleClass->IncAction();
+
+	Unit* attacker = engine->GetAttacker(action);
+
+	if( !attacker->HaveSpell(skill) )
+	{
+		sLog.outDebug("COMBAT: '%s' don't have spell '%s', cheating ?", attacker->GetName(), objmgr.GetSpellTemplate(skill)->Name);
+		///- Use default basic attack
+		action->SetSkill(SPELL_BASIC);
+	}
+
+	//GetPlayer()->PlayerBattleClass->AddBattleAction(action);
+	//GetPlayer()->PlayerBattleClass->IncAction();
+	engine->AddBattleAction(action);
+	engine->IncAction();
 
 	WorldPacket data;
 
-	if( !GetPlayer()->PlayerBattleClass->IsActionComplete() )
+	//if( !GetPlayer()->PlayerBattleClass->isActionComplete() )
+	if( !engine->isActionComplete() )
 	{
 		///- Tell next attacker to move if available
 		data.Initialize( 0x35 );
 		data << (uint8 ) 0x05;
 		data << atk_col;
 		data << atk_row;
+		SetLogging(true);
 		SendPacket(&data);
-		sLog.outDebug(" - Waiting next action from player");
+		SetLogging(false);
+		sLog.outDebug("COMBAT: Waiting next action from player '%s'", _player->GetName());
 		return;
 	}
 
-	GetPlayer()->PlayerBattleClass->UpdateBattleAction();
+	//GetPlayer()->PlayerBattleClass->UpdateBattleAction();
+	engine->BuildActions();
+	//engine->UpdateBattleAction(); // do not call UpdateBattleAction, it will be update in Player::Update
 
 }

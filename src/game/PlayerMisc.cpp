@@ -113,7 +113,7 @@ void Player::UpdateMap2Npc()
 
 	if( !result )
 	{
-		sLog.outString("No Npc position define in map %u", mapid);
+		//sLog.outString("No Npc position define in map %u", mapid);
 		return;
 	}
 
@@ -136,6 +136,6 @@ void Player::UpdateMap2Npc()
 		count++;
 	} while( result->NextRow() );
 
-	sLog.outString("Player::UpdateMap2Npc Updating %u npc's", count);
+	//sLog.outString("Player::UpdateMap2Npc Updating %u npc's", count);
 	GetSession()->SendPacket(&data);
 }

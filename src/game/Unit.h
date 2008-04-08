@@ -23,6 +23,7 @@
 #include "Object.h"
 #include "Opcodes.h"
 #include "Util.h"
+#include "Spell.h"
 #include "SharedDefines.h"
 #include "Utilities/EventProcessor.h"
 #include "MotionMaster.h"
@@ -32,6 +33,12 @@ class Creature;
 class GameObject;
 class Item;
 class Pet;
+
+enum InventorySlot
+{
+	NULL_BAG                = 0,
+	NULL_SLOT               = 255,
+};
 
 enum DeathState
 {
@@ -60,6 +67,7 @@ enum UnitState
 };
 
 #define CREATURE_MAX_SPELLS 4
+#define CREATURE_DROP_ITEM_MAX 10
 
 class LEGACY_DLL_SPEC Unit : public WorldObject
 {
@@ -71,7 +79,7 @@ class LEGACY_DLL_SPEC Unit : public WorldObject
 
 		virtual void Update( uint32 time );
 
-		static Unit* GetUnit(WorldObject& object, uint32 accountId);
+		static Unit* GetUnit(WorldObject& object, uint64 guid);
 
 		void SendMonsterMove(uint16 NewPosX, uint16 NewPosY, uint32 Time);
 
@@ -93,6 +101,7 @@ class LEGACY_DLL_SPEC Unit : public WorldObject
 		}
 
 		uint32 getLevel() const { return GetUInt8Value(UNIT_FIELD_LEVEL); }
+		void SetLevel(uint32 lvl);
 
 
 		uint64 const& GetOwnerGUID() const { return GetUInt64Value(UNIT_FIELD_SUMMONEDBY); }
@@ -116,20 +125,60 @@ class LEGACY_DLL_SPEC Unit : public WorldObject
 //		bool isVisibleForInState(Player const* u, bool inVisibleList) const;
 
 
-		bool isVendor()          const { return HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_VENDOR); }
+		bool isVendorGrocery()   const { return HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_VENDOR_GROCERY); }
+		bool isVendorEquipment() const { return HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_VENDOR_EQUIPMENT); }
+		bool isVendorBlacksmith()      const { return HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_VENDOR_BLACKSMITH); }
 		bool isTrainer()         const { return HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_TRAINER); }
 		bool isQuestGiver()      const { return HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER); }
 		bool isGossip()          const { return HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP); }
 		bool isBanker()          const { return HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_BANKER); }
 		bool isInnKeeper()       const { return HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_INNKEEPER); }
+		bool isVendor() const
+		{
+			return HasFlag( UNIT_NPC_FLAGS,
+				UNIT_NPC_FLAG_VENDOR_GROCERY |
+				UNIT_NPC_FLAG_VENDOR_EQUIPMENT |
+				UNIT_NPC_FLAG_VENDOR_BLACKSMITH );
+		}
 		bool isServiceProvider() const
 		{
 			return HasFlag( UNIT_NPC_FLAGS,
-				UNIT_NPC_FLAG_VENDOR |
+				UNIT_NPC_FLAG_VENDOR_GROCERY |
+				UNIT_NPC_FLAG_VENDOR_EQUIPMENT |
+				UNIT_NPC_FLAG_VENDOR_BLACKSMITH |
 				UNIT_NPC_FLAG_TRAINER |
 				UNIT_NPC_FLAG_BANKER |
 				UNIT_NPC_FLAG_INNKEEPER );
 		}
+
+		uint16 GetAttackPower();
+		uint16 GetMagicPower();
+		uint16 GetDefensePower();
+
+		bool CanHaveSpell(Spell* spell);
+		bool AddSpell(uint16 entry, uint8 level);
+		bool HaveSpell(uint16 entry);
+		Spell* GetSpell(uint16 entry) { return FindSpell(entry); }
+		Spell* FindSpell(uint16 entry);
+		Spell* GetSpellByPos(uint8 pos);
+		uint8 GetSpellLevel(const SpellInfo* sinfo);
+		uint8 GetSpellLevelByPos(uint8 pos);
+
+		/*******************************************************************/
+		/***        PLAYER BATTLE EXPERIENCE & ITEM DROP SYSTEM          ***/
+		/*******************************************************************/
+		void   AddKillExp(uint8 enemyLevel, bool linked=false);
+		void   AddKillItemDropped(uint16 itemId);
+		uint16 GetItemDropped(uint8 index);
+		uint32 GetExpGained();
+		bool   isLevelUp();
+		void   LevelUp();
+		void   resetLevelUp();
+
+		/*******************************************************************/
+		/***                    AI CREATURE SYSTEM                       ***/
+		/*******************************************************************/
+		uint16 GetRandomSpell(uint8 ai_difficulty);
 
 	protected:
 		explicit Unit( WorldObject *instantiator );
@@ -138,10 +187,13 @@ class LEGACY_DLL_SPEC Unit : public WorldObject
 
 		MotionMaster i_motionMaster;
 
+		SpellMap m_spells;
+
 	private:
 
 		uint32 m_state;
 
+		bool   m_levelUp;
 };
 
 #endif
