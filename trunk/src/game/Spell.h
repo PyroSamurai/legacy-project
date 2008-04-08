@@ -26,11 +26,72 @@ class Unit;
 class Player;
 class GameObject;
 
+enum SpellCastTargetFlags
+{
+	TARGET_FLAG_HURT              = 0x8000
+};
+
+enum SpellDamageType
+{
+	SPELL_DAMAGE_SCHOOL           = 0, // Can be pure ATK or pure INT 
+	SPELL_DAMAGE_ATK_INT          = 1, // Full ATK + 0.5 INT
+	SPELL_DAMAGE_INT              = 2, // Full INT
+	SPELL_DAMAGE_MECH             = 3, // Full ATK ignore DEFENSE
+
+};
+
+enum SpellModType
+{
+	SPELL_MOD_NONE                = 0,
+	SPELL_MOD_BUF                 = 1,
+	SPELL_MOD_HURT                = 2,
+	SPELL_MOD_BUF_HURT            = (SPELL_MOD_BUF | SPELL_MOD_HURT),
+	SPELL_MOD_HEAL                = 6,
+};
+
+enum SpellNumberEntry
+{
+	SPELL_BASIC                   = 10000,
+	SPELL_BERSERKER               = 13013,
+};
+/*
 class SpellCastTargets
 {
 	public:
 		SpellCastTargets() {}
 		~SpellCastTargets() {}
 };
+*/
+// from `spell_template` table
+struct SpellInfo
+{
+	uint32 Entry;
+	char*  Name;
+	uint32 SP;
+	uint32 Element;
+	uint32 hit;
+	uint32 point;
+	uint32 LevelMax;
+	uint32 Type;
+	uint32 DamageMod;
+	uint32 Reborn;
+};
 
+class Spell
+{
+	public:
+		Spell(uint16 entry, uint8 level) : m_entry(entry), m_level(level) {}
+		~Spell() {}
+
+		uint16 GetEntry() { return m_entry; }
+		uint8 GetLevel() { return m_level; }
+		SpellInfo const* GetProto() const;
+		bool LoadSpellFromDB();
+
+	private:
+		uint16 m_entry;
+		uint8  m_level;
+};
+
+typedef std::map<uint16, Spell*> SpellMap;
 #endif

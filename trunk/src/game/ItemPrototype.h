@@ -25,7 +25,10 @@ enum ItemModType
 {
 	ITEM_MOD_INT         = 0,
 	ITEM_MOD_ATK         = 1,
-	ITEM_MOD_DEF         = 2
+	ITEM_MOD_DEF         = 2,
+	ITEM_MOD_HPX         = 3,
+	ITEM_MOD_SPX         = 4,
+	ITEM_MOD_AGI         = 5
 };
 
 #define MAX_ITEM_MOD       3
@@ -58,17 +61,16 @@ enum ITEM_FLAGS
 
 enum InventoryType
 {
-	INVTYPE_NON_EQUIP               = 0,
-	INVTYPE_HEAD                    = 1,
-	INVTYPE_BODY                    = 2,
-	INVTYPE_WRIST                   = 3,
-	INVTYPE_WEAPON                  = 4,
-	INVTYPE_SHOE                    = 5,
-	INVTYPE_ACCESSORY               = 6,
-	INVTYPE_BAG                     = 7
+	INVTYPE_NON_EQUIP                           = 0,
+	INVTYPE_HEAD                                = 1,
+	INVTYPE_BODY                                = 2,
+	INVTYPE_WEAPON                              = 3,
+	INVTYPE_WRISTS                              = 4,
+	INVTYPE_FEET                                = 5,
+	INVTYPE_SPECIAL                             = 6,
 };
 
-#define MAX_INVTYPE                   8
+#define MAX_INVTYPE                               7
 
 enum ItemClass
 {
@@ -175,52 +177,24 @@ struct _Socket
 struct ItemPrototype
 {
 	uint32 ItemId;
-	uint32 Class;
-	uint32 SubClass;
-	uint32 Unk0;
-	char*  Name1;
-
-	uint32 Quality;
-	uint32 Flags;
-	uint32 BuyCount;
-	uint32 BuyPrice;
-	uint32 SellPrice;
+	uint32 modelid;
+	char*  Name;
+	char*  TypeDesc;
 	uint32 InventoryType;
-	uint32 AllowableClass;
-	uint32 AllowableRace;
-	uint32 ItemLevel;
-	uint32 RequiredLevel;
-	uint32 RequiredSkill;
-
-	uint32 RequiredSkillRank;
-	uint32 RequiredSpell;
-	uint32 RequiredHonorRank;
-	uint32 RequiredCityRank;
-	uint32 RequiredReputationFaction;
-
-	uint32 RequiredReputationRank;
+	uint32 level;
+	char*  attribute;
+	char*  slot;
+	uint32 EquipmentSlot;
+	uint32 contribute;
+	uint32 buyprice;
+	uint32 sellprice;
 	uint32 MaxCount;
 	uint32 Stackable;
+	char*  desc;
 	uint32 ContainerSlots;
-	_ItemStat ItemStat[10];
-	_Damage Damage[5];
-	_Spell Spells[5];
-	uint32 Bonding;
-	char*  Description;
-
-	uint32 StartQuest;
-
-	uint32 ItemSet;
-
-	uint32 MaxDurability;
-	uint32 Area;
-
-	uint32 Map;
-	
+	_ItemStat ItemState[10];
 	_Socket Socket[3];
-	uint32 socketBonus;
-
-	int32  Duration;
+	uint32  GemProperties;
 };
 
 #endif

@@ -58,13 +58,65 @@ World::~World()
 
 void World::SetInitialWorldSettings()
 {
-	sLog.outString("Reading Config");
+	///- Initialize the random number generator
+	srand((unsigned int)time(NULL));
+
+	///- Read the version of the configuration file and warn the user in cans of emptiness or mismatch
+	uint32 confVersion = sConfig.GetIntDefault("ConfVersion", 0);
+	if(!confVersion)
+	{
+		sLog.outError("******************************************************");
+		sLog.outError(" WARNING: legacyd.conf doest not include a ConfVersion");
+		sLog.outError("          Your configuration file may be out of date!");
+		sLog.outError("******************************************************");
+		clock_t pause = 3000 + clock();
+		while(pause > clock());
+	}
+	else
+	{
+		if( confVersion < _LEGACYDCONFVERSION )
+		{
+		sLog.outError("******************************************************");
+		sLog.outError(" WARNING: legacyd.conf version is out of date!");
+		sLog.outError("          Please check for updates");
+		sLog.outError("******************************************************");
+		clock_t pause = 3000 + clock();
+		while(pause > clock());
+		}
+	}
+
+	///- Read the player limit and the Message of the day from the config file
+	SetPlayerLimit(sConfig.GetIntDefault("PlayerLimit", DEFAULT_PLAYER_LIMIT), true);
+	SetMotd(sConfig.GetStringDefault("Motd", "Welcome to the Massive Network Game Object Server.").c_str() );
+
+	///- Read all rates from the config file
+	rate_values[RATE_DROP_ITEMS] = sConfig.GetFloatDefault("Rate.Drop.Items", 1);
+	rate_values[RATE_XP_KILL]    = sConfig.GetFloatDefault("Rate.XP.Kill", 1);
+	rate_values[RATE_XP_QUEST]   = sConfig.GetFloatDefault("Rate.XP.Quest", 1);
+	rate_values[RATE_HONOR_GAIN] = sConfig.GetFloatDefault("Rate.Honor.Gain", 1);
+	rate_values[RATE_ITEM_CREATION_QUALITY] = sConfig.GetFloatDefault("Rate.Item.Creation.Quality", 1);
+	rate_values[RATE_CREATURE_NORMAL_DAMAGE] = sConfig.GetFloatDefault("Rate.Creature.Normal.Damage", 1);
+	rate_values[RATE_CREATURE_SPELL_DAMAGE] = sConfig.GetFloatDefault("Rate.Creature.Spell.Damage", 1);
+	rate_values[RATE_CREATURE_DIFFICULTY] = sConfig.GetFloatDefault("Rate.Creature.Difficulty", 1);
+
+	rate_values[RATE_LINKED_AGILITY] = sConfig.GetIntDefault("Rate.Linked.Agility", 5);
+
+
+	///- Read other configuration items from the config file
 	m_configs[CONFIG_INTERVAL_SAVE] = sConfig.GetIntDefault("PlayerSaveInterval", 900000);
 	m_configs[CONFIG_PORT_WORLD] = sConfig.GetIntDefault("WorldServerPort", DEFAULT_WORLDSERVER_PORT);
 	m_configs[CONFIG_SOCKET_SELECTTIME] = sConfig.GetIntDefault("SocketSelectTime", DEFAULT_SOCKET_SELECT_TIME);
 
 	m_configs[CONFIG_GRID_UNLOAD] = sConfig.GetBoolDefault("GridUnload", true);
 
+
+
+
+	sLog.outString( "Loading Items..." );
+	objmgr.LoadItemPrototypes();
+
+	sLog.outString( "Loading Spells..." );
+	objmgr.LoadSpellPrototypes();
 
 	sLog.outString( "Loading Creature templates..." );
 	objmgr.LoadCreatureTemplates();
@@ -74,7 +126,6 @@ void World::SetInitialWorldSettings()
 
 	sLog.outString( "Loading Creature Data...");
 	objmgr.LoadCreatures();
-
 
 
 
@@ -114,9 +165,9 @@ void World::SetInitialWorldSettings()
 
 void World::RefreshDoorDatabase()
 {
-	sLog.outString("Resfreshing MapMatrix database");
+	sLog.outString("Loading Map Matrix...");
 	MapManager::Instance().ClearDoorDatabase();
-	QueryResult* resultMap2Map = loginDatabase.PQuery("select * from map_matrix");
+	QueryResult* resultMap2Map = WorldDatabase.PQuery("SELECT * FROM map_matrix");
 	//where x != 0 and y != 0");
 	do
 	{
@@ -132,7 +183,8 @@ void World::RefreshDoorDatabase()
 		//MapManager::Instance().AddMap2Door(mapDoor, destMap);
 	//	delete mapDoor;
 	} while( resultMap2Map->NextRow() );
-	sLog.outString(">> Loaded %u MapMatrix definitions", MapManager::Instance().GetMapMatrixCount());
+	sLog.outString(">> Loaded %u Map Matrix definitions", MapManager::Instance().GetMapMatrixCount());
+	sLog.outString("");
 }
 
 void World::InitResultQueue()
@@ -199,7 +251,7 @@ WorldSession * World::FindSession(uint32 id) const
 		return 0;
 }
 
-void World::RemoveSession(uint32 id)
+bool World::RemoveSession(uint32 id)
 {
 	SessionMap::iterator itr = m_sessions.find(id);
 
@@ -291,4 +343,19 @@ void World::_UpdateGameTime()
 	m_gameTime = thisTime;
 
 	///- Handle shutdown timer here
+}
+
+void World::SetPlayerLimit(int32 limit, bool needUpdate)
+{
+	if(limit < -SEC_ADMINISTRATOR)
+		limit = -SEC_ADMINISTRATOR;
+
+	// lock update need
+	bool db_update_need = needUpdate || (limit < 0) != (m_playerLimit < 0) || (limit < 0 && m_playerLimit < 0 && limit != m_playerLimit);
+
+	m_playerLimit = limit;
+
+	//if(db_update_need)
+	//	loginDatabase.PExecute("UPDATE realmlist SET allowedSecurityLevel = '%u' WHERE id = '%d'", uint8(GetPlayerSecurityLimit()),realmID);
+
 }
