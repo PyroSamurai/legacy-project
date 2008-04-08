@@ -203,7 +203,6 @@ bool Master::_StartDB()
 	sLog.outString("World Database: %s", dbstring.c_str());
 
 	///- Initialize the world database
-
 	sLog.outString("Connecting to world database...");
 	if(!WorldDatabase.Initialize(dbstring.c_str())){
 		sLog.outError("Cannot connect to world database %s", dbstring.c_str());
@@ -224,8 +223,15 @@ bool Master::_StartDB()
 		return false;
 	}
 
+	///- Get login database info from configuration file
+	if(!sConfig.GetString("LoginDatabaseInfo", &dbstring))
+	{
+		sLog.outError("Login database not specified in configuration file");
+		return false;
+	}
+
 	///- Initialize the login database
-	sLog.outString("Connecting to login database...");
+	sLog.outString("Login Database: %s", dbstring.c_str());
 	if(!loginDatabase.Initialize(dbstring.c_str())){
 		sLog.outError("Cannot connect to login database %s", dbstring.c_str());
 		return false;
