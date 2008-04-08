@@ -68,7 +68,7 @@
 #define GOSSIP_SENDER_SEC_CLASSTRAIN        5
 #define GOSSIP_SENDER_SEC_BATTLEINFO        6
 
-#define DEFAULT_GOSSIP_MESSAGE              0xffffff
+//#define DEFAULT_GOSSIP_MESSAGE              0xffffff
 
 extern uint32 GetSkillLevel(Player *player,uint32 skill);
 
