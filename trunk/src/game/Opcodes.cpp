@@ -32,19 +32,19 @@ const char* g_clntOpcodeNames[] =
 	"CMSG_PLAYER_AREA_TRIGGER",               // 8
 	"CMSG_CHAR_CREATE",                       // 9
 	"CMSG_UNKNOWN_10",                        // 10
-	"CMSG_UNKNOWN_11",                        // 11
+	"CMSG_USE_ITEM_TO_PLAYER",                // 11
 	"CMSG_PLAYER_ENTER_MAP_COMPLETED",        // 12
-	"CMSG_UNKNOWN_13",                        // 13
+	"CMSG_GROUP_COMMAND",                     // 13
 	"CMSG_UNKNOWN_14",                        // 14
 	"CMSG_UNKNOWN_15",                        // 15
 	"CMSG_UNKNOWN_16",                        // 16
-	"CMSG_UNKNOWN_17",                        // 17
+	"CMSG_USE_ITEM_TO_PET",                   // 17
 	"CMSG_UNKNOWN_18",                        // 18
-	"CMSG_UNKNOWN_19",                        // 19
+	"CMSG_PET_COMMAND",                       // 19
 	"CMSG_PLAYER_ACTION",                     // 20
 	"CMSG_UNKNOWN_21",                        // 21
 	"CMSG_UNKNOWN_22",                        // 22
-	"CMSG_UNKNOWN_23",                        // 23
+	"CMSG_USE_INVENTORY_ITEM",                // 23
 	"CMSG_UNKNOWN_24",                        // 24
 	"CMSG_UNKNOWN_25",                        // 25
 	"CMSG_UNKNOWN_26",                        // 26
@@ -118,5 +118,15 @@ const char* g_svrOpcodeNames[] =
 	"SMSG_UNKNOWN_39",
 	"SMSG_UNKNOWN_40",
 	"SMSG_RESPONSE_ENTER_MAP_ACK",
+};
+
+const char* g_elementNames[] =
+{
+	"HEART",
+	"EARTH",
+	"WATER",
+	"FIRE",
+	"WIND",
+	"NONE",
 };
 

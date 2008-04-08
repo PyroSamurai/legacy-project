@@ -17,10 +17,11 @@
  */
 
 #ifndef __LEGACY_NAMETABLES_H
-#define __LEGACY_NAMETABLES_h
+#define __LEGACY_NAMETABLES_H
 
 #include "Common.h"
 #include "Opcodes.h"
+#include "SharedDefines.h"
 
 /// Lookup client opcode name for human understandable logging
 inline const char* LookupNameClient(uint32 id, const char* table[])
@@ -47,6 +48,16 @@ inline const char* LookupNameServer(uint32 id, const char* table[])
 		return "UNKNOWN SVR_OPCODE_CODE received, it is more than max!";
 	return table[id];
 }
+
+/// Lookup element name for human understandable loggin
+inline const char* LookupNameElement(uint32 id, const char* table[])
+{
+	if(id > MAX_ELEMENT_ID)
+		return "UNKNOWN ELEMENT, it is more than max!";
+	return table[id];
+}
+
 extern const char* g_clntOpcodeNames[];
 extern const char* g_svrOpcodeNames[];
+extern const char* g_elementNames[];
 #endif

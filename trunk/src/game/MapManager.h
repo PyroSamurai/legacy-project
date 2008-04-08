@@ -82,7 +82,7 @@ class LEGACY_DLL_DECL MapManager : public LeGACY::Singleton<MapManager, LeGACY::
 				m_mapMatrix.erase(itr);
 			}
 			*/
-			sLog.outString("MapMatrix size: %u", m_mapMatrix.size());
+			//sLog.outString("MapMatrix size: %u", m_mapMatrix.size());
 		}
 		size_t GetMapMatrixCount()
 		{

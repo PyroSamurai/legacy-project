@@ -24,7 +24,7 @@
 #include "ObjectMgr.h"
 
 #include "Creature.h"
-#include "GossipDef.h"
+//#include "GossipDef.h"
 #include "Player.h"
 #include "Opcodes.h"
 #include "Log.h"
@@ -151,78 +151,38 @@ void Creature::sendPreparedGossip(Player* player)
 	uint8 mapNpcId = GetMapNpcId();//(GetGUIDLow() / 100) - GetMapId();
 	player->PlayerTalkClass->SendGossipMenu( GetNpcTextId(), mapNpcId );
 }
-/*
-void Creature::OnGossipSelect(Player* player, uint32 option)
+
+void Creature::OnGossipSelect(Player* player, uint32 sequence, uint32 option)
 {
-	GossipMenu* gossipmenu = player->PlayerTalkClass->GetGossipMenu();
-	uint32 action=gossipmenu->GetItem(option).m_gAction;
-	uint32 zoneid=GetZoneId();
-	uint64 guid=GetGUID();
-	GossipOption const *gossip=GetGossipOption( action );
-	uint32 textid;
-	if(!gossip)
+	if(option == GOSSIP_OPTION_END)
 	{
-		zoneid=0;
-		gossip=GetGossipOption( action );
-		if(!gossip)
-			return;
-	}
-	textid=GetGossipTextId( action, zoneid );
-	if(textid==0)
-		textid=GetNpcTextId();
-
-	switch (gossip->Action)
-	{
-		case GOSSIP_OPTION_GOSSIP:
-			player->PlayerTalkClass->CloseGossip();
-			player->PlayerTalkClass->SendTalking( textid );
-			break;
-
-		case GOSSIP_OPTION_QUESTGIVER:
-			player->PrepareQuestMenu( guid );
-			player->SendPreparedQuest( guid );
-			break;
-
-		case GOSSIP_OPTION_VENDOR:
-		case GOSSIP_OPTION_ARMORER:
-			player->GetSession()->SendListInventory(guid);
-			break;
-
-		case GOSSIP_OPTION_INNKEEPER:
-			player->PlayerTalkClass->CloseGossip();
-			player->SetBindPoint( guid );
-			break;
-		
-		case GOSSIP_OPTION_BANKER:
-			player->GetSession()->SendShowBank( guid );
-			break;
-
-		default:
-			OnPoiSelect( player, gossip );
-			break;
+		player->PlayerTalkClass->CloseMenu();
+		player->EndOfRequest();
+		return;
 	}
 
-}
-
-void Creature::OnPoiSelect(Player* player, GossipOption const *gossip)
-{
-}
-*/
-uint32 Creature::GetGossipTextId(uint32 action, uint32 zoneid)
-{
-	QueryResult *result = WorldDatabase.PQuery("SELECT textid FROM npc_gossip_textid WHERE action = '%u' AND zoneid = '%u'", action, zoneid );
+	QueryResult *result = WorldDatabase.PQuery("SELECT action, gossip_type, textid FROM npc_gossip WHERE npc_guid = %u AND sequence = %u", GetGUIDLow(), sequence);
 
 	if(!result)
-		return 0;
+	{
+		player->PlayerTalkClass->SendTalking(GetMapNpcId(), DEFAULT_GOSSIP_MESSAGE, GOSSIP_TYPE_PLAIN);
+		return;
+	}
 
 	Field *f = result->Fetch();
-	uint32 id = f[0].GetUInt32();
+	uint32 action = f[0].GetUInt32();
 
-	delete result;
+	sLog.outDebug(" >> Action Required %u", action);
+	if(action != option - GOSSIP_OPTION_START)
+		return;
 
-	return id;
+	uint8  gossip_type = f[1].GetUInt8();
+	uint16 textId      = f[2].GetUInt16();
+	sLog.outDebug(" >> Response with gossip type %u, textid %u", gossip_type, textId);
+	player->PlayerTalkClass->SendTalking(GetMapNpcId(), textId, gossip_type);
+
 }
-
+/*
 uint32 Creature::GetGossipCount( uint32 gossipid )
 {
 	uint32 count=0;
@@ -233,15 +193,15 @@ uint32 Creature::GetGossipCount( uint32 gossipid )
 	}
 	return count;
 }
-
-uint32 Creature::GetNpcTextId()
+*/
+uint16 Creature::GetNpcTextId()
 {
 	sLog.outString("Creature::GetNpcTextId GUID(%u) TextId(%u)", GetGUIDLow(), m_NPCTextId );
 	// already loaded and cached
-	if(m_NPCTextId)
-		return m_NPCTextId;
+	//if(m_NPCTextId)
+	//	return m_NPCTextId;
 
-	QueryResult* result = WorldDatabase.PQuery("SELECT textid FROM npc_gossip WHERE npc_guid = '%u'", GetGUIDLow());
+	QueryResult* result = WorldDatabase.PQuery("SELECT textid FROM npc_gossip WHERE npc_guid = '%u' AND sequence = 0", GetGUIDLow());
 	if(!result)
 		m_NPCTextId = DEFAULT_GOSSIP_MESSAGE;
 	else
@@ -253,6 +213,25 @@ uint32 Creature::GetNpcTextId()
 	sLog.outString("NpcTextId: %u", m_NPCTextId);
 	return m_NPCTextId;
 }
+
+GossipItem Creature::GetNpcGossip(uint32 sequence, uint32 action)
+{
+	QueryResult *result = WorldDatabase.PQuery("SELECT textid, gossip_type FROM npc_gossip WHERE npc_guid = %u AND sequence = %u AND action = %u", GetGUIDLow(), sequence, action - GOSSIP_OPTION_START);
+
+	GossipItem go;
+
+	if(!result)
+		return go;
+
+	Field *f = result->Fetch();
+	go.TextId = f[0].GetUInt16();
+	go.Type   = f[1].GetUInt8();
+
+	delete result;
+
+	return go;
+}
+
 /*
 std::string Creature::GetGossipTitle(uint8 type, uint32 id)
 {
@@ -390,6 +369,14 @@ bool Creature::CreateFromProto(uint32 guidlow, uint32 Entry, uint32 team, const 
 
 	SetUInt8Value(UNIT_FIELD_LEVEL, cinfo->level);
 	SetUInt8Value(UNIT_FIELD_ELEMENT, cinfo->element);
+
+	///- TODO: fix this, need adjusment
+	///- Default all creature have level 10 spells
+	AddSpell(cinfo->skill1, 10);
+	AddSpell(cinfo->skill2, 10);
+	AddSpell(cinfo->skill3, 10);
+	AddSpell(cinfo->skill4, 10);
+	AddSpell(cinfo->skill5, 10);
 
 
 	SetUInt32Value(UNIT_NPC_FLAGS, cinfo->npcflag);

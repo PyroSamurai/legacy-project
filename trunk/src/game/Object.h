@@ -97,6 +97,8 @@ class LEGACY_DLL_SPEC Object
 		//virtual void BuildUpdateBlockVisibilityForOthersPacket( WorldPacket *dat);
 
 
+		virtual void DestroyForPlayer( Player *target ) const;
+
 		const int32& GetInt32Value( uint16 index ) const
 		{
 			ASSERT( index < m_valuesCount || PrintIndexError( index, false) );

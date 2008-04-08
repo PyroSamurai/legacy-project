@@ -183,7 +183,7 @@ Map::Add(T *obj)
 
 void Map::MessageBroadcast(Player *player, WorldPacket *msg, bool to_self, bool own_team_only)
 {
-	sLog.outDetail("Map::MessageBroadcast Player");
+	//sLog.outDetail("Map::MessageBroadcast Player");
 	CellPair p = LeGACY::ComputeCellPair(player->GetPositionX(), player->GetPositionY());
 
 	if(p.x_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP || p.y_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP )
@@ -268,10 +268,10 @@ void Map::Remove(Player *player, bool remove)
 	
 	if( !getNGrid(cell.data.Part.grid_x, cell.data.Part.grid_y) )
 	{
-		sLog.outError("Map::Remove() i_grids was NULL x:%d, y:%d",cell.data.Part.grid_x,cell.data.Part.grid_y);
+		sLog.outError("MAP: Map::Remove() i_grids was NULL x:%d, y:%d",cell.data.Part.grid_x,cell.data.Part.grid_y);
 		return;
 	}
-	DEBUG_LOG("Remove player '%s' from map %u grid[%u,%u]", player->GetName(), player->GetMapId(), cell.GridX(), cell.GridY());
+	DEBUG_LOG("MAP: Remove player '%s' from map %u grid[%u,%u]", player->GetName(), player->GetMapId(), cell.GridX(), cell.GridY());
 	NGridType *grid = getNGrid(cell.GridX(), cell.GridY());
 	assert(grid != NULL);
 

@@ -36,8 +36,7 @@ LeGACY::PlayerNotifier::Visit(PlayerMapType &m)
 			continue;
 
 		i++;
-		sLog.outString("GridNotifier %u PlayerNotifier from '%s' to '%s'",
-			i, iter->getSource()->GetName(), i_player.GetName());
+		//sLog.outString("GridNotifier %u PlayerNotifier from '%s' to '%s'", i, iter->getSource()->GetName(), i_player.GetName());
 
 		iter->getSource()->UpdateVisibilityOf(&i_player);
 //		if ( iter->getSource() != &i_player )
@@ -85,7 +84,7 @@ MessageDeliverer::Visit(PlayerMapType &m)
 			&& (!i_ownTeamOnly || iter->getSource()->GetTeam() == i_player.GetTeam()) )
 		{
 			if(WorldSession* session = iter->getSource()->GetSession()) {
-				sLog.outString("GridNotifiers MessageDeliverer::Visit PlayerMapType for '%s'", iter->getSource()->GetName());
+			//	sLog.outString("GridNotifiers MessageDeliverer::Visit PlayerMapType for '%s'", iter->getSource()->GetName());
 				session->SendPacket(i_message);
 			}
 		}

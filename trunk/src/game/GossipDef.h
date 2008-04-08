@@ -21,6 +21,8 @@
 
 #include "Common.h"
 #include "NPCHandler.h"
+//#include "Creature.h"
+//#include "WorldPacket.h"
 
 class WorldSession;
 
@@ -28,6 +30,39 @@ class WorldSession;
 
 #define DEFAULT_GOSSIP_MESSAGE              10051
 
+enum GossipType
+{
+	GOSSIP_TYPE_PLAIN                  = 0x01,
+	GOSSIP_TYPE_INVENTORY              = 0x02,
+	GOSSIP_TYPE_SELECT                 = 0x06,
+};
+
+enum GossipOption
+{
+	GOSSIP_OPTION_START                = 0x1D,
+	GOSSIP_OPTION_1                    = 0x1E,
+	GOSSIP_OPTION_2                    = 0x1F,
+	GOSSIP_OPTION_3                    = 0x20,
+	GOSSIP_OPTION_4                    = 0x21,
+	GOSSIP_OPTION_5                    = 0x22,
+	GOSSIP_OPTION_6                    = 0x23,
+	GOSSIP_OPTION_7                    = 0x24,
+	GOSSIP_OPTION_8                    = 0x25,
+	GOSSIP_OPTION_9                    = 0x26,
+	GOSSIP_OPTION_10                   = 0x27,
+	GOSSIP_OPTION_END                  = 0x28,
+};
+
+struct GossipItem
+{
+	GossipItem() : TextId(0), Type(GOSSIP_TYPE_PLAIN) {}
+
+	uint16 TextId;
+	uint8  Type;
+};
+
+//typedef GossipItem Gossip;
+/*
 struct GossipMenuItem
 {
 	uint8       m_gIcon;
@@ -60,7 +95,7 @@ class LEGACY_DLL_SPEC GossipMenu
 	protected:
 		GossipMenuItemList m_gItems;
 };
-
+*/
 
 
 
@@ -70,7 +105,7 @@ class LEGACY_DLL_SPEC GossipMenu
 class LEGACY_DLL_SPEC PlayerMenu
 {
 	private:
-		GossipMenu*   pGossipMenu;
+//		GossipMenu*   pGossipMenu;
 //		QuestMenu*    pQuestMenu;
 		WorldSession* pSession;
 
@@ -78,12 +113,20 @@ class LEGACY_DLL_SPEC PlayerMenu
 		PlayerMenu( WorldSession *Session );
 		~PlayerMenu();
 
-
+		/* Required by ScriptCalls */
 		void ClearMenus();
+		void SendGossipMenu( uint8 map_npcid, uint16 textId );
 
-		void SendGossipMenu( uint16 textId, uint8 mapNpcId );
-		void CloseGossip();
-		void SendTalking( uint16 textId, uint8 mapNpcId );
+		void InitTalking();
+		void SendTalking( uint8 map_npcid, uint16 textId, uint8 gossip_type = GOSSIP_TYPE_PLAIN );
+		bool IsMenuOpened() { return m_menuOpen; }
+		void CloseMenu() { m_menuOpen = false; }
+
+		void SendMenu( uint8 map_npcid, uint16 textId );
+		void SendSellMenu( uint8 map_npcid, uint16 textId );
+
+	private:
+		bool m_menuOpen;
 };
 
 #endif

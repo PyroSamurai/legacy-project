@@ -62,7 +62,19 @@ enum WorldConfigs
 
 enum Rates
 {
-	RATE_HEALTH = 0
+	RATE_HEALTH = 0,
+
+	RATE_DROP_ITEMS,
+	RATE_DROP_MONEY,
+	RATE_XP_KILL,
+	RATE_XP_QUEST,
+	RATE_HONOR_GAIN,
+	RATE_ITEM_CREATION_QUALITY,
+	RATE_CREATURE_NORMAL_DAMAGE,
+	RATE_CREATURE_SPELL_DAMAGE,
+	RATE_CREATURE_DIFFICULTY,
+	RATE_LINKED_AGILITY,
+	MAX_RATES
 };
 
 enum ServerMessageType
@@ -80,12 +92,25 @@ class World
 
 		WorldSession* FindSession(uint32 id) const;
 		void AddSession(WorldSession *s);
-		void RemoveSession(uint32 id);
+		bool RemoveSession(uint32 id);
 		/// Get the number of current active sessions
 		uint32 GetActiveAndQueuedSessionCount() const { return m_sessions.size(); }
 		uint32 GetActiveSessionCount() const { return m_sessions.size() - m_QueuedPlayer.size(); }
 
+		/// Set the active session server limit (or security level limitation)
+		void SetPlayerLimit(int32 limit, bool needUpdate = false);
+
+		/// Set a new Message of the Day
+		void SetMotd(const char *motd) { m_motd = motd; }
+		/// Get the current Message of the Day
+		const char* GetMotd() const { return m_motd.c_str(); }
+
 		void Update(time_t diff);
+
+		/// Set a server rate (see #Rates)
+		void setRate(Rates rate, float value) { rate_values[rate] = value; }
+		/// Get a server rate (see #Rates)
+		float getRate(Rates rate) const { return rate_values[rate]; }
 
 		void setConfig(uint32 index, uint32 value)
 		{
@@ -125,6 +150,7 @@ class World
 		typedef HM_NAMESPACE::hash_map<uint32, WorldSession*> SessionMap;
 		SessionMap m_sessions;
 
+		float rate_values[MAX_RATES];
 		uint32 m_configs[CONFIG_VALUE_COUNT];
 		uint32 m_playerLimit;
 

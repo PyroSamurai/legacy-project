@@ -51,14 +51,12 @@ ObjectMgr::~ObjectMgr()
 void ObjectMgr::LoadCreatureTemplates()
 {
 	sCreatureStorage.Load();
-
+	//sLog.outString("SizeOf CreatureInfo: %u", sizeof(CreatureInfo));
 	sLog.outString( ">> Loaded %u creature definitions", sCreatureStorage.RecordCount );
-	sLog.outString();
+	sLog.outString("");
 
-	sLog.outString("SizeOf CreatureInfo: %u", sizeof(CreatureInfo));
 	// check data correctness
-	sLog.outString("ObjectMgr::LoadCreatureTemplate");
-	sLog.outString(" -       %-5s %10s %5s %2s %-10s", "ENTRY","NAME", "LEVEL", "EL", "SCRIPT");
+	//sLog.outString(" -       %-5s %10s %5s %2s %-10s", "ENTRY","NAME", "LVL", "EL", "SCRIPT");
 	for(uint32 i = 1; i < sCreatureStorage.MaxEntry; ++i)
 	{
 		CreatureInfo const* cInfo = sCreatureStorage.LookupEntry<CreatureInfo>(i);
@@ -66,7 +64,7 @@ void ObjectMgr::LoadCreatureTemplates()
 		if(!cInfo)
 			continue;
 
-		sLog.outString(" - Check %5u %10s %5u %2u %10s", cInfo->Entry, cInfo->Name, cInfo->level, cInfo->element, cInfo->ScriptName);
+		//sLog.outString(" - Check %5u %10s %5u %2u %10s", cInfo->Entry, cInfo->Name, cInfo->level, cInfo->element, cInfo->ScriptName);
 		//std::string s = "";
 		//s = cInfo->ScriptName;
 
@@ -127,8 +125,8 @@ void ObjectMgr::LoadCreatures()
 
 	delete result;
 
-	sLog.outString();
 	sLog.outString( ">> Loaded %u creatures", mCreatureDataMap.size() );
+	sLog.outString("");
 }
 
 void ObjectMgr::AddCreatureToGrid(uint32 guid, CreatureData const* data)
@@ -136,7 +134,7 @@ void ObjectMgr::AddCreatureToGrid(uint32 guid, CreatureData const* data)
 	CellPair cell_pair = LeGACY::ComputeCellPair(data->posX, data->posY);
 	uint32 cell_id = (cell_pair.y_coord*TOTAL_NUMBER_OF_CELLS_PER_MAP) + cell_pair.x_coord;
 
-	sLog.outString( " - Adding Creature %4u GUID(%7u) Map(%5u[%4u,%4u]) NpcId(%1u) CellId(%1u)", data->id, guid, data->mapid, data->posX, data->posY, data->map_npcid, cell_id);
+	//sLog.outString( " - Adding Creature %4u GUID(%7u) Map(%5u[%4u,%4u]) NpcId(%1u) CellId(%1u)", data->id, guid, data->mapid, data->posX, data->posY, data->map_npcid, cell_id);
 
 	CellObjectGuids& cell_guids = mMapObjectGuids[data->mapid][cell_id];
 	cell_guids.creatures.insert(guid);
@@ -154,6 +152,11 @@ void ObjectMgr::RemoveCreatureFromGrid(uint32 guid, CreatureData const* data)
 CreatureInfo const* ObjectMgr::GetCreatureTemplate(uint32 id)
 {
 	return sCreatureStorage.LookupEntry<CreatureInfo>(id);
+}
+
+SpellInfo const* ObjectMgr::GetSpellTemplate(uint16 id)
+{
+	return sSpellStorage.LookupEntry<SpellInfo>(id);
 }
 
 /*
@@ -258,4 +261,43 @@ uint32 ObjectMgr::GenerateLowGuid(HighGuid guidhigh)
 
 	ASSERT(0);
 	return 0;
+}
+
+void ObjectMgr::LoadItemPrototypes()
+{
+	sItemStorage.Load();
+	//sLog.outString("SizeOf ItemPrototype: %u", sizeof(ItemPrototype));
+	sLog.outString( ">> Loaded %u item prototypes", sItemStorage.RecordCount );
+	sLog.outString( "" );
+
+	//sLog.outString(" -       %-5s %15s %5s %3s %5s %5s", "ENTRY","NAME", "TYPE", "LVL", "MODEL", "STACK");
+	// check data correctness
+	for(uint32 i = 1; i < sItemStorage.MaxEntry; ++i)
+	{
+		ItemPrototype const* proto = sItemStorage.LookupEntry<ItemPrototype >(i);
+		if(!proto)
+			continue;
+
+		//sLog.outString(" - Check %5u %15s %5u %3u %5u %5u", proto->ItemId, proto->Name, proto->InventoryType, proto->level, proto->modelid, proto->Stackable);
+
+	}
+}
+
+void ObjectMgr::LoadSpellPrototypes()
+{
+	sSpellStorage.Load();
+	sLog.outString( ">> Loaded %u spell prototypes", sSpellStorage.RecordCount );
+	sLog.outString( "" );
+
+}
+
+uint32 ObjectMgr::GetPlayerGuidByAccountId(uint32 acc_id) const
+{
+	QueryResult *result = CharacterDatabase.PQuery("SELECT guid FROM characters WHERE accountid = '%u'", acc_id);
+	if(!result)
+		return 0;
+
+	uint32 guid = (*result)[0].GetUInt32();
+	delete result;
+	return guid;
 }

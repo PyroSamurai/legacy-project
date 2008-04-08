@@ -28,6 +28,7 @@ namespace AIRegistry
 	void Initialize()
 	{
 		sLog.outDebug(">> AIRegistry::Intialize");
+		sLog.outDebug("");
 		(new CreatureAIFactory<NullCreatureAI>("NullAI"))->RegisterSelf();
 
 

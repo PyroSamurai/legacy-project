@@ -39,16 +39,23 @@ liblegacygame_a_SOURCES = \
 	CreatureAIImpl.h \
 	CreatureAIRegistry.cpp CreatureAIRegistry.h \
 	CreatureAISelector.cpp CreatureAISelector.h \
+	debugcmds.cpp \
 	DynamicObject.h \
 	GameObject.cpp GameObject.h \
 	GossipDef.cpp GossipDef.h \
 	GridDefines.h \
 	GridNotifiers.h GridNotifiers.cpp \
+	GroupHandler.cpp \
 	HateMatrix.h \
 	HomeMovementGenerator.cpp HomeMovementGenerator.h \
 	IdleMovementGenerator.cpp IdleMovementGenerator.h \
 	Item.cpp Item.h \
+	ItemHandler.cpp \
 	ItemPrototype.h \
+	Level0.cpp \
+	Level1.cpp \
+	Level2.cpp \
+	Level3.cpp \
 	Map.cpp Map.h \
 	MapManager.cpp MapManager.h \
 	MotionMaster.cpp MotionMaster.h \
@@ -65,6 +72,7 @@ liblegacygame_a_SOURCES = \
 	ObjectMgr.cpp ObjectMgr.h \
 	Opcodes.cpp Opcodes.h \
 	Pet.cpp Pet.h \
+	PetHandler.cpp \
 	Player.cpp Player.h \
 	PlayerMisc.cpp \
 	Quest.h \

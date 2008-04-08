@@ -109,6 +109,13 @@ ObjectAccessor::FindPlayer(uint64 guid)
 }
 
 Player*
+ObjectAccessor::FindPlayerByAccountId(uint32 acc_id)
+{
+	uint32 guid = objmgr.GetPlayerGuidByAccountId(acc_id);
+	return GetObjectInWorld(MAKE_GUID(guid, HIGHGUID_PLAYER), (Player*)NULL);
+}
+
+Player*
 ObjectAccessor::FindPlayerByName(const char *name)
 {
 	//TODO: Player Guard

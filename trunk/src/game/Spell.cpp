@@ -16,3 +16,16 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "Spell.h"
+#include "ObjectMgr.h"
+
+bool Spell::LoadSpellFromDB()
+{
+	return true;
+}
+
+SpellInfo const* Spell::GetProto() const
+{
+	const SpellInfo * sinfo = objmgr.GetSpellTemplate(m_entry);
+	return sinfo;
+}

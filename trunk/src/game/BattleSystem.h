@@ -23,6 +23,8 @@
 #include "Log.h"
 #include "Object.h"
 #include "Unit.h"
+#include "Spell.h"
+#include "ObjectMgr.h"
 
 class WorldSession;
 
@@ -50,9 +52,11 @@ class BattleAction
 		BattleAction(uint8 atkCol, uint8 atkRow, uint16 skill, uint8 tgtCol, uint8 tgtRow) : _atkCol(atkCol), _atkRow(atkRow), _skill(skill), _tgtCol(tgtCol), _tgtRow(tgtRow), _agility(0) { }
 		BattleAction(const BattleAction &act) : _atkCol(act._atkCol), _atkRow(act._atkRow), _skill(act._skill), _tgtCol(act._tgtCol), _tgtRow(act._tgtRow), _agility(act._agility) { }
 
+		void SetAttacker(uint8 col, uint8 row) { _atkCol = col; _atkRow = row; }
 		void SetAttackerCol(uint8 col) { _atkCol = col; }
 		void SetAttackerRow(uint8 row) { _atkRow = row; }
 		void SetSkill(uint16 skill) { _skill = skill; }
+		void SetTarget(uint8 col, uint8 row) { _tgtCol = col; _tgtRow = row; }
 		void SetTargetCol(uint8 col) { _tgtCol = col; }
 		void SetTargetRow(uint8 row) { _tgtRow = row; }
 		void SetAgility(uint16 agi) { _agility = agi; }
@@ -73,6 +77,13 @@ class BattleAction
 			_agility = obj._agility;
 		}
 
+		const SpellInfo* GetProto()
+		{
+			return objmgr.GetSpellTemplate(_skill);
+		}
+
+		bool isLinkable();
+
 	protected:
 		uint8  _atkCol;
 		uint8  _atkRow;
@@ -82,17 +93,39 @@ class BattleAction
 		uint16 _agility;
 };
 
+typedef std::list<BattleAction*> UnitActionTurn;
+
+class ItemDropped
+{
+	public:
+		ItemDropped() : _rcvCol(0), _rcvRow(0), _item(0), _ctrCol(0), _ctrRow(0) { }
+		ItemDropped(uint8 rcvCol, uint8 rcvRow, uint16 item, uint8 ctrCol, uint8 ctrRow) : _rcvCol(rcvCol), _rcvRow(rcvRow), _item(item), _ctrCol(ctrCol), _ctrRow(ctrRow) { }
+
+		uint8  GetReceiverCol() const { return _rcvCol; }
+		uint8  GetReceiverRow() const { return _rcvRow; }
+		uint16 GetItem() const { return _item; }
+		uint8  GetContributorCol() const { return _ctrCol; }
+		uint8  GetContributorRow() const { return _ctrRow; }
+
+	protected:
+		uint8  _rcvCol;
+		uint8  _rcvRow;
+		uint16 _item;
+		uint8  _ctrCol;
+		uint8  _ctrRow;
+};
+
+typedef std::list<ItemDropped*> ItemDroppedTurn;
+
 class LEGACY_DLL_SPEC BattleSystem
 {
-	private:
-		WorldSession* pSession;
-
 	public:
-		BattleSystem( WorldSession *Session );
+		BattleSystem(Player* master);
 		~BattleSystem();
 
+		bool FindNewMaster();
 
-		void Engage(Creature* enemy);
+		void Engage(Player* attacker, Creature* enemy);
 		void Engage(Player* enemy);
 		void BattleStart();
 		bool BattleConcluded();
@@ -117,49 +150,107 @@ class LEGACY_DLL_SPEC BattleSystem
 
 		void AddBattleAction(BattleAction* action);
 		void UpdateBattleAction();
+		void BuildActions();
+		bool SendAction();
 		void IncAction()
 		{
 			m_PlayerActionCount++;
-			sLog.outString(" >> PlayerActionCount %u", m_PlayerActionCount);
+		//	sLog.outString("COMBAT: >> PlayerActionCount %u", m_PlayerActionCount);
 		}
-		bool IsActionComplete()
+		bool isActionComplete()
 		{
-			sLog.outString(" >> IsActionComplete need %u count %u", m_PlayerActionNeed, m_PlayerActionCount);
+			sLog.outString("COMBAT: >> ROUND PLAYER ACTION need %u, count %u", m_PlayerActionNeed, m_PlayerActionCount);
 			return m_PlayerActionNeed == m_PlayerActionCount;
 		}
 
 		Unit* GetAttacker(const BattleAction *action) const;
 		Unit* GetVictim(const BattleAction *action) const;
+
+		bool NeedRedirectTarget(const BattleAction *action);
 		BattleAction* RedirectTarget(BattleAction *action);
 
 
-
+		bool CanJoin() const;
+		void JoinBattle(Player* player);
+		void LeaveBattle(Player* player);
 
 	protected:
 		void ResetAction();
 
-		int32 GetDamage(Unit*, Unit*, uint16);
-		void DealDamageTo(Unit* unit, int32 dmg);
+		int32 GetDamage(Unit* attacker, Unit* victim, const SpellInfo* sinfo, bool linked=false);
+		float GetDamageMultiplier(uint8 el1, uint8 el2);
+		bool isDealDamageToAndKill(Unit* victim, int32 damage);
 
 		void AIMove();
 		void DumpBattlePosition();
 
+		bool CanLink(BattleAction act1, BattleAction act2);
+		void BuildUpdateBlockAction(WorldPacket *data, BattleAction* action, bool linked=false);
+		UnitActionTurn ParseSpell(BattleAction* action, uint8 hit, bool linked=false);
+
+		void SendMessageToSet(WorldPacket * packet, bool log=false);
+
+		/*******************************************************************/
+		/***                    POSITIONING HELPER                       ***/
+		/*******************************************************************/
+		bool SameSide(const BattleAction* prev, const BattleAction* next);
+		bool isDefPos(const uint8 col); 
+		bool isAtkPos(const uint8 col);
+		bool isDefPosBackRow(const uint8 col);
+		bool isAtkPosBackRow(const uint8 col);
+
+		Unit* GetBattleUnit(uint8 col, uint8 row);
+		bool isUnitAvail(uint8 col, uint8 row);
+
+
+		/*******************************************************************/
+		/***                     SPELL HELPER                            ***/
+		/*******************************************************************/
+		const char* GetDamageModText(uint32 dmg_mod);
+
+
+		/*******************************************************************/
+		/***               EXPERIENCE & ITEM DROP HELPER                 ***/
+		/*******************************************************************/
+		void AddKillExpGained(Unit* killer, Unit* victim, bool linked);
+		void AddKillItemDropped(BattleAction* action);
+		void GiveExpGained();
+		void GiveItemDropped();
+		void SendItemDropped(ItemDropped* item);
+		void BuildUpdateBlockItemDropped(WorldPacket *data, ItemDropped* item);
 	private:
-		uint8 m_PlayerActionNeed;
-		uint8 m_PlayerActionCount;
+		Player* i_master;
+
+		uint8  m_PlayerActionNeed;
+		uint8  m_PlayerActionCount;
 
 		uint16 m_BattleGroundId;
 
 		bool   m_waitForAction;
 		uint32 m_actionTime;
+		uint32 m_animationTime;
 
-		Unit* m_BattleUnit[BATTLE_COL_MAX][BATTLE_ROW_MAX];
+		uint32 m_animationTimeAction;
+		uint32 m_animationTimeItemDropped;
 
-		typedef std::list<BattleAction*> UnitActionTurn;
+		bool   m_creatureKilled;
+
+		Unit*  m_BattleUnit[BATTLE_COL_MAX][BATTLE_ROW_MAX];
+
 		UnitActionTurn m_unitTurn;
+
+		ItemDroppedTurn m_itemDropped;
+
+		UnitActionTurn m_Actions[20];
 
 		uint32 DefenderTeam[BATTLE_COL_MAX][BATTLE_ROW_MAX];
 		uint32 AttackerTeam[BATTLE_COL_MAX][BATTLE_ROW_MAX];
+
+		double m_AtkRateLvl;
+		double m_DefRateLvl;
+
+		typedef std::set<Player*> PlayerListMap;
+		PlayerListMap m_PlayerList;
 
 };
 
