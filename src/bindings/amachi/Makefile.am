@@ -29,6 +29,7 @@ liblegacyscript_la_SOURCES = \
 	ScriptMgr.h \
 	config.h \
 	scripts/npc/npc_innkeeper.cpp \
+	scripts/npc/npc_vendor.cpp \
 	system.cpp \
 	scripts/sc_default.cpp \
 	scripts/sc_defines.cpp \

@@ -36,6 +36,7 @@ extern void AddSC_default();
 
 // -- NPC --
 extern void AddSC_npc_innkeeper();
+extern void AddSC_npc_vendor();
 // -------------------
 
 LEGACY_DLL_EXPORT
@@ -70,6 +71,7 @@ void ScriptsInit()
 
 	// -- NPC --
 	AddSC_npc_innkeeper();
+	AddSC_npc_vendor();
     // ----------------------------------------
 
 	outstring_log("AM: Loaded %u C++ Scripts", nrscripts);
