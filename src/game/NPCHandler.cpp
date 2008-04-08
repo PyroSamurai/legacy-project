@@ -31,9 +31,13 @@
 #include "Creature.h"
 #include "MapManager.h"
 #include "BattleSystem.h"
+#include "Chat.h"
 
 void WorldSession::HandlePlayerClickNpc( WorldPacket & recv_data )
 {
+	if( _player->isDead() )
+		return;
+
 	CHECK_PACKET_SIZE(recv_data, 1);
 
 	sLog.outDebug( "WORLD: Recvd CMSG_PLAYER_CLICK_NPC Message" );
@@ -45,19 +49,28 @@ void WorldSession::HandlePlayerClickNpc( WorldPacket & recv_data )
 	recv_data >> map_npcid;
 
 	///- Temporary guid mapping for npc
-	uint32 tmp_guid = mapid * MAP_NPCID_MULTIPLIER;
-	guid = MAKE_GUID(tmp_guid + map_npcid, HIGHGUID_UNIT);
+	//uint32 tmp_guid = mapid * MAP_NPCID_MULTIPLIER;
+	//guid = MAKE_GUID(tmp_guid + map_npcid, HIGHGUID_UNIT);
+	guid = ObjectAccessor::Instance().GetNpcGuidByMapNpcId(mapid, map_npcid);
 
-	sLog.outString(" >> Player '%s' try to interact with %u in %u", GetPlayer()->GetName(), map_npcid, mapid);
+	sLog.outString(" >> Player '%s' try to interact with %u in %u", GetPlayer()->GetName(), GUID_LOPART(guid), mapid);
 
 	Creature* unit = ObjectAccessor::GetNPCIfCanInteractWith(*_player, guid, UNIT_NPC_FLAG_NONE);
 
 	if(!unit)
 	{
 		sLog.outDebug( "WORLD: HandlePlayerClickNpc - Unit(GUID:%u) not found or you can't interact with him.", uint32(GUID_LOPART(guid)) );
-		_player->PlayerTalkClass->SendTalking( DEFAULT_GOSSIP_MESSAGE, map_npcid );
+		_player->PlayerTalkClass->SendTalking( map_npcid, DEFAULT_GOSSIP_MESSAGE );
+		if(GetSecurity() > SEC_PLAYER)
+			ChatHandler(this).PSendSysMessage("WORLD: '<none>' guid %u map %u id %u", GUID_LOPART(guid), mapid, map_npcid);
 		return;
 	}
+
+	if(GetSecurity() > SEC_PLAYER)
+		ChatHandler(this).PSendSysMessage("WORLD: '%s' guid %u map %u id %u", unit->GetName(), GUID_LOPART(guid), mapid, map_npcid);
+
+	if( unit->isDead() )
+		return;
 
 	if( unit->isGossip() || unit->isQuestGiver() || unit->isServiceProvider())
 	{
@@ -71,6 +84,37 @@ void WorldSession::HandlePlayerClickNpc( WorldPacket & recv_data )
 		return;
 	}
 
-	///- Engage the Creature
-	_player->PlayerBattleClass->Engage( unit );
+	///- Creature is a monster, engage the Creature
+	_player->Engage( unit );
+}
+
+void WorldSession::HandlePlayerSelectDialogOpcodes( WorldPacket & recv_data )
+{
+	CHECK_PACKET_SIZE(recv_data, 1);
+
+	sLog.outDebug( "WORLD: Recvd CMSG_PLAYER_SELECT_DIALOG Message" );
+
+	uint8  option;
+	recv_data >> option;
+
+	uint64 guid = _player->GetTalkedCreatureGuid();
+	Creature* unit = ObjectAccessor::GetNPCIfCanInteractWith(*_player, guid, UNIT_NPC_FLAG_NONE);
+
+	if(!unit)
+	{
+		sLog.outDebug( "WORLD: HandleSelectDialogOpcodes - Unit(GUID:%u) not found or you can't interact with him.", uint32(GUID_LOPART(guid)) );
+		if(GetSecurity() > SEC_PLAYER)
+			ChatHandler(this).PSendSysMessage("WORLD: '<none>' guid %u", GUID_LOPART(guid));
+		return;
+	}
+
+	sLog.outString(" >> Player '%s' select option %u", GetPlayer()->GetName(), option);
+
+
+	uint32 sequence = _player->GetTalkedSequence();
+	///- Handle Select Dialog
+	if(!Script->GossipSelect( _player, unit, sequence, option ))
+	{
+		unit->OnGossipSelect( _player, sequence, option );
+	}
 }
