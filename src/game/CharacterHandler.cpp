@@ -31,6 +31,7 @@
 #include "Database/DatabaseImpl.h"
 #include "Encoder.h"
 #include "GossipDef.h"
+#include "Chat.h"
 
 #include "BattleSystem.h"
 
@@ -52,7 +53,7 @@ class LoginQueryHolder : public SqlQueryHolder
 
 bool LoginQueryHolder::Initialize()
 {
-//	sLog.outString("LoginQueryHolder::Initialize");
+	sLog.outString("LoginQueryHolder::Initialize");
 	SetSize(MAX_PLAYER_LOGIN_QUERY);
 
 	bool res = true;
@@ -361,14 +362,31 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 
 //	sLog.outString("Map '%u' has '%u' Players", pCurrChar->GetMapId(), map->GetPlayersCount());
 
-
+	// Send MOTD
+	{
+		uint32 linecount = 0;
+		std::string str_motd = sWorld.GetMotd();
+		std::string::size_type pos, nextpos;
+		pos = 0;
+		while( (nextpos = str_motd.find('$',pos)) != std::string::npos )
+		{
+			if( nextpos != pos )
+			{
+				ChatHandler(this).SendSysMessage(str_motd.substr(pos,nextpos-pos).c_str());
+				linecount++;
+			}
+			pos = nextpos+1;
+		}
+		if( pos < str_motd.length() )
+		{
+			ChatHandler(this).SendSysMessage(str_motd.substr(pos).c_str());
+			linecount++;
+		}
+		DEBUG_LOG( "WORLD: Sent motd(SMSG_MOTD)" );
+	}
 
 	m_playerLoading = false;
 	delete holder;
-
-	WorldPacket data(0, 1);
-	data << (uint8) 1;
-//	HandlePlayerClickNpc( data );
 
 }
 

@@ -38,6 +38,17 @@ bool compare_agility(BattleAction* first, BattleAction* second)
 		return false;
 }
 
+///- comparing target position for sorting ascending
+bool compare_target_position(BattleAction* first, BattleAction* second)
+{
+	if( (first->GetTargetCol() < second->GetTargetCol()) ||
+		(first->GetTargetRow() < second->GetTargetRow()) )
+		return true;
+	else
+		return false;
+}
+
+
 ///- comparing position for sorting ascending
 bool compare_position(ItemDropped *first, ItemDropped* second)
 {
@@ -100,6 +111,11 @@ BattleSystem::BattleSystem(Player* master)
 	m_waitForAction = false;
 
 	i_master = master;
+
+	m_teamBattle          = false;
+	m_teamLowestLevel     = 0;
+	m_teamHighestLevel    = 0;
+	m_teamLowerLevelCount = 0;
 }
 
 ///- Clean up all mess :(
@@ -242,17 +258,16 @@ void BattleSystem::BattleStart()
 	//pSession->SetLogging(false);
 
 	///- Battle Initiator, Send order is CRITICAL !!!!
-	// Battle of Suku Mu
-	//pSession->GetPlayer()->UpdatePlayer();
-	for(PlayerListMap::const_iterator itr = m_PlayerList.begin(); itr != m_PlayerList.end(); ++itr)
+	PlayerListMap::const_iterator itr = m_PlayerList.begin();
+	for(itr = m_PlayerList.begin(); itr != m_PlayerList.end(); ++itr)
 		(*itr)->UpdatePlayer();
 
 	BattleScreenTrigger();
 
-	//pSession->GetPlayer()->UpdatePet(0);
-	for(PlayerListMap::const_iterator itr = m_PlayerList.begin(); itr != m_PlayerList.end(); ++itr)
-		(*itr)->UpdatePetBattle();
-		//(*itr)->UpdatePet(0);
+	itr = m_PlayerList.begin();
+	for(itr = m_PlayerList.begin(); itr != m_PlayerList.end(); ++itr)
+		if((*itr))
+			(*itr)->UpdatePetBattle();
 
 	SendPetPosition();
 
@@ -304,6 +319,7 @@ void BattleSystem::SendTurnComplete()
 ///- Initialize Battle Screen Mode
 void BattleSystem::BattleScreenTrigger()
 {
+	sLog.outDebug("BATTLE: Screen Trigger");
 	WorldPacket data;
 /*
 	Player *p = pSession->GetPlayer();
@@ -334,29 +350,39 @@ void BattleSystem::BattleScreenTrigger()
 	uint8 col = 3; // only for player unit
 	for(uint8 row = 0; row < BATTLE_ROW_MAX; row++)
 	{
-		Player* p = (Player*) m_BattleUnit[col][row];
+		//Player* p = (Player*) m_BattleUnit[col][row];
+		Player* p = (Player*) GetBattleUnit(col, row);
+
 		if( !p ) continue;
 
-		if( !p->isType(TYPE_PLAYER) )
-			continue;
+		if( !p->isType(TYPE_PLAYER) ) continue;
 
+		sLog.outDebug("BATTLE: Trigger add for '%s'", p->GetName());
 		data << (uint8 ) 0x01;
 		data << (uint8 ) 0x02;
+		//if( !p ) return;
 		data << (uint32) p->GetAccountId();
 		data << (uint16) 0x0000;
 		data << (uint16) 0x0000;
 		data << (uint16) 0x0000;
 		data << (uint8 ) col;       // player col position
 		data << (uint8 ) row;       // player row position
+		//if( !p ) return;
 		data << (uint16) p->GetUInt16Value(UNIT_FIELD_HP_MAX);  // hp max
+		//if( !p ) return;
 		data << (uint16) p->GetUInt16Value(UNIT_FIELD_SP_MAX);  // sp max
+		//if( !p ) return;
 		data << (uint16) p->GetUInt16Value(UNIT_FIELD_HP);      // current hp
+		//if( !p ) return;
 		data << (uint16) p->GetUInt16Value(UNIT_FIELD_SP);      // current sp
+		//if( !p ) return;
 		data << (uint8 ) p->GetUInt8Value (UNIT_FIELD_LEVEL);   // level
+		//if( !p ) return;
 		data << (uint8 ) p->GetUInt8Value (UNIT_FIELD_ELEMENT); // element
 
 	}
 
+	sLog.outDebug("BATTLE: Triggering battle to set");
 	SendMessageToSet(&data, true);
 
 	///- Start the battle IMPORTANT!!
@@ -365,6 +391,8 @@ void BattleSystem::BattleScreenTrigger()
 	data << (uint8 ) 0x01;
 	//pSession->SendPacket(&data);
 	SendMessageToSet(&data);
+
+	sLog.outDebug("BATTLE: Screen Trigger Complete");
 }
 
 ///- Send Only TYPE_PET Unit position
@@ -440,6 +468,15 @@ void BattleSystem::InitAttackerPosition()
 		//PlayerList[unit_count] = pPlayer;
 		JoinBattle(pPlayer);
 
+		if( pPlayer->getLevel() > m_teamHighestLevel )
+			m_teamHighestLevel = pPlayer->getLevel();
+
+		if( pPlayer->getLevel() < m_teamLowestLevel )
+			m_teamLowestLevel = pPlayer->getLevel();
+
+		if( pPlayer->getLevel() + 10 < m_teamHighestLevel )
+			m_teamLowerLevelCount++;
+
 		unit_count++;
 		level_count += pPlayer->getLevel();
 
@@ -454,6 +491,11 @@ void BattleSystem::InitAttackerPosition()
 	}
 
 	m_AtkRateLvl = level_count / unit_count;
+
+	if( unit_count > 2 )
+		m_teamBattle = true;
+	else
+		m_teamBattle = false;
 }
 
 ///- Init Enemy position
@@ -472,7 +514,7 @@ void BattleSystem::InitDefenderPosition()
 			if( !guid )
 				continue;
 
-			Creature* unit = new Creature( NULL );
+			Creature* unit = new Creature( NULL, true );
 			if( !unit->LoadFromDB( guid ) )
 			{
 				delete unit;
@@ -598,14 +640,37 @@ void BattleSystem::AIMove()
 		}
 }
 
-Unit* BattleSystem::GetAttacker(const BattleAction *action) const
+Unit* BattleSystem::GetAttacker(const BattleAction *action)
 {
-	return m_BattleUnit[action->GetAttackerCol()][action->GetAttackerRow()];
+	if( !action )
+	{
+		sLog.outDebug("BATTLE: GetAttacker Empty Action");
+		return NULL;
+	}
+
+	uint8 col = action->GetAttackerCol();
+	uint8 row = action->GetAttackerRow();
+	Unit* unit = GetBattleUnit(col, row);
+	if( !unit )
+		sLog.outDebug("BATTLE: Empty attacker @[%u,%u]", col, row);
+
+	return unit;
 }
 
-Unit* BattleSystem::GetVictim(const BattleAction *action) const
+Unit* BattleSystem::GetVictim(const BattleAction *action)
 {
-	return m_BattleUnit[action->GetTargetCol()][action->GetTargetRow()];
+	if( !action )
+	{
+		sLog.outDebug("BATTLE: GetVictim Empty Action");
+		return NULL;
+	}
+	uint8 col = action->GetTargetCol();
+	uint8 row = action->GetTargetRow();
+	Unit* unit = GetBattleUnit(col, row);
+	if( !unit )
+		sLog.outDebug("BATTLE: Empty victim @[%u,%u]", col, row);
+
+	return unit;
 }
 
 bool BattleSystem::NeedRedirectTarget(const BattleAction *action)
@@ -1109,7 +1174,11 @@ void BattleSystem::BuildUpdateBlockAction(WorldPacket *data, BattleAction* actio
 		{
 			m_creatureKilled = true;
 			AddKillExpGained(attacker, victim, linked);
-			AddKillItemDropped(hit);
+			//AddKillItemDropped(hit);
+		}
+		else
+		{
+			AddHitExpGained(attacker, victim, linked);
 		}
 
 		*data << (uint8 ) 0x01;    // spell effect count, 1 for now, HP only
@@ -1366,8 +1435,11 @@ UnitActionTurn BattleSystem::ParseSpell(BattleAction* action, uint8 hit, bool li
 				}
 				else
 				{
-					sLog.outDebug("PARSER: %u,%u Upper hit", x, y-1);
-					hitInfo.push_back(new BattleAction(a,b,s,x,y-1));
+					if( isUnitAvail( x, y-1 ) )
+					{
+						sLog.outDebug("PARSER: %u,%u Upper hit", x, y-1);
+						hitInfo.push_back(new BattleAction(a,b,s,x,y-1));
+					}
 				}
 			}
 		}
@@ -1395,8 +1467,11 @@ UnitActionTurn BattleSystem::ParseSpell(BattleAction* action, uint8 hit, bool li
 				}
 				else
 				{
-					sLog.outDebug("PARSER: %u,%u Bottom hit", x, y+1);
-					hitInfo.push_back(new BattleAction(a,b,s,x,y+1));
+					if( isUnitAvail( x, y+1 ) )
+					{
+						sLog.outDebug("PARSER: %u,%u Bottom hit", x, y+1);
+						hitInfo.push_back(new BattleAction(a,b,s,x,y+1));
+					}
 				}
 			}
 		}
@@ -1571,7 +1646,7 @@ int32 BattleSystem::GetDamage(Unit* attacker, Unit* victim, const SpellInfo* sin
 	///- Randomize damage using min - max
 	dmg = (int32) irand(int32(dmg_min), int32(dmg_max));
 
-	sLog.outDebug("DAMAGE: %s randomize {%4.2f <-> %4.2f} result {%4.2f}", GetDamageModText(sinfo->DamageMod), dmg_min, dmg_max, dmg);
+	sLog.outDebug("DAMAGE: %s randomize {%4.2f <%4.2f> %4.2f}", GetDamageModText(sinfo->DamageMod), dmg_min, dmg, dmg_max);
 
 	///- Minimum damage for hurt/heal type mod, last check
 	if( dmg <= 0 && sinfo->DamageMod == SPELL_MOD_HURT )
@@ -1820,6 +1895,8 @@ void BattleSystem::BattleStop()
 
 	WorldPacket data;
 
+	GiveExpGained();
+
 	for(uint8 row = 0; row < BATTLE_ROW_MAX; row++)
 		for(uint8 col = 0; col < BATTLE_COL_MAX; col++)
 		{
@@ -1836,8 +1913,6 @@ void BattleSystem::BattleStop()
 			}
 		}
 
-	GiveExpGained();
-
 	for(PlayerListMap::const_iterator itr = m_PlayerList.begin(); itr != m_PlayerList.end(); ++itr)
 	{
 		LeaveBattle((*itr));
@@ -1852,11 +1927,49 @@ void BattleSystem::SendMessageToSet(WorldPacket * packet, bool log)
 	{
 		if(!(*itr)) continue;
 		if(!(*itr)->GetSession()) continue;
-		if( log ) (*itr)->GetSession()->SetLogging(true);
-		(*itr)->GetSession()->SendPacket(packet);
-		if( log ) (*itr)->GetSession()->SetLogging(false);
+		SendMessageToPlayer((*itr), packet, log);
+
+		//if( log ) (*itr)->GetSession()->SetLogging(true);
+		//(*itr)->GetSession()->SendPacket(packet);
+		//if( log ) (*itr)->GetSession()->SetLogging(false);
 	}
 
+}
+
+void BattleSystem::SendMessageToPlayer(Player* player, WorldPacket* packet, bool log)
+{
+	if( !player )
+		return;
+
+	if( !player->GetSession() )
+		return;
+
+	//sLog.outDebug("BATTLE: Send Message to '%s'", player->GetName());
+	if( log )
+		if( player )
+			if( player->GetSession() )
+			{
+				ASSERT(player);
+				ASSERT(player->GetSession());
+				player->GetSession()->SetLogging(true);
+			}
+
+	if( player )
+		if( player->GetSession() )
+		{
+			ASSERT(player);
+			ASSERT(player->GetSession());
+			player->GetSession()->SendPacket(packet);
+		}
+
+	if( log )
+		if( player )
+			if( player->GetSession())
+			{
+				ASSERT(player);
+				ASSERT(player->GetSession());
+				player->GetSession()->SetLogging(false);
+			}
 }
 
 bool BattleSystem::CanJoin() const
@@ -1963,10 +2076,16 @@ bool BattleSystem::isAtkPosBackRow(uint8 col)
 Unit* BattleSystem::GetBattleUnit(uint8 col, uint8 row)
 {
 	if( col > BATTLE_COL_MAX || row > BATTLE_ROW_MAX )
+	{
+		sLog.outDebug("BATTLE: GetBattleUnit out of battle range @[%u,%u]", col, row);
 		return NULL;
+	}
 
 	if( !m_BattleUnit[col][row] )
+	{
+		sLog.outDebug("BATTLE: GetBattleUnit empty position @[%u,%u]", col, row);
 		return NULL;
+	}
 
 	return m_BattleUnit[col][row];
 }
@@ -1987,18 +2106,35 @@ void BattleSystem::AddKillExpGained(Unit* killer, Unit* victim, bool linked)
 	//sLog.outDebug("EXPERIENCE: Killer type is %u, Victim type is %u", killer->GetTypeId(), victim->GetTypeId());
 	if( victim->isType(TYPE_PLAYER) || victim->isType(TYPE_PET) )
 	{
-	//	sLog.outDebug("EXP: Victim is not creature");
+		sLog.outDebug("EXPERIENCE KILL: Victim is not creature");
 		return;
 	}
 
 	if( !killer->isType(TYPE_PLAYER) && !killer->isType(TYPE_PET) )
 	{
-	//	sLog.outDebug("EXP: Killer is creature");
+		sLog.outDebug("EXPERIENCE KILL: Killer is creature");
 		return;
 	}
 
 	killer->AddKillExp(victim->getLevel(), linked);
 
+}
+
+void BattleSystem::AddHitExpGained(Unit* hitter, Unit* victim, bool linked)
+{
+	if( victim->isType(TYPE_PLAYER) || victim->isType(TYPE_PET) )
+	{
+		sLog.outDebug("EXPERIENCE HIT: Victim is not creature");
+		return;
+	}
+
+	if( !hitter->isType(TYPE_PLAYER) && !hitter->isType(TYPE_PET) )
+	{
+		sLog.outDebug("EXPERIENCE HIT: Killer is creature");
+		return;
+	}
+
+	hitter->AddHitExp(victim->getLevel(), linked);
 }
 
 void BattleSystem::AddKillItemDropped(BattleAction* action)
@@ -2017,6 +2153,18 @@ void BattleSystem::AddKillItemDropped(BattleAction* action)
 
 	if( !receiver || !contributor)
 		return;
+
+	if( contributor->isType(TYPE_PLAYER) || contributor->isType(TYPE_PET) )
+	{
+		sLog.outDebug("ITEM DROPPED: Contributor is not creature");
+		return;
+	}
+
+	if( !receiver->isType(TYPE_PLAYER) && !receiver->isType(TYPE_PET) )
+	{
+		sLog.outDebug("ITEM DROPPED: Receiver is creature");
+		return;
+	}
 
 	uint16 item = 0;
 
@@ -2039,7 +2187,7 @@ void BattleSystem::GiveExpGained()
 	PlayerListMap::const_iterator it = m_PlayerList.begin();
 	for(it; it != m_PlayerList.end(); ++it)
 	{
-		sLog.outDebug("EXPERIENCE: Giving '%s' experience", (*it)->GetName() );
+		sLog.outDebug("EXPERIENCE: Giving '%s' experience %u", (*it)->GetName(), (*it)->GetExpGained());
 /*
 		data.Initialize( 0x08 );
 		data << (uint8 ) 0x01;
@@ -2050,7 +2198,7 @@ void BattleSystem::GiveExpGained()
 		(*it)->GetSession()->SetLogging(true);
 		(*it)->GetSession()->SendPacket(&data);
 */
-		(*it)->_updatePlayer(0x24, 1, (*it)->GetExpGained());
+		(*it)->_updatePlayer(UPD_FLAG_XP, 1, (*it)->GetExpGained());
 
 		if( (*it)->isLevelUp() )
 		{
@@ -2074,7 +2222,9 @@ void BattleSystem::GiveExpGained()
 		data << (uint32) pet->GetExpGained();
 		data << (uint32) 0;
 */
-		(*it)->_updatePet((*it)->GetPetSlot(pet), 0x24, 1, pet->GetExpGained());
+		sLog.outDebug("EXPERIENCE: Giving '%s' experience %u", pet->GetName(), pet->GetExpGained());
+
+		(*it)->_updatePet((*it)->GetPetSlot(pet), UPD_FLAG_XP, 1, pet->GetExpGained());
 
 		//(*it)->GetSession()->SendPacket(&data);
 
@@ -2102,7 +2252,7 @@ void BattleSystem::GiveItemDropped()
 
 	//sLog.outDebug("ITEM DROPPED: Giving item dropped");
 
-	m_animationTimeItemDropped = 12;
+	m_animationTimeItemDropped = 3;
 
 	m_itemDropped.sort(compare_position);
 
@@ -2224,7 +2374,7 @@ void BattleSystem::SendItemDropped(ItemDropped* item)
 	if( !pPlayer )
 		return;
 
-	pPlayer->GetSession()->SendPacket(&data);
+	SendMessageToPlayer(pPlayer, &data);
 }
 
 

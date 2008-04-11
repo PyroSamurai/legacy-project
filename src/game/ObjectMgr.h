@@ -184,7 +184,7 @@ class ObjectMgr
 
 		CreatureData const* GetCreatureData(uint32 guid) const
 		{
-			sLog.outString("    >> ObjectMgr::GetCreatureData %u", guid);
+			//sLog.outString("    >> ObjectMgr::GetCreatureData %u", guid);
 			CreatureDataMap::const_iterator itr = mCreatureDataMap.find(guid);
 			if(itr==mCreatureDataMap.end()) return NULL;
 			return &itr->second;

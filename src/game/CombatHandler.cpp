@@ -61,6 +61,8 @@ void WorldSession::HandlePlayerAttackOpcode( WorldPacket & recv_data )
 
 	Unit* attacker = engine->GetAttacker(action);
 
+	ASSERT(attacker);
+
 	if( !attacker->HaveSpell(skill) )
 	{
 		sLog.outDebug("COMBAT: '%s' don't have spell '%s', cheating ?", attacker->GetName(), objmgr.GetSpellTemplate(skill)->Name);
@@ -68,8 +70,6 @@ void WorldSession::HandlePlayerAttackOpcode( WorldPacket & recv_data )
 		action->SetSkill(SPELL_BASIC);
 	}
 
-	//GetPlayer()->PlayerBattleClass->AddBattleAction(action);
-	//GetPlayer()->PlayerBattleClass->IncAction();
 	engine->AddBattleAction(action);
 	engine->IncAction();
 
@@ -83,15 +83,13 @@ void WorldSession::HandlePlayerAttackOpcode( WorldPacket & recv_data )
 		data << (uint8 ) 0x05;
 		data << atk_col;
 		data << atk_row;
-		SetLogging(true);
 		SendPacket(&data);
-		SetLogging(false);
-		sLog.outDebug("COMBAT: Waiting next action from player '%s'", _player->GetName());
+		//sLog.outDebug("COMBAT: Waiting next action from player '%s'", _player->GetName());
 		return;
 	}
 
-	//GetPlayer()->PlayerBattleClass->UpdateBattleAction();
 	engine->BuildActions();
-	//engine->UpdateBattleAction(); // do not call UpdateBattleAction, it will be update in Player::Update
+
+	///- Do not call UpdateBattleAction here, will be updated via Player::Update
 
 }

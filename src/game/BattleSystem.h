@@ -155,7 +155,7 @@ class LEGACY_DLL_SPEC BattleSystem
 		void IncAction()
 		{
 			m_PlayerActionCount++;
-		//	sLog.outString("COMBAT: >> PlayerActionCount %u", m_PlayerActionCount);
+			sLog.outString("COMBAT: >> PlayerActionCount %u", m_PlayerActionCount);
 		}
 		bool isActionComplete()
 		{
@@ -163,8 +163,8 @@ class LEGACY_DLL_SPEC BattleSystem
 			return m_PlayerActionNeed == m_PlayerActionCount;
 		}
 
-		Unit* GetAttacker(const BattleAction *action) const;
-		Unit* GetVictim(const BattleAction *action) const;
+		Unit* GetAttacker(const BattleAction *action);
+		Unit* GetVictim(const BattleAction *action);
 
 		bool NeedRedirectTarget(const BattleAction *action);
 		BattleAction* RedirectTarget(BattleAction *action);
@@ -189,6 +189,7 @@ class LEGACY_DLL_SPEC BattleSystem
 		UnitActionTurn ParseSpell(BattleAction* action, uint8 hit, bool linked=false);
 
 		void SendMessageToSet(WorldPacket * packet, bool log=false);
+		void SendMessageToPlayer(Player* player, WorldPacket * packet, bool log=false);
 
 		/*******************************************************************/
 		/***                    POSITIONING HELPER                       ***/
@@ -213,6 +214,7 @@ class LEGACY_DLL_SPEC BattleSystem
 		/***               EXPERIENCE & ITEM DROP HELPER                 ***/
 		/*******************************************************************/
 		void AddKillExpGained(Unit* killer, Unit* victim, bool linked);
+		void AddHitExpGained(Unit* hitter, Unit* victim, bool linked);
 		void AddKillItemDropped(BattleAction* action);
 		void GiveExpGained();
 		void GiveItemDropped();
@@ -251,6 +253,12 @@ class LEGACY_DLL_SPEC BattleSystem
 
 		typedef std::set<Player*> PlayerListMap;
 		PlayerListMap m_PlayerList;
+
+		///- for experience calculation helper
+		bool   m_teamBattle;
+		uint8  m_teamLowestLevel;
+		uint8  m_teamHighestLevel;
+		uint8  m_teamLowerLevelCount;
 
 };
 

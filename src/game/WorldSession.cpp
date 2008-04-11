@@ -29,7 +29,7 @@
 #include "NameTables.h"
 #include "MapManager.h"
 #include "ObjectAccessor.h"
-
+#include "BattleSystem.h"
 
 /// WorldSession constructor
 WorldSession::WorldSession(uint32 id, WorldSocket *sock, uint32 sec) :
@@ -187,11 +187,32 @@ bool WorldSession::Update(uint32 /*diff*/)
 	}
 
 	///- If necessray, log the player out
-	if (!_socket)
+	time_t currTime = time(NULL);
+	//if (!_socket || (ShouldLogOut(currTime) && !m_playerLoading))
+	if (!_socket && !m_playerLoading )
 	{
+		/*
+		///- If Battle Master, find new battle master
+		if( GetPlayer()->isBattleInProgress() )
+		{
+			sLog.outDebug("SESSION: '%s' is battle master, find new master", GetPlayer()->GetName());
+			if( !GetPlayer()->PlayerBattleClass->FindNewMaster() )
+			{
+				delete GetPlayer()->PlayerBattleClass;
+				GetPlayer()->PlayerBattleClass = NULL;
+			}
+
+		}
+
+		///- Leave from battle if any
+		GetPlayer()->LeaveBattle();
+		*/
 		LogoutPlayer(true);
-		return false;     // Will remove this session from the world session map
+		return false;
 	}
+
+	//if (!_socket)
+	//	return false;  // Will remove this session from the world session map
 
 	return true;
 
@@ -200,6 +221,7 @@ bool WorldSession::Update(uint32 /*diff*/)
 ///- Log the player out
 void WorldSession::LogoutPlayer(bool Save)
 {
+	sLog.outDebug("SESSION: Logging out Player");
 	m_playerLogout = true;
 
 	///- Reset the online field in the account table
@@ -229,5 +251,8 @@ void WorldSession::LogoutPlayer(bool Save)
 
 void WorldSession::SetLogging(bool newvalue)
 {
+	if( _socket == NULL )
+		return;
+
 	_socket->SetLogging(newvalue);
 }

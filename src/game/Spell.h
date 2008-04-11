@@ -53,6 +53,8 @@ enum SpellNumberEntry
 {
 	SPELL_BASIC                   = 10000,
 	SPELL_BERSERKER               = 13013,
+	SPELL_TEACHING                = 14027,   // Guru pembimbing
+	SPELL_UNITED                  = 14028,   // Bersatu
 };
 /*
 class SpellCastTargets

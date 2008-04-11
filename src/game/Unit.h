@@ -167,7 +167,9 @@ class LEGACY_DLL_SPEC Unit : public WorldObject
 		/*******************************************************************/
 		/***        PLAYER BATTLE EXPERIENCE & ITEM DROP SYSTEM          ***/
 		/*******************************************************************/
-		void   AddKillExp(uint8 enemyLevel, bool linked=false);
+		void   AddKillExp(uint8 enemyLevel, bool linked=false, bool inTeam=false, uint8 lowestLevelInGroup=0, uint8 lowerLevelCount=0);
+		void   AddHitExp(uint8 enemyLevel, bool linked=false);
+		void   AddExpGained(uint32 xp);
 		void   AddKillItemDropped(uint16 itemId);
 		uint16 GetItemDropped(uint8 index);
 		uint32 GetExpGained();

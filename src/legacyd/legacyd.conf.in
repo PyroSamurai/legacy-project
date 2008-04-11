@@ -76,8 +76,8 @@ PlayerLimit = 100
 # Default: 200
 MaxPlayerLevel = 200
 
-# Message of the Day. Displayed at worldlogin for every user ('@' for a newline)
-Motd = "Welcome to the Massive Network Game Object Server."
+# Message of the Day. Displayed at worldlogin for every user ('$' for a newline)
+Motd = "Welcome to the Massive Network Game Object Server.$This server is still under heavy development.$Please report any bugs to bugs-report@legacy-projects.com."
 
 # Health rate
 Rate.Health = 1
@@ -104,7 +104,7 @@ Rate.Creature.Elite.SpellDamage  = 1
 
 # Battle Action Linked Rate Agility
 # Example: 5 - will linked agility with tolerance -5 to +5
-Rate.Linked.Agility = 5
+Rate.Linked.Agility = 10
 
 # Default map update interval
 MapUpdateInterval = 100
