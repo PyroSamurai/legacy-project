@@ -146,7 +146,12 @@ void ChatHandler::FillMessageData( WorldPacket *data, WorldSession* session, uin
 	sLog.outDebug("FillMessageData '%s'", message);
 	data->Initialize( 0x02 );
 	*data << (uint8 ) type;
-	*data << (uint32) session->GetPlayer()->GetAccountId();
+
+	if( type == CHAT_MSG_SYSTEM )
+		*data << (uint32) 0x0000;
+	else
+		*data << (uint32) session->GetPlayer()->GetAccountId();
+
 	for(int i = 0; message[i] != '\0'; i++)
 		*data << (uint8 ) message[i];
 	//*data << message;

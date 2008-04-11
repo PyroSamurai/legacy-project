@@ -84,7 +84,12 @@ Player::~Player ()
 	if( isBattleInProgress() )
 	{
 		sLog.outDebug("PLAYER: '%s' is battle master, find new master", GetName());
-		PlayerBattleClass->FindNewMaster();
+		if( !PlayerBattleClass->FindNewMaster() )
+		{
+			delete PlayerBattleClass;
+			PlayerBattleClass = NULL;
+		}
+
 		/*
 		if( isTeamLeader() && !m_team.empty() )
 		{
@@ -117,7 +122,7 @@ Player::~Player ()
 		LeaveTeam((pteam));
 	}
 
-	if( GetSession()->PlayerLogout() )
+	if( m_session && m_session->PlayerLogout() )
 	{
 		sLog.outDebug( "WORLD: Player '%s' is logged out", GetName());
 		WorldPacket data;
@@ -325,7 +330,7 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder)
 	sLog.outDebug(" - HP & SP : %u/%u %u/%u", m_hp, m_hp_max, m_sp, m_sp_max);
 	sLog.outDebug(" - Map Id  : %u [%u,%u]", GetMapId(), GetPositionX(), GetPositionY());
 
-	DumpPlayer();
+	//DumpPlayer();
 	return true;
 }
 
@@ -424,7 +429,7 @@ bool Player::_LoadInventory(QueryResult* result)
 						success = false;
 				}
 
-				sLog.outDebug("STORAGE: _LoadInventory Destination slot for %u is %u", item_guid, dest);
+				//sLog.outDebug("STORAGE: _LoadInventory Destination slot for %u is %u", item_guid, dest);
 			}
 			else
 			{
@@ -532,7 +537,7 @@ bool Player::_LoadPet(QueryResult* result)
 		if( pet->isBattle() )
 			m_battlePet = pet;
 
-		sLog.outString(" - Slot %u pet Entry %u Model %u '%s' is %s", slot + 1, pet->GetEntry(), pet->GetModelId(), pet->GetName(), pet->isBattle() ? "Battle" : "Resting"); 
+		//sLog.outString(" - Slot %u pet Entry %u Model %u '%s' is %s", slot + 1, pet->GetEntry(), pet->GetModelId(), pet->GetName(), pet->isBattle() ? "Battle" : "Resting"); 
 
 		if(count > MAX_PET_SLOT)
 			break;
@@ -583,6 +588,7 @@ bool Player::_LoadSpell(QueryResult* result)
 
 void Player::UpdateBattlePet()
 {
+	//sLog.outDebug("PLAYER: Update Battle Pet");
 	uint16 modelid = 0;
 
 	if( m_battlePet )
@@ -594,7 +600,8 @@ void Player::UpdateBattlePet()
 	data << (uint16) modelid;
 	data << (uint16) 0;
 
-	GetSession()->SendPacket(&data);
+	if( m_session )
+		m_session->SendPacket(&data);
 }
 
 void Player::SetBattlePet(Pet* pet)
@@ -797,7 +804,7 @@ void Player::UpdatePetCarried()
 		petcount++;
 		data << (uint8 ) petcount;
 		data << (uint16) pet->GetModelId(); // pet npc id ;
-		data << (uint32) 0; // pet total xp 0x010D9A19
+		data << (uint32) pet->GetExpGained();//0; // pet total xp 0x010D9A19
 
 		data << (uint8 ) pet->GetUInt8Value(UNIT_FIELD_LEVEL); // pet level
 
@@ -971,7 +978,7 @@ void Player::UpdatePlayer()
 void Player::UpdateLevel()
 {
 	_updatePlayer( 0x23, 1, getLevel() );
-	_updatePlayer( 0x24, 1, GetExpGained() );
+	//_updatePlayer( 0x24, 1, GetExpGained() );
 	_updatePlayer( 0x25, 1, GetUInt16Value(UNIT_FIELD_SPELL_POINT));
 	_updatePlayer( 0x26, 1, GetUInt16Value(UNIT_FIELD_STAT_POINT));
 	resetLevelUp();
@@ -985,16 +992,19 @@ void Player::UpdatePetLevel(Pet* pet)
 	pet->resetLevelUp();
 }
 
-void Player::_updatePlayer(uint8 flagStatus, uint8 modifier, uint16 value)
+void Player::_updatePlayer(uint8 updflag, uint8 modifier, uint16 value)
 {
+	//sLog.outDebug("PLAYER: Update player '%s' flag %3u value %u", GetName(), updflag, value);
 	WorldPacket data;
 	data.Initialize( 0x08 );
 	data << (uint8 ) 0x01;            // flag status for main character
-	data << flagStatus;               // flag status fields
-	data << modifier;                 // +/- modifier
-	data << value;                    // value modifier
+	data << (uint8 ) updflag;               // flag status fields
+	data << (uint8 ) modifier;                 // +/- modifier
+	data << (uint16) value;                    // value modifier
 	data << (uint32) 0 << (uint16) 0;
-	GetSession()->SendPacket(&data);
+
+	if( m_session )
+		m_session->SendPacket(&data);
 }
 
 void Player::UpdatePet()
@@ -1004,14 +1014,15 @@ void Player::UpdatePet()
 		Pet* pet = m_pets[slot];
 		if( !pet )
 			continue;
-		_updatePet(slot+1, 0xCF, 1, 0);
-		_updatePet(slot+1, 0x19, 1, pet->GetUInt16Value(UNIT_FIELD_HP));
-		_updatePet(slot+1, 0xD0, 1, 0);
-		_updatePet(slot+1, 0x1A, 1, pet->GetUInt16Value(UNIT_FIELD_SP));
-		_updatePet(slot+1, 0xD2, 1, 0);
-		_updatePet(slot+1, 0xD3, 1, 0);
-		_updatePet(slot+1, 0xD4, 1, 0);
-		_updatePet(slot+1, 0xD6, 1, 0);
+		_updatePet(slot+1, UPD_FLAG_HPX_MOD, 1, 0);
+		_updatePet(slot+1, UPD_FLAG_HP, 1, pet->GetUInt16Value(UNIT_FIELD_HP));
+		_updatePet(slot+1, UPD_FLAG_SPX_MOD, 1, 0);
+		_updatePet(slot+1, UPD_FLAG_SP, 1, pet->GetUInt16Value(UNIT_FIELD_SP));
+		_updatePet(slot+1, UPD_FLAG_ATK_MOD, 1, 0);
+		_updatePet(slot+1, UPD_FLAG_DEF_MOD, 1, 0);
+		_updatePet(slot+1, UPD_FLAG_INT_MOD, 1, 0);
+		_updatePet(slot+1, UPD_FLAG_AGI_MOD, 1, 0);
+
 	}
 }
 
@@ -1020,14 +1031,14 @@ void Player::UpdatePet(uint8 slot)
 	Pet* pet = m_pets[slot];
 	if( !pet )
 		return;
-	_updatePet(slot, 0xCF, 1, 0);
-	_updatePet(slot, 0x19, 1, pet->GetUInt16Value(UNIT_FIELD_HP));
-	_updatePet(slot, 0xD0, 1, 0);
-	_updatePet(slot, 0x1A, 1, pet->GetUInt16Value(UNIT_FIELD_SP));
-	_updatePet(slot, 0xD2, 1, 0);
-	_updatePet(slot, 0xD3, 1, 0);
-	_updatePet(slot, 0xD4, 1, 0);
-	_updatePet(slot, 0xD6, 1, 0);
+	_updatePet(slot, UPD_FLAG_HPX_MOD, 1, 0);
+	_updatePet(slot, UPD_FLAG_HP, 1, pet->GetUInt16Value(UNIT_FIELD_HP));
+	_updatePet(slot, UPD_FLAG_SPX_MOD, 1, 0);
+	_updatePet(slot, UPD_FLAG_SP, 1, pet->GetUInt16Value(UNIT_FIELD_SP));
+	_updatePet(slot, UPD_FLAG_ATK_MOD, 1, 0);
+	_updatePet(slot, UPD_FLAG_DEF_MOD, 1, 0);
+	_updatePet(slot, UPD_FLAG_INT_MOD, 1, 0);
+	_updatePet(slot, UPD_FLAG_AGI_MOD, 1, 0);
 }
 
 void Player::UpdatePetBattle()
@@ -1041,18 +1052,21 @@ void Player::UpdatePetBattle()
 		}
 }
 
-void Player::_updatePet(uint8 slot, uint8 flagStatus, uint8 modifier, uint32 value)
+void Player::_updatePet(uint8 slot, uint8 updflag, uint8 modifier, uint32 value)
 {
+	//sLog.outDebug("PLAYER: Update Pet slot %u flag %3u value %u", slot, updflag, value);
 	WorldPacket data;
 	data.Initialize( 0x08 );
 	data << (uint8 ) 0x02 << (uint8 ) 0x04;
-	data << slot; // pet slot number
+	data << (uint8 ) slot; // pet slot number
 	data << (uint8 ) 0x00;
-	data << flagStatus;
-	data << modifier;
-	data << value;
+	data << (uint8 ) updflag;
+	data << (uint8 ) modifier;
+	data << (uint32) value;
 	data << (uint32) 0;
-	GetSession()->SendPacket(&data);
+
+	if( m_session )
+		m_session->SendPacket(&data);
 }
 
 void Player::UpdateInventory()
@@ -1077,7 +1091,8 @@ void Player::UpdateInventory()
 	if( !count )
 		return;
 
-	GetSession()->SendPacket(&data);
+	if( m_session )
+		m_session->SendPacket(&data);
 }
 
 void Player::UpdateCurrentEquip()
@@ -1110,7 +1125,8 @@ void Player::UpdateCurrentEquip()
 
 	for(uint8 i = 0; i < equip_cnt; i++) data << equip[i];
 
-	GetSession()->SendPacket(&data);
+	if( m_session )
+		m_session->SendPacket(&data);
 }
 
 void Player::UpdateCurrentGold()
@@ -1120,7 +1136,9 @@ void Player::UpdateCurrentGold()
 	data << (uint8 ) 0x04;
 	data << (uint32) m_gold_hand; // gold
 	data << (uint32) 0x00000000;
-	GetSession()->SendPacket(&data);
+
+	if( m_session )
+		m_session->SendPacket(&data);
 }
 
 void Player::Send0504()
@@ -1129,7 +1147,9 @@ void Player::Send0504()
 	WorldPacket data;
 	data.Initialize( 0x05, 1 );
 	data << (uint8) 0x04;
-	GetSession()->SendPacket(&data);
+	
+	if( m_session )
+		m_session->SendPacket(&data);
 }
 
 void Player::Send0F0A()
@@ -1137,7 +1157,9 @@ void Player::Send0F0A()
 	WorldPacket data;
 	data.Initialize( 0x0F, 1 );
 	data << (uint8) 0x0A;
-	GetSession()->SendPacket(&data);
+
+	if( m_session )
+		m_session->SendPacket(&data);
 }
 
 void Player::Send0602()
@@ -1145,7 +1167,9 @@ void Player::Send0602()
 	WorldPacket data;
 	data.Initialize( 0x06, 1 );
 	data << (uint8) 0x02;
-	GetSession()->SendPacket(&data);
+
+	if( m_session )
+		m_session->SendPacket(&data);
 }
 
 void Player::Send1408()
@@ -1154,7 +1178,9 @@ void Player::Send1408()
 	WorldPacket data;
 	data.Initialize( 0x14, 1 );
 	data << (uint8) 0x08;
-	GetSession()->SendPacket(&data);
+
+	if( m_session )
+		m_session->SendPacket(&data);
 }
 
 void Player::AllowPlayerToMove()
@@ -1258,7 +1284,9 @@ void Player::SendMapChanged()
 	data << GetPositionX();
 	data << GetPositionY();
 	data << (uint8) 0x01 << (uint8) 0x00;
-	GetSession()->SendPacket(&data);
+
+	if( m_session )
+		m_session->SendPacket(&data);
 
 
 	Send0504();  // This is important, maybe tell the client to Wait Cursor
@@ -1299,7 +1327,7 @@ void Player::TalkedToCreature( uint32 entry, uint64 guid )
 
 uint8 Player::FindEquipSlot( ItemPrototype const* proto, uint32 slot, bool swap ) const
 {
-	sLog.outDebug("STORAGE: FindEquipSlot '%s' slot %u", proto->Name, slot);
+	//sLog.outDebug("STORAGE: FindEquipSlot '%s' slot %u", proto->Name, slot);
 	uint8 slots;
 	slots = NULL_SLOT;
 	switch( proto->InventoryType )
@@ -1333,7 +1361,7 @@ uint8 Player::FindEquipSlot( ItemPrototype const* proto, uint32 slot, bool swap 
 		{
 			if ( slots == slot )
 			{
-				sLog.outString("STORAGE: FindEquipSlot '%s' is equipable in slot %u", proto->Name, slot);
+				//sLog.outString("STORAGE: FindEquipSlot '%s' is equipable in slot %u", proto->Name, slot);
 				return slot;
 			}
 		}
@@ -1548,11 +1576,11 @@ uint8 Player::CanStoreItem( uint8 slot, uint8 &dest, Item *pItem, bool swap ) co
 	dest = 0;
 	if( pItem )
 	{
-		sLog.outDebug("STORAGE: CanStoreItem slot = %u, item = %u, count = %u", slot, pItem->GetEntry(), pItem->GetCount());
+		//sLog.outDebug("STORAGE: CanStoreItem slot = %u, item = %u, count = %u", slot, pItem->GetEntry(), pItem->GetCount());
 		ItemPrototype const *pProto = pItem->GetProto();
 		if( pProto )
 		{
-			sLog.outDebug("STORAGE: CanStoreItem for '%s'", pProto->Name);
+			//sLog.outDebug("STORAGE: CanStoreItem for '%s'", pProto->Name);
 			Item *pItem2;
 			uint16 pos;
 			//if(pItem->IsBindedNotWith(GetGUID()))
@@ -1572,7 +1600,7 @@ uint8 Player::CanStoreItem( uint8 slot, uint8 &dest, Item *pItem, bool swap ) co
 					pItem2 = GetItemByPos( pos );
 					if( pItem2 && pItem2->GetEntry() == pItem->GetEntry() && pItem2->GetCount() + pItem->GetCount() <= pProto->Stackable )
 					{
-						sLog.outDebug("STORAGE: CanStoreItem still stackable %u <= %u", pItem2->GetCount() + pItem->GetCount(), pProto->Stackable);
+						//sLog.outDebug("STORAGE: CanStoreItem still stackable %u <= %u", pItem2->GetCount() + pItem->GetCount(), pProto->Stackable);
 						dest = pos;
 						return EQUIP_ERR_OK;
 					}
@@ -1590,11 +1618,11 @@ uint8 Player::CanStoreItem( uint8 slot, uint8 &dest, Item *pItem, bool swap ) co
 				}
 			}
 
-			sLog.outDebug("STORAGE: CanStoreItem Inventory is full");
+			//sLog.outDebug("STORAGE: CanStoreItem Inventory is full");
 			return EQUIP_ERR_INVENTORY_FULL;
 		}
 	}
-	sLog.outDebug("STORAGE: CanStoreItem pItem is NULL");
+	//sLog.outDebug("STORAGE: CanStoreItem pItem is NULL");
 	if( !swap )
 		return EQUIP_ERR_ITEM_NOT_FOUND;
 	else
@@ -1627,7 +1655,7 @@ uint8 Player::CanEquipItem( uint8 slot, uint8 &dest, Item *pItem, bool swap, boo
 	dest = 0;
 	if( pItem )
 	{
-		sLog.outDebug("STORAGE: CanEquipItem slot = %u, item = %u, count = %u", slot, pItem->GetEntry(), pItem->GetCount());
+		//sLog.outDebug("STORAGE: CanEquipItem slot = %u, item = %u, count = %u", slot, pItem->GetEntry(), pItem->GetCount());
 		ItemPrototype const *pProto = pItem->GetProto();
 
 		if( pProto )
@@ -1694,7 +1722,7 @@ Item* Player::StoreItem( uint8 pos, Item *pItem, bool update )
 	{
 		uint8 slot = pos ;
 
-		sLog.outDebug( "STORAGE: StoreItem slot = %u, item = %u, count = %u", slot, pItem->GetEntry(), pItem->GetCount());
+		//sLog.outDebug( "STORAGE: StoreItem slot = %u, item = %u, count = %u", slot, pItem->GetEntry(), pItem->GetCount());
 
 		Item *pItem2 = GetItemByPos( slot );
 
@@ -1764,7 +1792,7 @@ Item* Player::EquipItem( uint8 pos, Item *pItem, bool update )
 	}
 	else
 	{
-		sLog.outDebug("STORAGE: EquipItem destination is not null");
+		//sLog.outDebug("STORAGE: EquipItem destination is not null");
 		pItem2->SetCount( pItem2->GetCount() + pItem->GetCount() );
 		pItem->SetOwnerGUID(GetGUID());
 		pItem->SetState(ITEM_REMOVED, this);
@@ -1825,7 +1853,7 @@ void Player::VisualizeItem( uint8 pos, Item *pItem)
 
 	uint8 slot = pos;
 
-	sLog.outDebug( "STORAGE: EquipItem slot = %u, item = %u", slot, pItem->GetEntry());
+	//sLog.outDebug( "STORAGE: EquipItem slot = %u, item = %u", slot, pItem->GetEntry());
 	
 	m_items[slot] = pItem;
 	SetUInt64Value( (uint16)(PLAYER_FIELD_INV_SLOT_HEAD + (slot * 2) ), pItem->GetGUID() );
@@ -1852,7 +1880,7 @@ void Player::VisualizePetItem( uint32 pet_guid, uint8 pos, Item *pItem )
 
 	uint8 slot = pos;
 
-	sLog.outDebug( "STORAGE: EquipPetItem slot = %u, item = %u", slot, pItem->GetEntry());
+	//sLog.outDebug( "STORAGE: EquipPetItem slot = %u, item = %u", slot, pItem->GetEntry());
 
 	Pet* pet = GetPetByGuid( pet_guid );
 	pet->SetEquip( slot, pItem, false);

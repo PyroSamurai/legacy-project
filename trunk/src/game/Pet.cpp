@@ -119,8 +119,7 @@ bool Pet::LoadPetFromDB(Unit* owner, uint32 guid)
 	SetBattle(f[30].GetUInt8());
 
 	delete result;
-	sLog.outDebug("New Pet has guid %u", GetGUIDLow());
-
+	//sLog.outDebug("New Pet has guid %u", GetGUIDLow());
 
 	return true;
 }

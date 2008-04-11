@@ -141,9 +141,12 @@ AC_SUBST(LEGACYD_DEBUG_INFO)
 ## Set output files.
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([
+	dep/Makefile
 	dep/include/Makefile
 	dep/src/Makefile
 	dep/src/sockets/Makefile
+	dep/src/zlib/Makefile
+	dep/src/zthread/Makefile
 	Makefile
 	src/Makefile
 	src/framework/Makefile

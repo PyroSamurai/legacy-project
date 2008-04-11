@@ -144,6 +144,7 @@ class LEGACY_DLL_SPEC Creature : public Unit
 	public:
 
 		explicit Creature( WorldObject *instantiator );
+		explicit Creature( WorldObject *instantiator, bool puppet );
 		virtual ~Creature();
 
 		void AddToWorld();
@@ -285,6 +286,7 @@ class LEGACY_DLL_SPEC Creature : public Unit
 
 	private:
 		GridReference<Creature> m_gridRef;
+		bool m_puppet;
 
 };
 #endif

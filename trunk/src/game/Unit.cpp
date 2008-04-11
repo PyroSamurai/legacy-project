@@ -235,7 +235,7 @@ bool Unit::AddSpell(uint16 entry, uint8 level)
 
 	if( !CanHaveSpell(spell) )
 	{
-		sLog.outString("UNIT: '%s' element %s can not have spell <%s> element %s", GetName(), LookupNameElement(GetUInt8Value(UNIT_FIELD_ELEMENT), g_elementNames), sinfo->Name, LookupNameElement(sinfo->Element, g_elementNames));
+		//sLog.outString("UNIT: '%s' element %s can not have spell <%s> element %s", GetName(), LookupNameElement(GetUInt8Value(UNIT_FIELD_ELEMENT), g_elementNames), sinfo->Name, LookupNameElement(sinfo->Element, g_elementNames));
 		delete spell;
 		return false;
 	}
@@ -320,13 +320,50 @@ uint16 Unit::GetRandomSpell(uint8 ai_difficulty)
 	return spell->GetEntry();
 }
 
-void Unit::AddKillExp(uint8 enemyLevel, bool linked)
+void Unit::AddKillExp(uint8 enemyLevel, bool linked, bool inTeam, uint8 lowestLevelInGroup, uint8 lowerLevelCount)
 {
 	//sLog.outDebug("EXPERIENCE: '%s' add for killing enemy level %u", GetName(), enemyLevel);
 
-	uint32 xp = GetUInt32Value(UNIT_FIELD_NEXT_LEVEL_XP);
-	xp = xp + 1;
+	uint8  level   = getLevel();
+	float  xp      = 0;
 
+	uint8 diffLevel = abs(level - enemyLevel);
+	if(level - enemyLevel > 17)
+		///- Player level too high to gained more experience from enemy
+		xp += 0;
+	else if( linked )
+		///- add 10% bonus for linked attack
+		xp += level + diffLevel + ((level + diffLevel) * 0.1);
+	else
+		///- single attack, no bonus
+		xp += level + diffLevel;
+
+	if( HaveSpell(SPELL_UNITED) && isType(TYPE_PLAYER) && inTeam )
+	{
+		///- 10% bonus for SPELL_UNITED if battle in group
+		xp += (xp * 0.1);
+
+		uint8 diff = abs(level - lowestLevelInGroup);
+		if( HaveSpell(SPELL_TEACHING) && inTeam && diff > 10 )
+		{
+			///- 75% bonus from level diff * apprentince count, SPELL_TEACHING
+			//   if assist > 10 level lower player
+			xp += diff * 0.75 * lowerLevelCount;
+		}
+	}
+
+	float  rate_xp   = sWorld.getRate(RATE_XP_KILL);
+	uint32 xp_gained = (uint32) round(xp * rate_xp);
+	AddExpGained(xp_gained);
+}
+
+void Unit::AddHitExp(uint8 enemyLevel, bool linked)
+{
+	AddExpGained(1);
+}
+
+void Unit::AddExpGained(uint32 xp)
+{
 	uint8  lvl = getLevel();
 
 	uint8  birth_lvl = GetUInt8Value(UNIT_FIELD_REBORN);
@@ -350,21 +387,21 @@ void Unit::AddKillExp(uint8 enemyLevel, bool linked)
 
 	uint32 tnl = (uint32) round(pow(lvl + 1, power) + 5);
 
-	sLog.outDebug("EXPERIENCE: '%s' XP gain %u, TNL is %u", GetName(), xp, tnl);
-	//return;
+	sLog.outDebug("EXPERIENCE: '%s' XP gain %u, TNL is %u to %u", GetName(), xp, GetUInt32Value(UNIT_FIELD_NEXT_LEVEL_XP) + xp, tnl);
 
-	//SetUInt32Value(UNIT_FIELD_NEXT_LEVEL_XP, xp + (6 * getLevel()));
+	xp = GetUInt32Value(UNIT_FIELD_NEXT_LEVEL_XP) + xp;
+
 	SetUInt32Value(UNIT_FIELD_NEXT_LEVEL_XP, xp);
 
-	if( xp >= tnl )
+	while( xp >= tnl )
 	{
 		LevelUp();
 
-		//tnl = (uint32) round(pow(lvl + 1, 2.9) + 5);
-		SetUInt32Value(UNIT_FIELD_XP, xp);
-		SetUInt32Value(UNIT_FIELD_NEXT_LEVEL_XP, 0);
-	}
+		SetUInt32Value(UNIT_FIELD_XP, GetUInt32Value(UNIT_FIELD_XP) + tnl);
+		SetUInt32Value(UNIT_FIELD_NEXT_LEVEL_XP, xp - tnl);
 
+		tnl = (uint32) round(pow(getLevel() + 1, power) + 5);
+	}
 }
 
 void Unit::LevelUp()

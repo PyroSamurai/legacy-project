@@ -83,6 +83,9 @@ enum ChatMsg
 	CHAT_MSG_PARTY                = 0x05,
 	CHAT_MSG_ARMY                 = 0x06,
 	CHAT_MSG_ALLY                 = 0x07,
+	CHAT_MSG_UNK_0                = 0x08,
+	CHAT_MSG_UNK_1                = 0x09,
+	CHAT_MSG_UNK_2                = 0x0A,
 	CHAT_MSG_SYSTEM               = 0x0B
 };
 

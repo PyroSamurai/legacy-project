@@ -34,7 +34,7 @@
 #include <string>
 #include <vector>
 
-#define MAX_PET_SLOT     4
+#define MAX_PET_SLOT  5 // max can carry 4 pet slot, 0 = empty slot do not use
 #define MAX_PLAYER_SPELL 254
 
 class Creature;

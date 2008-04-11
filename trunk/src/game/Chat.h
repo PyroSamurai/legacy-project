@@ -54,7 +54,7 @@ class ChatHandler
 
 		void FillSystemMessageData( WorldPacket *data, const char* message )
 		{
-			FillMessageData( data, CHAT_MSG_GM, 0, message );
+			FillMessageData( data, CHAT_MSG_SYSTEM, 0, message );
 		}
 
 //		Player* getSelectedPlayer();

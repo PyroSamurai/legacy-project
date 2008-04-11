@@ -38,7 +38,7 @@ legacyd_LDADD = \
 	../shared/Config/liblegacyconfig.a \
 	../shared/liblegacyshared.a \
 	../framework/liblegacyframework.a \
-	/usr/local/lib/libZThread.a \
+	../../dep/src/zthread/libZThread.la \
 	-lpthread
 
 legacyd_LDFLAGS = \

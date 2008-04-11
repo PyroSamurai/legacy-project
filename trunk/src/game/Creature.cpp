@@ -46,12 +46,29 @@ m_respawnTime( 0 ),
 m_respawnDelay( 25 ),
 m_isPet( false ),
 m_defaultMovementType( IDLE_MOTION_TYPE ),
-m_AI_locked(false)
+m_AI_locked( false ),
+m_puppet( false )
 {
 	m_valuesCount = UNIT_END;
 
 	for(int i = 0; i < 2; ++i) respawn_cord[i] = 0;
-	//for(int i = 0; i < 4; ++i) m_spells[i] = 0;
+}
+
+Creature::Creature( WorldObject *instantiator, bool puppet ) :
+Unit( instantiator ),
+m_NPCTextId(0),
+i_AI( NULL ),
+m_itemsLoaded( false ),
+m_respawnTime( 0 ),
+m_respawnDelay( 25 ),
+m_isPet( false ),
+m_defaultMovementType( IDLE_MOTION_TYPE ),
+m_AI_locked( false ),
+m_puppet( puppet )
+{
+	m_valuesCount = UNIT_END;
+
+	for(int i = 0; i < 2; ++i) respawn_cord[i] = 0;
 }
 
 Creature::~Creature()
@@ -133,7 +150,7 @@ bool Creature::Create(uint32 guidlow, uint16 mapid, uint16 x, uint16 y, uint32 E
 	SetMapId(mapid);
 	Relocate(x, y);
 
-	sLog.outString("    Creature::Create GUID(%u) MAPID(%u) ENTRY(%u)", guidlow, GetMapId(), Entry);
+	//sLog.outString("    Creature::Create GUID(%u) MAPID(%u) ENTRY(%u)", guidlow, GetMapId(), Entry);
 
 	return CreateFromProto(guidlow, Entry, team, data);
 }
@@ -355,7 +372,7 @@ bool Creature::CreateFromProto(uint32 guidlow, uint32 Entry, uint32 team, const 
 
 	SetUInt16Value(UNIT_FIELD_DISPLAYID, cinfo->modelid);
 	SetName(GetCreatureInfo()->Name);
-	sLog.outString(" >> Creature::CreateFromProto '%s' %u '%s'", GetName(), GetMapId(), GetCreatureInfo()->ScriptName);
+	sLog.outDebug("CREATURE: >> Creature::CreateFromProto '%s' %u '%s'", GetName(), GetMapId(), GetCreatureInfo()->ScriptName);
 
 	SetUInt16Value(UNIT_FIELD_HP, cinfo->hp);
 	SetUInt16Value(UNIT_FIELD_SP, cinfo->sp);
@@ -388,8 +405,11 @@ bool Creature::CreateFromProto(uint32 guidlow, uint32 Entry, uint32 team, const 
 	if(isInnKeeper()) sLog.outString(" >> '%s' is InnKeeper", GetName());
 	if(isServiceProvider()) sLog.outString(" >> '%s' is ServiceProvider", GetName());
 
-	// checked at loading
-	m_defaultMovementType = MovementGeneratorType(cinfo->MovementType);
+	if( !m_puppet )
+	{
+		// checked at loading
+		m_defaultMovementType = MovementGeneratorType(cinfo->MovementType);
+	}
 
 	// Notify the map's instance data.
 	// Only works if you create the object in it, not if it is moves to that map
@@ -411,7 +431,7 @@ bool Creature::LoadFromDB(uint32 guid, uint32 InstanceId)
 
 	if(!data)
 	{
-		sLog.outErrorDb("Creature (GUID: %u) not found in table `creature`, can't load.", guid);
+		sLog.outErrorDb("CREATURE: Creature (GUID: %u) not found in table `creature`, can't load.\n", guid);
 		return false;
 	}
 
@@ -464,10 +484,13 @@ bool Creature::LoadFromDB(uint32 guid, uint32 InstanceId)
 		objmgr.SaveCreatureRespawnTime(m_DBTableGuid, GetInstanceId(), 0);
 	}
 */
-	// checked at creature_template loading
-	m_defaultMovementType = MovementGeneratorType(data->movementType);
+	if( !m_puppet )
+	{
+		// checked at creature_template loading
+		m_defaultMovementType = MovementGeneratorType(data->movementType);
+		AIM_Initialize();
+	}
 
-	AIM_Initialize();
 	return true;
 }
 

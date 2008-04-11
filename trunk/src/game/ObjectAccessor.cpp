@@ -73,9 +73,10 @@ ObjectAccessor::GetNPCIfCanInteractWith(Player const &player, uint64 guid, uint3
 Creature*
 ObjectAccessor::GetCreature(WorldObject const &u, uint64 guid)
 {
-	sLog.outString("ObjectAccessor::GetCreature %u", guid);
+	//sLog.outString("ObjectAccessor::GetCreature %u", guid);
 	Creature * ret = GetObjectInWorld(guid, (Creature*)NULL);
 	if(ret && ret->GetMapId() != u.GetMapId()) ret = NULL;
+	/*
 	if(ret)
 	{
 		sLog.outString("ret is not NULL GUID(%u) MAPID(%u)", ret->GetGUIDLow(), ret->GetMapId());
@@ -84,6 +85,7 @@ ObjectAccessor::GetCreature(WorldObject const &u, uint64 guid)
 	{
 		sLog.outString("ret is NULL >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 	}
+	*/
 	return ret;
 }
 

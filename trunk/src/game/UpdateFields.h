@@ -245,4 +245,32 @@ enum EUnitFields
 	PLAYER_END                          = UNIT_END + 0x04C0,
 };
 
+enum UpdateFieldsFlags
+{
+	UPD_FLAG_HP                         = 0x19,
+	UPD_FLAG_SP                         = 0x1A,
+	UPD_FLAG_INT                        = 0x1B,
+	UPD_FLAG_ATK                        = 0x1C,
+	UPD_FLAG_DEF                        = 0x1D,
+	UPD_FLAG_AGI                        = 0x1E,
+	UPD_FLAG_HPX                        = 0x1F,
+	UPD_FLAG_SPX                        = 0x20,
+
+	UPD_FLAG_LEVEL                      = 0x23,
+	UPD_FLAG_XP                         = 0x24,
+	UPD_FLAG_SPELL_POINT                = 0x25,
+	UPD_FLAG_STAT_POINT                 = 0x26,
+
+	UPD_FLAG_LOYALTY                    = 0x40,
+
+	UPD_FLAG_HPX_MOD                    = 0xCF,
+	UPD_FLAG_SPX_MOD                    = 0xD0,
+
+	UPD_FLAG_ATK_MOD                    = 0xD2,
+	UPD_FLAG_DEF_MOD                    = 0xD3,
+	UPD_FLAG_INT_MOD                    = 0xD4,
+
+	UPD_FLAG_AGI_MOD                    = 0xD6,
+};
+
 #endif
