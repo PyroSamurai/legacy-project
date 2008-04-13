@@ -46,7 +46,7 @@ Item::Item()
 
 bool Item::Create(uint32 guidlow, uint32 itemid, Player* owner)
 {
-	sLog.outDebug("Item::Create guidlow %u, itemid %u, owner %u", guidlow, itemid, owner->GetGUID());
+	sLog.outDebug("ITEM: Create guidlow %u, itemid %u, owner %u", guidlow, itemid, owner->GetGUID());
 
 	Object::_Create(guidlow, HIGHGUID_ITEM);
 
@@ -56,6 +56,7 @@ bool Item::Create(uint32 guidlow, uint32 itemid, Player* owner)
 	SetUInt64Value(ITEM_FIELD_CONTAINED, owner ? owner->GetGUID() : 0);
 
 	ItemPrototype const *itemProto = objmgr.GetItemPrototype(itemid);
+
 	if(!itemProto)
 		return false;
 

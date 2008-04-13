@@ -150,8 +150,8 @@ enum InventorySlots
 	INVENTORY_SLOT_ITEM_22       = 32,
 	INVENTORY_SLOT_ITEM_23       = 33,
 	INVENTORY_SLOT_ITEM_24       = 34,
-	INVENTORY_SLOT_ITEM_25       = 35,
-	INVENTORY_SLOT_ITEM_END      = 36,
+	INVENTORY_SLOT_ITEM_END      = 35,
+	INVENTORY_SLOT_ITEM_PAD_0    = 36, // not use, padding only
 	INVENTORY_SLOT_ITEM_PAD_1    = 37, // not use, padding only
 	INVENTORY_SLOT_ITEM_PAD_2    = 38, // not use, padding only
 	INVENTORY_SLOT_ITEM_PAD_3    = 39, // not use, padding only
@@ -381,6 +381,8 @@ class LEGACY_DLL_SPEC Player : public Unit
 		Item* EquipNewItem( uint8 pos, uint32 item, uint32 count, bool update );
 		Item* EquipItem( uint8 pos, Item *pItem, bool update );
 
+		bool  AddNewInventoryItem(uint32 entry, uint32 count);
+
 		void QuickEquipItem( uint8 pos, Item *pItem);
 		void VisualizeItem( uint8 pos, Item *pItem);
 
@@ -402,7 +404,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 
 		void BuyItemFromVendor(uint64 vendorguid, uint32 item, uint8 count, uint8 slot);
 
-		void DumpPlayer();
+		void DumpPlayer(const char* section="all");
 		/*********************************************************/
 		/***                  LOAD SYSTEM                      ***/
 		/*********************************************************/

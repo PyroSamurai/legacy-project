@@ -435,6 +435,9 @@ void Unit::AddKillItemDropped(uint16 itemId)
 
 uint16 Unit::GetItemDropped(uint8 index)
 {
+	return 20619;
+	return 26001;
+
 	//return 49001;
 	if( rand_chance() < 50 )
 		return 26001;

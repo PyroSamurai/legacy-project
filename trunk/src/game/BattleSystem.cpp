@@ -1174,7 +1174,7 @@ void BattleSystem::BuildUpdateBlockAction(WorldPacket *data, BattleAction* actio
 		{
 			m_creatureKilled = true;
 			AddKillExpGained(attacker, victim, linked);
-			//AddKillItemDropped(hit);
+			AddKillItemDropped(hit);
 		}
 		else
 		{
@@ -2166,15 +2166,28 @@ void BattleSystem::AddKillItemDropped(BattleAction* action)
 		return;
 	}
 
-	uint16 item = 0;
+	Player* player;
+	if( receiver->isType(TYPE_PLAYER) )
+		player = (Player*) receiver;
+	else if( receiver->isType(TYPE_PET) )
+		player = (Player*) receiver->GetOwner();
+
+	if( !player )
+		return;
+
+	uint32 item = 0;
 
 	for(uint8 i = 0; i < CREATURE_DROP_ITEM_MAX; i++)
 	{
 		if( item = contributor->GetItemDropped(i) )
 		{
-			//sLog.outDebug("ITEM DROPPED: '%s' dropped item [%u] for '%s'", contributor->GetName(), item, receiver->GetName());
+			sLog.outDebug("ITEM DROPPED: '%s' dropped item [%u] for '%s'", contributor->GetName(), item, receiver->GetName());
 
-			m_itemDropped.push_back(new ItemDropped(a,b,item,x,y));
+			if( player->AddNewInventoryItem(item, 1) )
+			{
+				m_itemDropped.push_back(new ItemDropped(a,b,item,x,y));
+				player->DumpPlayer("inventory");
+			}
 			break;
 		}
 	}
@@ -2250,17 +2263,19 @@ void BattleSystem::GiveItemDropped()
 	if( m_itemDropped.empty() )
 		return;
 
-	//sLog.outDebug("ITEM DROPPED: Giving item dropped");
+	sLog.outDebug("ITEM DROPPED: Giving item dropped size %u", m_itemDropped.size());
 
 	m_animationTimeItemDropped = 3;
 
 	m_itemDropped.sort(compare_position);
 
+	/*
 	ItemDroppedTurn::const_iterator it = m_itemDropped.begin();
 	for(it; it != m_itemDropped.end(); ++it)
 	{
-	//	sLog.outString("ITEM DROPPED: Item Dropped for [%u,%u] <%u> from [%u,%u]", (*it)->GetReceiverCol(), (*it)->GetReceiverRow(), (*it)->GetItem(), (*it)->GetContributorCol(), (*it)->GetContributorRow());
+		sLog.outString("ITEM DROPPED: Item Dropped for [%u,%u] <%u> from [%u,%u]", (*it)->GetReceiverCol(), (*it)->GetReceiverRow(), (*it)->GetItem(), (*it)->GetContributorCol(), (*it)->GetContributorRow());
 	}
+	*/
 
 	ItemDropped* item;
 
