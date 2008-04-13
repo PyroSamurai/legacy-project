@@ -334,27 +334,31 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder)
 	return true;
 }
 
-void Player::DumpPlayer()
+void Player::DumpPlayer(const char* section)
 {
 	sLog.outDebug("");
-	for(uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; slot++)
-		if(m_items[slot])
-			sLog.outDebug(" @@ Equipment slot %3u equiped '%s' (%u piece)", slot, m_items[slot]->GetProto()->Name, m_items[slot]->GetCount());
-	for(uint8 slot = INVENTORY_SLOT_ITEM_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
-		if (m_items[slot])
-			sLog.outDebug(" @@ Inventory slot %3u contain '%s' (%u piece)", slot, m_items[slot]->GetProto()->Name, m_items[slot]->GetCount());
+	if( section == "equip" )
+		for(uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; slot++)
+			if(m_items[slot])
+				sLog.outDebug(" @@ Equipment slot %3u equiped [%-20.20s] (%u piece)", slot, m_items[slot]->GetProto()->Name, m_items[slot]->GetCount());
 
-	for(SpellMap::iterator it = m_spells.begin(); it != m_spells.end(); ++it)
-		sLog.outDebug( " ** Player '%s' has spell <%-20.20s> level [%2u]", GetName(), (*it).second->GetProto()->Name, (*it).second->GetLevel());
+	if( section == "inventory" )
+		for(uint8 slot = INVENTORY_SLOT_ITEM_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
+			if (m_items[slot])
+				sLog.outDebug(" @@ Inventory slot %2u contain [%-20.20s] (%2u piece) GUID(%u)", slot, m_items[slot]->GetProto()->Name, m_items[slot]->GetCount(), m_items[slot]->GetGUIDLow());
 
-	for(uint8 slot = 0; slot < MAX_PET_SLOT; slot++)
-	{
-		if( m_pets[slot] )
-		{
-			sLog.outDebug(" @@ Pet slot %3u '%s' is %s", slot + 1, m_pets[slot]->GetName(), (m_pets[slot]->isBattle() ? "Battle" : "Resting"));
-			m_pets[slot]->DumpPet();
-		}
-	}
+	if( section == "spell" )
+		for(SpellMap::iterator it = m_spells.begin(); it != m_spells.end(); ++it)
+			sLog.outDebug( " ** Player '%s' has spell <%-20.20s> level [%2u]", GetName(), (*it).second->GetProto()->Name, (*it).second->GetLevel());
+
+	if( section == "pet" )
+		for(uint8 slot = 0; slot < MAX_PET_SLOT; slot++)
+			if( m_pets[slot] )
+			{
+				sLog.outDebug(" @@ Pet slot %3u '%s' is %s", slot + 1, m_pets[slot]->GetName(), (m_pets[slot]->isBattle() ? "Battle" : "Resting"));
+				m_pets[slot]->DumpPet();
+			}
+
 	sLog.outDebug("");
 }
 
@@ -1387,6 +1391,7 @@ Item* Player::CreateItem( uint32 item, uint32 count ) const
 	ItemPrototype const *pProto = objmgr.GetItemPrototype( item );
 	if( pProto )
 	{
+		sLog.outDebug("STORAGE: Item Prototype found <%u>, creating", item);
 		Item *pItem = new Item;
 		if ( count > pProto->Stackable )
 			count = pProto->Stackable;
@@ -1394,12 +1399,15 @@ Item* Player::CreateItem( uint32 item, uint32 count ) const
 			count = 1;
 		if( pItem->Create(objmgr.GenerateLowGuid(HIGHGUID_ITEM), item, const_cast<Player*>(this)) )
 		{
+			sLog.outDebug("STORAGE: Item <%u> created", item);
 			pItem->SetCount( count );
 			return pItem;
 		}
 		else
 			delete pItem;
 	}
+	else
+		sLog.outDebug("STORAGE: Item Prototype not found <%u>", item);
 	return NULL;
 }
 
@@ -1576,11 +1584,11 @@ uint8 Player::CanStoreItem( uint8 slot, uint8 &dest, Item *pItem, bool swap ) co
 	dest = 0;
 	if( pItem )
 	{
-		//sLog.outDebug("STORAGE: CanStoreItem slot = %u, item = %u, count = %u", slot, pItem->GetEntry(), pItem->GetCount());
+		sLog.outDebug("STORAGE: CanStoreItem slot = %u, item = %u, count = %u", slot, pItem->GetEntry(), pItem->GetCount());
 		ItemPrototype const *pProto = pItem->GetProto();
 		if( pProto )
 		{
-			//sLog.outDebug("STORAGE: CanStoreItem for '%s'", pProto->Name);
+			sLog.outDebug("STORAGE: CanStoreItem for '%s'", pProto->Name);
 			Item *pItem2;
 			uint16 pos;
 			//if(pItem->IsBindedNotWith(GetGUID()))
@@ -1600,7 +1608,7 @@ uint8 Player::CanStoreItem( uint8 slot, uint8 &dest, Item *pItem, bool swap ) co
 					pItem2 = GetItemByPos( pos );
 					if( pItem2 && pItem2->GetEntry() == pItem->GetEntry() && pItem2->GetCount() + pItem->GetCount() <= pProto->Stackable )
 					{
-						//sLog.outDebug("STORAGE: CanStoreItem still stackable %u <= %u", pItem2->GetCount() + pItem->GetCount(), pProto->Stackable);
+						sLog.outDebug("STORAGE: CanStoreItem still stackable %u <= %u", pItem2->GetCount() + pItem->GetCount(), pProto->Stackable);
 						dest = pos;
 						return EQUIP_ERR_OK;
 					}
@@ -1618,11 +1626,11 @@ uint8 Player::CanStoreItem( uint8 slot, uint8 &dest, Item *pItem, bool swap ) co
 				}
 			}
 
-			//sLog.outDebug("STORAGE: CanStoreItem Inventory is full");
+			sLog.outDebug("STORAGE: CanStoreItem Inventory is full");
 			return EQUIP_ERR_INVENTORY_FULL;
 		}
 	}
-	//sLog.outDebug("STORAGE: CanStoreItem pItem is NULL");
+	sLog.outDebug("STORAGE: CanStoreItem pItem is NULL");
 	if( !swap )
 		return EQUIP_ERR_ITEM_NOT_FOUND;
 	else
@@ -1894,6 +1902,25 @@ void Player::VisualizePetItem( uint32 pet_guid, uint8 pos, Item *pItem )
 Item* Player::BankItem( uint8 pos, Item *pItem, bool update )
 {
 	return StoreItem( pos, pItem, update );
+}
+
+bool Player::AddNewInventoryItem(uint32 modelid, uint32 count)
+{
+	uint8 dest;
+
+	uint32 itemid = objmgr.GetItemEntryByModelId(modelid);
+
+	Item *item;
+
+	if( CanStoreNewItem( NULL_SLOT, dest, itemid, count, false ) == EQUIP_ERR_OK )
+	{
+		sLog.outDebug("STORAGE: Add new inventory item <%u>", itemid);
+		item = StoreNewItem( dest, itemid, count, false );
+		return true;
+	}
+
+	sLog.outDebug("STORAGE: Can not add new item <%u> to inventory", itemid);
+	return false;
 }
 
 //////////////////////////////////////////////////////////////////////////////

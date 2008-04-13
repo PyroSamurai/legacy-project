@@ -59,6 +59,7 @@ SQLStorage sCreatureModelStorage(CreatureModelfmt,"modelid","creature_model_info
 SQLStorage sCreatureInfoAddonStorage(CreatureInfoAddonInfofmt,"entry","creature_template_addon");
 SQLStorage sEquipmentStorage(EquipmentInfofmt,"entry","creature_equip_template");
 SQLStorage sGOStorage(GameObjectInfofmt,"entry","gameobject_template");
+//SQLStorage sItemStorage(ItemPrototypefmt,"entry","item_template");
 SQLStorage sItemStorage(ItemPrototypefmt,"entry","item_template");
 SQLStorage sPageTextStore(PageTextfmt,"entry","page_text");
 SQLStorage sSpellThreatStore(SpellThreatfmt,"entry","spell_threat");

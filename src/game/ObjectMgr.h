@@ -97,6 +97,7 @@ typedef HM_NAMESPACE::hash_map<uint32, GameObjectData> GameObjectDataMap;
 
 typedef std::multimap<uint32, uint32> QuestRelations;
 
+typedef std::map<uint32, uint32> ItemPrototypeMap;
 
 
 /// Player state
@@ -138,6 +139,7 @@ class ObjectMgr
 
 
 		static ItemPrototype const* GetItemPrototype(uint32 id) { return sItemStorage.LookupEntry<ItemPrototype>(id); }
+		uint32 GetItemEntryByModelId(uint32 modelid);
 
 
 		uint32 GetPlayerGuidByAccountId(const uint32 acc_id) const;
@@ -215,6 +217,8 @@ class ObjectMgr
 
 		MapObjectGuids mMapObjectGuids;
 		CreatureDataMap mCreatureDataMap;
+
+		ItemPrototypeMap m_itemPrototypeList;
 };
 
 #define objmgr LeGACY::Singleton<ObjectMgr>::Instance()

@@ -42,6 +42,13 @@ ScriptMapMap sEventScripts;
 
 ObjectMgr::ObjectMgr()
 {
+	m_hiCharGuid       = 1;
+	m_hiCreatureGuid   = 1;
+	m_hiItemGuid       = 1;
+	m_hiGoGuid         = 1;
+	//m_hiDoGuid         = 1;
+
+	m_hiPetNumber      = 1;
 }
 
 ObjectMgr::~ObjectMgr()
@@ -207,12 +214,14 @@ void ObjectMgr::SetHighestGuids()
 		delete result;
 	}
 
+	/*
 	result = WorldDatabase.Query("SELECT MAX(guid) FROM gameobject");
 	if(result)
 	{
 		m_hiGoGuid = (*result)[0].GetUInt32()+1;
 		delete result;
 	}
+	*/
 }
 
 uint32 ObjectMgr::GenerateLowGuid(HighGuid guidhigh)
@@ -270,7 +279,7 @@ void ObjectMgr::LoadItemPrototypes()
 	sLog.outString( ">> Loaded %u item prototypes", sItemStorage.RecordCount );
 	sLog.outString( "" );
 
-	//sLog.outString(" -       %-5s %15s %5s %3s %5s %5s", "ENTRY","NAME", "TYPE", "LVL", "MODEL", "STACK");
+	sLog.outString(" -       %-5s %15s %5s %3s %5s %5s", "ENTRY","NAME", "TYPE", "LVL", "MODEL", "STACK");
 	// check data correctness
 	for(uint32 i = 1; i < sItemStorage.MaxEntry; ++i)
 	{
@@ -278,9 +287,35 @@ void ObjectMgr::LoadItemPrototypes()
 		if(!proto)
 			continue;
 
-		//sLog.outString(" - Check %5u %15s %5u %3u %5u %5u", proto->ItemId, proto->Name, proto->InventoryType, proto->level, proto->modelid, proto->Stackable);
+		sLog.outString(" - Check %5u %15s %5u %3u %5u %5u", proto->ItemId, proto->Name, proto->InventoryType, proto->level, proto->modelid, proto->Stackable);
 
 	}
+}
+
+uint32 ObjectMgr::GetItemEntryByModelId(uint32 modelid)
+{
+	///- lazy loading
+	ItemPrototypeMap::iterator it = m_itemPrototypeList.find(modelid);
+
+	uint32 entry = 0;
+	if( it == m_itemPrototypeList.end() )
+	{
+		QueryResult *result = WorldDatabase.PQuery("SELECT entry FROM item_template where modelid = '%u'", modelid);
+
+		if( !result )
+			return 0;
+
+		entry = (*result)[0].GetUInt32();
+		delete result;
+
+		m_itemPrototypeList.insert(pair<uint32, uint32>(entry, modelid));
+	}
+	else
+	{
+		entry = it->first;
+	}
+
+	return entry;
 }
 
 void ObjectMgr::LoadSpellPrototypes()

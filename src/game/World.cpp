@@ -110,6 +110,8 @@ void World::SetInitialWorldSettings()
 	m_configs[CONFIG_GRID_UNLOAD] = sConfig.GetBoolDefault("GridUnload", true);
 
 
+	///- Init highest guids before any table loading to prevent using not initialized guids in some code.
+	objmgr.SetHighestGuids();
 
 
 	sLog.outString( "Loading Items..." );
