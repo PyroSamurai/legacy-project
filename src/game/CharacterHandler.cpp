@@ -32,7 +32,6 @@
 #include "Encoder.h"
 #include "GossipDef.h"
 #include "Chat.h"
-
 #include "BattleSystem.h"
 
 // check used symbols in player name at creating and rename
@@ -60,9 +59,9 @@ bool LoginQueryHolder::Initialize()
 
 	res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADFROM, "SELECT * FROM characters WHERE accountid = '%u'", m_accountId);
 
-	res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADPET, "SELECT id, petslot FROM character_pet WHERE owner = '%u' ORDER BY petslot", GUID_LOPART(m_guid));
+	res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADPET, "SELECT guid, petslot FROM character_pet WHERE owner_guid = '%u' ORDER BY petslot", GUID_LOPART(m_guid));
 
-	res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADINVENTORY, "SELECT entry, pet, slot, item, item_template, item_instance.* FROM character_inventory JOIN item_instance ON character_inventory.item = item_instance.guid WHERE character_inventory.guid = '%u' ORDER BY slot", GUID_LOPART(m_guid));
+	res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADINVENTORY, "SELECT data, pet, slot, item, entry FROM character_inventory ci JOIN item_instance ii ON ci.item = ii.guid WHERE ci.guid = '%u' ORDER BY ci.slot", GUID_LOPART(m_guid));
 
 	res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADSPELL, "SELECT entry, level FROM character_spell where owner = '%u' ORDER BY entry", GUID_LOPART(m_guid));
 
@@ -97,12 +96,36 @@ void WorldSession::HandleCharCreateSelectName(WorldPacket & recv_data)
 {
 	CHECK_PACKET_SIZE(recv_data, 1);
 	WorldPacket data;
-	std::string name;
 
-	recv_data >> name;
+	recv_data >> new_name;
+
+	if(objmgr.GetPlayerGUIDByName(new_name))
+	{
+		data.Initialize( 0x09 );
+		data << (uint8 ) 0x03;
+		data << (uint8 ) 0x01;
+		SendPacket(&data);
+		return;
+	}
+
+	///- Name ok
+	data.Initialize( 0x09 );
+	data << (uint8 ) 0x03;
+	data << (uint8 ) 0x00;
+	SendPacket(&data);
+
+
+
+
+
+	///- TODO: delete below this after fix
+	return;
+/*
+	///- Delete possible re-choosing name after marking previous one
+	CharacterDatabase.PExecute("DELETE FROM characters WHERE accountid = %u", GetAccountId());
 
 	CharacterDatabase.escape_string(name);
-	QueryResult* result = CharacterDatabase.PQuery("SELECT * FROM characters WHERE name = '%s'", name.c_str());
+	QueryResult* result = CharacterDatabase.PQuery("SELECT name FROM characters WHERE name = '%s' and accountid != %u", name.c_str(), GetAccountId());
 
 	SetLogging(false);
 	///- Name already taken
@@ -126,6 +149,7 @@ void WorldSession::HandleCharCreateSelectName(WorldPacket & recv_data)
 	data << (uint8 ) 0x03;
 	data << (uint8 ) 0x00;
 	SendPacket(&data);
+*/
 }
 
 void WorldSession::HandleCharCreateOpcode( WorldPacket & recv_data )
@@ -153,133 +177,84 @@ void WorldSession::HandleCharCreateOpcode( WorldPacket & recv_data )
 void WorldSession::HandleCharCreate( WorldPacket & recv_data )
 {
 	CHECK_PACKET_SIZE(recv_data, 1+1+1+1+2+2+2+2+1+1+1+1+1+1+1+1);
-	
-	uint8  gender = 0;
-	uint8  face = 0;
-	uint8  hair = 0;
-	uint8  reborn = 0;
 
-	uint8  skin_color_R = 0;
-	uint8  skin_color_G = 0;
-	uint8  skin_color_B = 0;
-	uint8  hair_color_R = 0;
-	uint8  hair_color_G = 0;
-	uint8  hair_color_B = 0;
-	uint8  shirt_color = 0;
-	uint8  misc_color = 0;
+	Player * pNewChar = new Player(this);
 
-	uint8  element = 0;
-	uint8  stat_int = 0;
-	uint8  stat_atk = 0;
-	uint8  stat_def = 0;
-	uint8  stat_hpx = 0;
-	uint8  stat_spx = 0;
-	uint8  stat_agi = 0;
-
-	uint8  lenPassword1 = 0;
-	std::string password1 = "";
-	uint8  lenPassword2 = 0;
-	std::string password2 = "";
-
-	uint8 tmp_password1[100];
-	uint8 tmp_password2[100];
-
-	recv_data >> gender;
-	recv_data >> face;
-	recv_data >> hair;
-	recv_data >> reborn;
-
-	recv_data >> hair_color_R;
-	recv_data >> hair_color_G;
-	recv_data >> hair_color_B;
-	recv_data >> skin_color_R;
-	recv_data >> skin_color_G;
-	recv_data >> skin_color_B;
-	recv_data >> shirt_color;
-	recv_data >> misc_color;
-
-	sLog.outDebug("Coloring: hair: %u, skin %u, shirt %u, misc %u", hair_color_R, skin_color_R, shirt_color, misc_color);
-	recv_data >> element;
-
-	recv_data >> stat_int;
-	recv_data >> stat_atk;
-	recv_data >> stat_def;
-	recv_data >> stat_hpx;
-	recv_data >> stat_spx;
-	recv_data >> stat_agi;
-
-	recv_data >> lenPassword1;
-
-	CHECK_PACKET_SIZE( recv_data, lenPassword1 );
-
-	for(uint8 i = 0; i < lenPassword1; i++)
+	// prevent character creating with invalid name
+	if(new_name.empty())
 	{
-		recv_data >> tmp_password1[i];
-		password1 += tmp_password1[i];
-	}
-	sLog.outDebug("Password1: '%s'", password1.c_str());
-
-	recv_data >> lenPassword2;
-
-	CHECK_PACKET_SIZE( recv_data, lenPassword2 );
-	for(uint8 i = 0; i < lenPassword2; i++)
-	{
-		recv_data >> tmp_password2[i];
-		password2 += tmp_password2[i];
-	}
-	sLog.outDebug("Password2: '%s'", password2.c_str());
-
-	QueryResult* result = CharacterDatabase.PQuery("SELECT name FROM characters WHERE accountid = %u", GetAccountId());
-	if( !result )
+		sLog.outError("Account:[%d] but tried to Create character with empty [name]", GetAccountId());
 		return;
+	}
 
-	std::string name = (*result)[0].GetCppString();
+	std::string pass1;
+	std::string pass2;
 
-	delete result;
+	if(pNewChar->Create( objmgr.GenerateLowGuid(HIGHGUID_PLAYER), new_name, recv_data, pass1, pass2 ))
+	{
+		Item* shirt = pNewChar->CreateItem( 864, 1 );
+		if( shirt )
+		{
+			uint8 slot = shirt->GetProto()->EquipmentSlot;
+			uint8 dest = slot;
+			if( pNewChar->CanEquipItem( slot, dest, shirt, false ) == EQUIP_ERR_OK )
+				pNewChar->EquipItem( dest, shirt, false );
+			else
+				delete shirt;
+		}
 
-	loginDatabase.PExecute("DELETE FROM accounts WHERE accountid = %u", GetAccountId());
-	loginDatabase.PExecute("INSERT INTO accounts (accountid, password, online) values (%u, md5('%s'), 1)", GetAccountId(), password1.c_str());
+		///- Adding default pet (Guo Jia evo)
+		Pet* pet = pNewChar->CreatePet( 3402 );
+		if( pet )
+		{
+			uint8 slot = 0;
+			uint8 dest = slot;
+			if( pNewChar->CanSummonPet( slot, dest, pet, false ) == PET_ERR_OK )
+				pNewChar->SummonPet( 0, pet );
+			else
+				delete pet;
+		}
 
-	CharacterDatabase.PExecute("DELETE FROM characters WHERE accountid = %u AND name = '%s'", GetAccountId(), name.c_str());
+		pNewChar->SaveToDB();
 
-	std::ostringstream ss;
-	ss << "INSERT INTO characters (accountid, psswd, gender, element, face, hair, name, reborn, level, mapid, pos_x, pos_y, stat_int, stat_atk, stat_def, stat_hpx, stat_spx, stat_agi, hair_color_R, hair_color_G, hair_color_B, skin_color_R, skin_color_G, skin_color_B, shirt_color, misc_color ) values ( "
-		<< GetAccountId() << ", md5('"
-		<< password1 << "'), "
-		<< uint32(gender) << ", "      // to prevent save uint8 as char
-		<< uint32(element) << ", "
-		<< uint32(face) << ", "
-		<< uint32(hair) << ", '"
-		<< name.c_str() << "', "
-		<< uint32(reborn) << ", "
-		<< uint32(1) << ", "
-		<< uint32(10816) << ", "
-		<< uint32(442) << ", "
-		<< uint32(758) << ", "
-		<< uint32(stat_int) << ", "
-		<< uint32(stat_atk) << ", "
-		<< uint32(stat_def) << ", "
-		<< uint32(stat_hpx) << ", "
-		<< uint32(stat_spx) << ", "
-		<< uint32(stat_agi) << ", "
-		<< uint32(hair_color_R) << ", "
-		<< uint32(hair_color_G) << ", "
-		<< uint32(hair_color_B) << ", "
-		<< uint32(skin_color_R) << ", "
-		<< uint32(skin_color_G) << ", "
-		<< uint32(skin_color_B) << ", "
-		<< uint32(shirt_color) << ", "
-		<< uint32(misc_color) << " )";
+		delete pNewChar;
+	}
+	else
+	{
+		// Player not create (problem?)
+		delete pNewChar;
 
-	CharacterDatabase.Execute( ss.str().c_str() );
+		///- TODO: Send char create error to client
+		return;
+	}
+
+	std::string md5pass1 = md5(pass1);
+	std::string md5pass2 = md5(pass2);
+
+	///- Commit pending player creation transaction, for login preparation
+	loginDatabase.PExecute("UPDATE accounts SET md5pass1 = '%s', md5pass2 = '%s' WHERE accountid = %u", md5pass1.c_str(), md5pass2.c_str(), GetAccountId());
+
+	CharacterDatabase.CommitTransaction();
+
+	///- do a small delay to make sure player save to database completed
+	ZThread::Thread::sleep(10);
+
+	std::string IP_str = _socket ? _socket->GetRemoteAddress().c_str() : "-";
+	sLog.outString("Account: %d (IP: %s) Create Character:[%s]", GetAccountId(), IP_str.c_str(), new_name.c_str());
+	sLog.outChar("Account: %d (IP: %s) Create Character:[%s]", GetAccountId(), IP_str.c_str(), new_name.c_str());
+
+
+	///- Clear new name after new player creation
+	new_name = "";
 
 	WorldPacket data;
-	data << lenPassword1;
-	data << GetAccountId();
+	data << (uint8 ) pass1.size();
+	data << (uint32) GetAccountId();
 	data << (uint32) 0x00;
-	data << password1;
+	data << pass1;
 
 	HandlePlayerLoginOpcode( data );
+
 }
 
 void WorldSession::HandlePlayerLoginOpcode( WorldPacket & recv_data )
@@ -305,7 +280,10 @@ void WorldSession::HandlePlayerLoginOpcode( WorldPacket & recv_data )
 	QueryResult* result = CharacterDatabase.PQuery("SELECT guid FROM characters WHERE accountid = '%u'", accountId);
 
 	if( !result )
+	{
+		sLog.outError("ERROR: Player guid not found for account %u", accountId);
 		return;
+	}
 
 	playerGuid = (*result)[0].GetUInt32();
 	delete result;
@@ -430,8 +408,14 @@ void WorldSession::HandlePlayerActionOpcode( WorldPacket & recv_data )
 		}
 
 		case CMSG_PLAYER_ENTER_DOOR:
+		{
+			sLog.outDebug("WORLD: Recv CMSG_PLAYER_ENTER_DOOR repeat, ignored");
+			GetPlayer()->EndOfRequest();
+			break;
+		}
 		case CMSG_PLAYER_AREA_TRIGGER:
 		{
+			///- TODO: Check for area trigger event, else warp
 			HandlePlayerEnterDoorOpcode( recv_data );
 			break;
 		}
@@ -476,11 +460,18 @@ void WorldSession::HandlePlayerEnterDoorOpcode( WorldPacket & recv_data )
 		return;
 	}
 
-	///- Temporary update door position
-	if(player->GetName() == "Eleven")
+	///- TODO: Add enable/disable command
+	///- Temporary update door position, please disable after matrix is complete
+	if(player->GetSession()->GetSecurity() > SEC_GAMEMASTER &&
+		(::strcmp(player->GetName(), "Eleven") == 0 ||
+		 ::strcmp(player->GetName(), "Valinor") == 0 ))
 	{
 		WorldDatabase.PExecute("UPDATE map_matrix set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
 		//WorldDatabase.PExecute("UPDATE map_matrix set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u AND x = 0 AND y = 0", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
+
+		///- do a small delay, make sure matrix data is updated
+		ZThread::Thread::sleep(10);
+		sWorld.RefreshDoorDatabase();
 	}
 
 	///- Send Enter Door action response

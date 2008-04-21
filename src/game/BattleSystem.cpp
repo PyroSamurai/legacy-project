@@ -84,8 +84,8 @@ void BattleSystem::DumpBattlePosition()
 			else
 				sLog.outDebugInLine("[%-7.7s %4u/%3u] ",
 						unit->GetName(),
-						unit->GetUInt16Value(UNIT_FIELD_HP),
-						unit->GetUInt16Value(UNIT_FIELD_SP));
+						unit->GetUInt32Value(UNIT_FIELD_HP),
+						unit->GetUInt32Value(UNIT_FIELD_SP));
 		}
 		sLog.outDebugInLine("\n");
 	}
@@ -334,12 +334,12 @@ void BattleSystem::BattleScreenTrigger()
 	data << (uint16) 0x0000;
 	data << (uint8 ) 3;       // player col position
 	data << (uint8 ) 2;       // player row position
-	data << (uint16) p->GetUInt16Value(UNIT_FIELD_HP_MAX); // player hp max
-	data << (uint16) p->GetUInt16Value(UNIT_FIELD_SP_MAX); // player sp max
-	data << (uint16) p->GetUInt16Value(UNIT_FIELD_HP);     // player current hp
-	data << (uint16) p->GetUInt16Value(UNIT_FIELD_SP);     // player current sp
-	data << (uint16) p->GetUInt8Value(UNIT_FIELD_LEVEL);   // player level
-	data << (uint16) p->GetUInt8Value(UNIT_FIELD_ELEMENT); // player element
+	data << (uint16) p->GetUInt32Value(UNIT_FIELD_HP_MAX); // player hp max
+	data << (uint16) p->GetUInt32Value(UNIT_FIELD_SP_MAX); // player sp max
+	data << (uint16) p->GetUInt32Value(UNIT_FIELD_HP);     // player current hp
+	data << (uint16) p->GetUInt32Value(UNIT_FIELD_SP);     // player current sp
+	data << (uint16) p->GetUInt32Value(UNIT_FIELD_LEVEL);   // player level
+	data << (uint16) p->GetUInt32Value(UNIT_FIELD_ELEMENT); // player element
 	pSession->SendPacket(&data);
 */
 
@@ -350,7 +350,6 @@ void BattleSystem::BattleScreenTrigger()
 	uint8 col = 3; // only for player unit
 	for(uint8 row = 0; row < BATTLE_ROW_MAX; row++)
 	{
-		//Player* p = (Player*) m_BattleUnit[col][row];
 		Player* p = (Player*) GetBattleUnit(col, row);
 
 		if( !p ) continue;
@@ -360,25 +359,18 @@ void BattleSystem::BattleScreenTrigger()
 		sLog.outDebug("BATTLE: Trigger add for '%s'", p->GetName());
 		data << (uint8 ) 0x01;
 		data << (uint8 ) 0x02;
-		//if( !p ) return;
 		data << (uint32) p->GetAccountId();
 		data << (uint16) 0x0000;
 		data << (uint16) 0x0000;
 		data << (uint16) 0x0000;
 		data << (uint8 ) col;       // player col position
 		data << (uint8 ) row;       // player row position
-		//if( !p ) return;
-		data << (uint16) p->GetUInt16Value(UNIT_FIELD_HP_MAX);  // hp max
-		//if( !p ) return;
-		data << (uint16) p->GetUInt16Value(UNIT_FIELD_SP_MAX);  // sp max
-		//if( !p ) return;
-		data << (uint16) p->GetUInt16Value(UNIT_FIELD_HP);      // current hp
-		//if( !p ) return;
-		data << (uint16) p->GetUInt16Value(UNIT_FIELD_SP);      // current sp
-		//if( !p ) return;
-		data << (uint8 ) p->GetUInt8Value (UNIT_FIELD_LEVEL);   // level
-		//if( !p ) return;
-		data << (uint8 ) p->GetUInt8Value (UNIT_FIELD_ELEMENT); // element
+		data << (uint16) p->GetUInt32Value(UNIT_FIELD_HP_MAX);  // hp max
+		data << (uint16) p->GetUInt32Value(UNIT_FIELD_SP_MAX);  // sp max
+		data << (uint16) p->GetUInt32Value(UNIT_FIELD_HP);      // current hp
+		data << (uint16) p->GetUInt32Value(UNIT_FIELD_SP);      // current sp
+		data << (uint8 ) p->GetUInt32Value(UNIT_FIELD_LEVEL);   // level
+		data << (uint8 ) p->GetUInt32Value(UNIT_FIELD_ELEMENT); // element
 
 	}
 
@@ -436,12 +428,12 @@ void BattleSystem::SendPetPosition()
 		data << pet->GetOwnerAccountId(); // pet owner id (0 for AI)
 		data << (uint8 ) 2;                // pet col position
 		data << (uint8 ) row;              // pet row position
-		data << pet->GetUInt16Value(UNIT_FIELD_HP_MAX); // pet hp max
-		data << pet->GetUInt16Value(UNIT_FIELD_SP_MAX); // pet sp max
-		data << pet->GetUInt16Value(UNIT_FIELD_HP);     // pet current hp
-		data << pet->GetUInt16Value(UNIT_FIELD_SP);     // pet current sp
-		data << pet->GetUInt8Value(UNIT_FIELD_LEVEL);   // pet level
-		data << pet->GetUInt8Value(UNIT_FIELD_ELEMENT); // pet element
+		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_HP_MAX); // pet hp max
+		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_SP_MAX); // pet sp max
+		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_HP);     // pet hp
+		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_SP);     // pet sp
+		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_LEVEL);   // pet level
+		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_ELEMENT); // pet element
 
 		//pSession->SendPacket(&data);
 		SendMessageToSet(&data);
@@ -584,12 +576,12 @@ void BattleSystem::SendDefenderPosition()
 			data << (uint16) 0x0000;
 			data << col;
 			data << row;
-			data << (uint16) unit->GetUInt16Value(UNIT_FIELD_HP_MAX); // max hp
-			data << (uint16) unit->GetUInt16Value(UNIT_FIELD_SP_MAX); // max sp
-			data << (uint16) unit->GetUInt16Value(UNIT_FIELD_HP); // current hp
-			data << (uint16) unit->GetUInt16Value(UNIT_FIELD_SP); // current sp
-			data << (uint8 ) unit->GetUInt8Value(UNIT_FIELD_LEVEL); // level
-			data << (uint8 ) unit->GetUInt8Value(UNIT_FIELD_ELEMENT);// element
+			data << (uint16) unit->GetUInt32Value(UNIT_FIELD_HP_MAX); // max hp
+			data << (uint16) unit->GetUInt32Value(UNIT_FIELD_SP_MAX); // max sp
+			data << (uint16) unit->GetUInt32Value(UNIT_FIELD_HP); // current hp
+			data << (uint16) unit->GetUInt32Value(UNIT_FIELD_SP); // current sp
+			data << (uint8 ) unit->GetUInt32Value(UNIT_FIELD_LEVEL); // level
+			data << (uint8 ) unit->GetUInt32Value(UNIT_FIELD_ELEMENT);// element
 			//pSession->SendPacket(&data);
 			SendMessageToSet(&data);
 		}
@@ -699,7 +691,7 @@ BattleAction* BattleSystem::RedirectTarget(BattleAction *action)
 				if( !unit ) continue;
 				if( unit->isDead() ) continue;
 
-				sLog.outDebug("BATTLE: Defender '%s' redirect to new victim '%s'(%u)", pAttacker->GetName(), unit->GetName(), unit->GetUInt16Value(UNIT_FIELD_HP));
+				sLog.outDebug("BATTLE: Defender '%s' redirect to new victim '%s'(%u)", pAttacker->GetName(), unit->GetName(), unit->GetUInt32Value(UNIT_FIELD_HP));
 				action->SetTargetCol(col2);
 				action->SetTargetRow(row);
 				return action;
@@ -714,7 +706,7 @@ BattleAction* BattleSystem::RedirectTarget(BattleAction *action)
 				if( !unit ) continue;
 				if( unit->isDead() ) continue;
 
-				sLog.outDebug("BATTLE: Attacker '%s' redirect to new victim '%s'(%u)", pAttacker->GetName(), unit->GetName(), unit->GetUInt16Value(UNIT_FIELD_HP));
+				sLog.outDebug("BATTLE: Attacker '%s' redirect to new victim '%s'(%u)", pAttacker->GetName(), unit->GetName(), unit->GetUInt32Value(UNIT_FIELD_HP));
 				action->SetTargetCol(col2);
 				action->SetTargetRow(row);
 				return action;
@@ -737,7 +729,7 @@ void BattleSystem::AddBattleAction(BattleAction* action)
 //	if( !pTarget || pTarget->isDead() )
 //		action = RedirectTarget(action);
 
-	uint16 agility = pAttacker->GetUInt16Value(UNIT_FIELD_AGI);
+	uint16 agility = pAttacker->GetUInt32Value(UNIT_FIELD_AGI);
 
 	///- TODO:
 	// Check Golem status buf
@@ -1554,6 +1546,9 @@ UnitActionTurn BattleSystem::ParseSpell(BattleAction* action, uint8 hit, bool li
 
 	} // end switch
 
+	///- sort it before sending back, for better animation
+	hitInfo.sort(compare_target_position);
+
 	return hitInfo;
 }
 
@@ -1586,12 +1581,13 @@ int32 BattleSystem::GetDamage(Unit* attacker, Unit* victim, const SpellInfo* sin
 			break;
 	}
 
-	uint8 a_el = attacker->GetUInt8Value(UNIT_FIELD_ELEMENT);
-	uint8 v_el = victim->GetUInt8Value(UNIT_FIELD_ELEMENT);
+	int   diffLevel = attacker->getLevel() - victim->getLevel();
+	uint8 a_el = attacker->GetUInt32Value(UNIT_FIELD_ELEMENT);
+	uint8 v_el = victim->GetUInt32Value(UNIT_FIELD_ELEMENT);
 
 	float dmg_multiplier = GetDamageMultiplier(a_el, v_el);
 
-	float dmg_school = 0;
+	float dmg_school = (diffLevel > 0 ? diffLevel : 0);
 
 	uint16 atk_pow = attacker->GetAttackPower();
 	uint16 mag_pow = attacker->GetMagicPower();
@@ -1605,21 +1601,21 @@ int32 BattleSystem::GetDamage(Unit* attacker, Unit* victim, const SpellInfo* sin
 		case SPELL_DAMAGE_MECH:
 		{
 			if( sinfo->Entry == SPELL_BASIC )
-				dmg_school = atk_pow;
+				dmg_school *= atk_pow;
 			else
-				dmg_school = mag_pow;
+				dmg_school *= mag_pow;
 
 			break;
 		}
 
 		case SPELL_DAMAGE_ATK_INT:
 		{
-			dmg_school = atk_pow + (mag_pow / 2);
+			dmg_school *= atk_pow + (mag_pow / 2);
 			break;
 		}
 
 		default:
-			dmg_school = atk_pow;
+			dmg_school *= atk_pow;
 			break;
 	}
 
@@ -1686,27 +1682,31 @@ const char* BattleSystem::GetDamageModText(uint32 dmg_mod)
 
 bool BattleSystem::isDealDamageToAndKill(Unit* victim, int32 damage)
 {
-	uint32 currentHP = victim->GetUInt16Value(UNIT_FIELD_HP);
+	uint32 currentHP = victim->GetUInt32Value(UNIT_FIELD_HP);
 
 	///- Damage Type
 	if(damage < 0)
 	{
-		if( currentHP < abs(damage) )
+		if( currentHP <= abs(damage) )
 		{
-			victim->SetUInt16Value(UNIT_FIELD_HP, 0);
+			victim->SetUInt32Value(UNIT_FIELD_HP, 0);
 			victim->setDeathState(DEAD);
 			sLog.outString("COMBAT: ## '%s' killed ##", victim->GetName());
 			return true;
 		}
 		
 		currentHP += damage;
-		victim->SetUInt16Value(UNIT_FIELD_HP, currentHP);
+		victim->SetUInt32Value(UNIT_FIELD_HP, currentHP);
+
 		return false;
 	}
 	///- Heal Type
 	else
 	{
 	}
+
+	if( victim->isType(TYPE_PET) )
+		((Pet*)victim)->SetState(PET_CHANGED);
 
 	return false;
 }
@@ -1987,6 +1987,35 @@ void BattleSystem::JoinBattle(Player* player)
 
 void BattleSystem::LeaveBattle(Player* player)
 {
+	if(!player) return;
+
+	sLog.outDebug("BATTLE: Player '%s' leaving battle", player->GetName());
+
+	///- Prevent dead player walking
+	if( player->isDead() || player->GetHealth() == 0 )
+	{
+		player->SetUInt32Value(UNIT_FIELD_HP, 1);
+		player->setDeathState(ALIVE);
+	}
+
+	player->UpdatePlayer();
+
+	Pet* pet = player->GetBattlePet();
+
+	if( pet )
+	{
+		if( pet->isDead() || pet->GetHealth() == 0 )
+		{
+			pet->SetUInt32Value(UNIT_FIELD_HP, 1);
+			pet->setDeathState(ALIVE);
+		}
+		player->UpdatePetBattle();
+	}
+
+	///- forced to save, if database I/O load get too high, disable this
+	player->SaveToDB();
+
+	///- Clean player list, if not necessary, disable this
 	PlayerListMap::iterator it = m_PlayerList.find(player);
 	if( it != m_PlayerList.end() )
 	{
@@ -1994,19 +2023,17 @@ void BattleSystem::LeaveBattle(Player* player)
 		m_PlayerList.erase(it);
 	}
 
-	Pet* pet = player->GetBattlePet();
-
 	for(uint8 row = 0; row < BATTLE_ROW_MAX; row++)
 		for(uint8 col = 0; col < BATTLE_COL_MAX; col++)
 		{
 			if( m_BattleUnit[col][row] == player )
 				m_BattleUnit[col][row] = NULL;
 
+			if( !pet ) continue;
+
 			if( m_BattleUnit[col][row] == pet )
 				m_BattleUnit[col][row] = NULL;
 		}
-
-	sLog.outDebug("BATTLE: Player '%s' leaving battle", player->GetName());
 }
 
 bool BattleSystem::SameSide(const BattleAction* prev, const BattleAction* next)
@@ -2117,6 +2144,8 @@ void BattleSystem::AddKillExpGained(Unit* killer, Unit* victim, bool linked)
 	}
 
 	killer->AddKillExp(victim->getLevel(), linked);
+	if( killer->isType(TYPE_PET) )
+		((Pet*)killer)->SetState(PET_CHANGED);
 
 }
 
@@ -2135,6 +2164,8 @@ void BattleSystem::AddHitExpGained(Unit* hitter, Unit* victim, bool linked)
 	}
 
 	hitter->AddHitExp(victim->getLevel(), linked);
+	if( hitter->isType(TYPE_PET) )
+		((Pet*)hitter)->SetState(PET_CHANGED);
 }
 
 void BattleSystem::AddKillItemDropped(BattleAction* action)
@@ -2216,7 +2247,7 @@ void BattleSystem::GiveExpGained()
 		if( (*it)->isLevelUp() )
 		{
 			(*it)->resetLevelUp();
-			(*it)->UpdateLevel();
+			(*it)->UpdatePlayerLevel();
 		}
 
 
@@ -2245,7 +2276,6 @@ void BattleSystem::GiveExpGained()
 		{
 			(*it)->UpdatePetLevel(pet);
 		}
-		(*it)->GetSession()->SetLogging(false);
 	}
 
 	//data.Initialize( 0x08 );

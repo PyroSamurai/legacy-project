@@ -56,7 +56,7 @@ LEGACY_DLL_EXPORT
 void ScriptsInit()
 {
 	outstring_log("");
-	outstring_log("AM: Amachi Script initializing %s", "0.0.0");
+	outstring_log("AM: Amachi Script Indonesian release, episode V (ver:%s). Initializing", "0.0.0");
 	outstring_log("");
     nrscripts = 0;
     num_inst_scripts = 0;
@@ -91,7 +91,7 @@ Script* GetScriptByName(std::string Name)
 LEGACY_DLL_EXPORT
 bool GossipHello ( Player * player, Creature *_Creature )
 {
-	outstring_log("GossipHello Called");
+	outstring_log("AMACHI: GossipHello Called");
     Script *tmpscript = NULL;
 
     tmpscript = GetScriptByName(_Creature->GetCreatureInfo()->ScriptName);

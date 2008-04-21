@@ -31,9 +31,34 @@
 
 bool ChatHandler::HandleUnstuckCommand(char const* args)
 {
+	if( !m_session )
+		return false;
+
 	sLog.outDebug("COMMAND: HandleUnstuckCommand");
 
 	Player* pPlayer = m_session->GetPlayer();
 	pPlayer->EndOfRequest();
 	return true;
+}
+
+bool ChatHandler::HandleSaveCommand(char const* args)
+{
+	if( !m_session )
+		return false;
+
+	sLog.outDebug("COMMAND: HandleSaveCommand");
+
+	ChatHandler(m_session).SendSysMessage("Saving...");
+	Player* pPlayer = m_session->GetPlayer();
+	pPlayer->SaveToDB();
+	ChatHandler(m_session).SendSysMessage("Save complete.");
+	return true;
+}
+
+bool ChatHandler::HandlePasswordCommand(char const* args)
+{
+	if( !m_session )
+		return false;
+
+	sLog.outDebug("COMMAND: HandlePasswordCommand");
 }

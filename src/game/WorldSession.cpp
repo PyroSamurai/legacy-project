@@ -42,6 +42,8 @@ WorldSession::WorldSession(uint32 id, WorldSocket *sock, uint32 sec) :
 WorldSession::~WorldSession()
 {
 	///- unload player if not unloaded
+	if(_player)
+		LogoutPlayer(true);
 	
 	///- if have unclosed socket, close it
 	if(_socket)
@@ -123,7 +125,7 @@ void WorldSession::QueuePacket(WorldPacket& packet)
 }
 
 /// Send a packet to the client
-void WorldSession::SendPacket(WorldPacket* packet)
+void WorldSession::SendPacket(WorldPacket* packet, bool log)
 {
 	if(!_socket)
 		return;
@@ -132,7 +134,7 @@ void WorldSession::SendPacket(WorldPacket* packet)
 	// Code for network use statistic
 	#endif
 
-	_socket->SendPacket(packet);
+	_socket->SendPacket(packet, log);
 }
 
 /// Update the WorldSession (triggered by World update)
@@ -228,17 +230,20 @@ void WorldSession::LogoutPlayer(bool Save)
 	//No SQL injection as AccountId is uint32
 	loginDatabase.PExecute("UPDATE accounts SET online = 0 WHERE accountid = '%u'", GetAccountId());
 
-	if(Save)
+	if(Save && _player)
 	{
 		_player->SaveToDB();
 	}
 
 	///- Remove the player from the world
-	ObjectAccessor::Instance().RemoveObject(_player);
-	MapManager::Instance().GetMap(_player->GetMapId(), _player)->Remove(_player, false);
+	if( _player )
+	{
+		ObjectAccessor::Instance().RemoveObject(_player);
+		MapManager::Instance().GetMap(_player->GetMapId(), _player)->Remove(_player, false);
 
-	delete _player;
-	_player = NULL;
+		delete _player;
+		_player = NULL;
+	}
 
 	CharacterDatabase.PExecute("UPDATE characters SET online = 0 WHERE accountid = '%u'", GetAccountId());
 	sLog.outDebug( "SESSION: Send SMSG_LOGOUT_COMPLETE Message" );

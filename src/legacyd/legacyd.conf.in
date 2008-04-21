@@ -7,8 +7,8 @@ ConfVersion=2008040600
 LogsDir = ""
 
 # Database connection settings for the world server.
-LoginDatabaseInfo     = "192.168.0.15;3306;legacy;legacy;legacydb"
-WorldDatabaseInfo     = "192.168.0.15;3306;legacy;legacy;legacydb"
+LoginDatabaseInfo     = "192.168.0.15;3306;legacy;legacy;realmd"
+WorldDatabaseInfo     = "192.168.0.15;3306;legacy;legacy;legacy"
 CharacterDatabaseInfo = "192.168.0.15;3306;legacy;legacy;characters"
 
 # Settings for maximum database-ping interval (minutes between pings)
@@ -17,7 +17,7 @@ MaxPingTime = 30
 # Enable logging of GM commands - all SQL code will be written to a log file
 # 0 - Do not log
 # 1 = Write SQL code to logfile
-LogSQL = 1
+LogSQL = 0
 
 # Server console level of logging
 # 0 - Minimum; 1 = Basic&Error; 2 = Detail; 3 = Full/Debug
@@ -89,7 +89,7 @@ Rate.Drop.Money = 1
 
 # XP rates
 # Default: 1
-Rate.XP.Kill    = 1
+Rate.XP.Kill    = 3
 Rate.XP.Quest   = 1
 
 # Creature Damage Rate.

@@ -31,7 +31,7 @@
 
 bool ChatHandler::HandleWarpCommand(char const* args)
 {
-	if(!args)
+	if( !args || !m_session )
 		return false;
 
 	char* dest_text = strtok((char*)args, " ");
@@ -46,3 +46,271 @@ bool ChatHandler::HandleWarpCommand(char const* args)
 	pPlayer->SendMapChanged();
 	return true;
 }
+
+bool ChatHandler::HandleChangeLevelCommand(const char* args)
+{
+	if( !args || !m_session )
+		return false;
+
+	char* namepart = strtok((char*)args, " ");
+	char* level_text = strtok(NULL, " ");
+	if(!namepart || !level_text)
+		return false;
+
+	// .changelevel <player> <level>
+	sLog.outDebug("COMMAND: HandleChangeLevelCommand");
+
+	std::string player_name = namepart;
+	int32 level = atoi(level_text);
+
+	if( level <= 0 || level > 200)
+	{
+		PSendGmMessage("Invalid level. Must be between 1 and 200");
+		return true;
+	}
+
+	uint32 guid = objmgr.GetPlayerGUIDByName(player_name);
+	Player* player = objmgr.GetPlayer(guid);
+	if( !player )
+	{
+		PSendGmMessage("Player '%s' not found.", player_name.c_str());
+		return true;
+	}
+
+	player->SetLevel(level);
+	player->UpdatePlayerLevel();
+
+	return false;
+}
+
+bool ChatHandler::HandleSaveAllCommand(const char* args)
+{
+	if( !m_session )
+		return false;
+
+	sLog.outDebug("COMMAND: HandleSaveAllCommand");
+	return false;
+}
+
+bool ChatHandler::HandleNpcAddCommand(const char* args)
+{
+	if( !args || !m_session )
+		return false;
+
+	char* map_npcid_text = strtok((char*)args, " ");
+	char* model_text = strtok(NULL, " ");
+	char* x_text = strtok(NULL, " ");
+	char* y_text = strtok(NULL, " ");
+
+	if( !map_npcid_text || !model_text || !x_text || !y_text )
+		return false;
+
+	uint8  map_npcid = atoi(map_npcid_text);
+	uint16 modelid   = atoi(model_text);
+	uint16 pos_x     = atoi(x_text);
+	uint16 pos_y     = atoi(y_text);
+
+	// .npc add <mapnpcid> <entry> <x> <y>
+	sLog.outDebug("COMMAND: HandleAddNpcCommand");
+
+	Player* GM = m_session->GetPlayer();
+
+	if( !GM )
+		return true;
+
+	uint32 mapid = GM->GetMapId();
+	uint32 guid = objmgr.GenerateNpcGuidLow(mapid, map_npcid);
+
+	CreatureData const* npc = objmgr.GetCreatureData(guid);
+
+	if( npc )
+	{
+		PSendGmMessage("Npc %u exists.", guid);
+		return true;
+	}
+
+	CreatureInfo const* cinfo = objmgr.GetCreatureTemplateByModelId(modelid);
+
+	if( !cinfo )
+	{
+		PSendGmMessage("Npc %u prototype %u invalid.", guid, modelid);
+		return true;
+	}
+
+	WorldDatabase.BeginTransaction();
+
+	WorldDatabase.PExecute("INSERT INTO creature (guid, entry, mapid, map_npcid, pos_x, pos_y, MovementType) VALUES (%u, %u, %u, %u, %u, %u, %u)", guid, cinfo->Entry, mapid, map_npcid, pos_x, pos_y, cinfo->MovementType);
+
+	WorldDatabase.CommitTransaction();
+
+	///- do a small delay to make sure data is inserted
+	ZThread::Thread::sleep(10);
+
+	objmgr.LoadCreature(guid);
+
+	Creature* obj = new Creature(NULL);
+
+	if( !obj->LoadFromDB(guid, 0) )
+	{
+		PSendGmMessage("Npc %u failed to load from database.", guid);
+		WorldDatabase.RollbackTransaction();
+		delete obj;
+		return true;
+	}
+
+	Map* map = MapManager::Instance().GetMap(GM->GetMapId(), GM);
+	map->Add(obj);
+	PSendGmMessage("Npc %u created.", guid);
+
+	return true;
+}
+
+bool ChatHandler::HandleNpcEditCommand(const char* args)
+{
+	char* cmd = strtok((char*)args, " ");
+	char* map_npcid_text = strtok(NULL, " ");
+
+	if( !cmd || !map_npcid_text )
+		return false;
+
+	uint8  map_npcid = atoi(map_npcid_text);
+
+	// .npc edit team <mapnpcid> <group1> ... <group10>
+	// .npc edit pos  <mapnpcid> idle|random <x> <y>
+	sLog.outDebug("COMAND: HandleEditNpcCommand");
+
+	Player* GM = m_session->GetPlayer();
+
+	if( !GM )
+		return true;
+
+	uint32 mapid = GM->GetMapId();
+	uint32 guid = objmgr.GenerateNpcGuidLow(mapid, map_npcid);
+
+	CreatureData const* npc = objmgr.GetCreatureData(guid);
+
+	if( !npc )
+	{
+		PSendGmMessage("Npc %u does not exists. Please create it first.", guid);
+		return true;
+	}
+
+	CreatureInfo const* cinfo = objmgr.GetCreatureTemplate(npc->id);
+
+	if( !cinfo )
+	{
+		PSendGmMessage("Npc %u prototype %u invalid.", guid, npc->id);
+		return true;
+	}
+
+	if(::strcmp(cmd, "team"))
+	{
+		char* t00_text = strtok(NULL, " ");
+		char* t01_text = strtok(NULL, " ");
+		char* t03_text = strtok(NULL, " ");
+		char* t04_text = strtok(NULL, " ");
+
+		char* t10_text = strtok(NULL, " ");
+		char* t11_text = strtok(NULL, " ");
+		char* t12_text = strtok(NULL, " ");
+		char* t13_text = strtok(NULL, " ");
+		char* t14_text = strtok(NULL, " ");
+
+		uint32 team[2][5];
+
+		team[0][0] = (t00_text ? atoi(t00_text) : 0);
+		team[0][1] = (t01_text ? atoi(t01_text) : 0);
+		team[0][3] = (t03_text ? atoi(t03_text) : 0);
+		team[0][4] = (t04_text ? atoi(t04_text) : 0);
+
+		team[1][0] = (t10_text ? atoi(t10_text) : 0);
+		team[1][1] = (t11_text ? atoi(t11_text) : 0);
+		team[1][2] = (t12_text ? atoi(t12_text) : 0);
+		team[1][3] = (t13_text ? atoi(t13_text) : 0);
+		team[1][4] = (t14_text ? atoi(t14_text) : 0);
+
+		sLog.outDebug("Update Team pos 0-0 = %u", team[0][0]);
+		sLog.outDebug("Update Team pos 0-1 = %u", team[0][1]);
+		sLog.outDebug("Update Team pos 0-3 = %u", team[0][3]);
+		sLog.outDebug("Update Team pos 0-4 = %u", team[0][4]);
+
+		sLog.outDebug("Update Team pos 1-0 = %u", team[1][0]);
+		sLog.outDebug("Update Team pos 1-1 = %u", team[1][1]);
+		sLog.outDebug("Update Team pos 1-2 = %u", team[1][2]);
+		sLog.outDebug("Update Team pos 1-3 = %u", team[1][3]);
+		sLog.outDebug("Update Team pos 1-4 = %u", team[1][4]);
+
+		std::ostringstream ss;
+		ss << "UPDATE creature SET ";
+
+		uint8 count = 0;
+
+		for(uint16 i = 0; i < 2; i++)
+			for(uint16 j = 0; j < 5; j++)
+			{
+				count++;
+
+				if(i == 0 && j == 2)
+					continue;
+
+				if(i > 0 || j > 0)
+					ss << ", ";
+
+				CreatureInfo const* cinfo2;
+				cinfo2 = objmgr.GetCreatureTemplateByModelId(team[i][j]);
+				if( !cinfo2 && team[i][j] != 0 )
+				{
+					PSendGmMessage("Npc team %u prototype %u invalid.", count, team[i][j]);
+					team[i][j] = 0;
+				}
+
+				if( cinfo2 )
+					sLog.outDebug("Team %u set %s", count, cinfo2->Name);
+
+				uint32 guid2 = objmgr.GetCreatureGuidByModelId(team[i][j]);
+
+				if( !guid2 )
+				{
+					PSendGmMessage("Npc team %u npc %u does not exists. Please create it first.", count, team[i][j]);
+				}
+
+				ss << "team_" << i << "_" << j << " = " << guid2 << " ";
+			}
+
+		ss << " WHERE guid = " << guid;
+
+		WorldDatabase.Execute( ss.str().c_str() );
+
+		ZThread::Thread::sleep(10);
+
+		///- Reload the npc
+		objmgr.LoadCreature(guid);
+
+		PSendGmMessage("Npc %u battle team is updated.", guid);
+
+		return true;
+	}
+}
+
+bool ChatHandler::HandleItemAddCommand(const char* args)
+{
+}
+
+bool ChatHandler::HandlePetAddCommand(const char* args)
+{
+	if( !args || !m_session )
+		return false;
+
+	char* namepart = strtok((char*)args, " ");
+	char* entry_text = strtok(NULL, " ");
+
+	if( !namepart || !entry_text )
+		return false;
+
+	// .pet add <player> <entry>
+
+	sLog.outDebug("COMMAND: HandlePetAddCommand");
+
+	std::string player_name = namepart;
+}
+

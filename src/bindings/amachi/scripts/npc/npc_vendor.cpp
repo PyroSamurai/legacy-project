@@ -46,9 +46,21 @@ bool GossipSelect_npc_vendor(Player *player, Creature *_Creature, uint32 sender,
 	outstring_log("SCRIPTS: NPC VENDOR SELECT DIALOG\n");
 	GossipItem go = _Creature->GetNpcGossip(sequence, action);
 
-	if(GOSSIP_TYPE_INVENTORY != go.Type && 0 == go.TextId)
-		return true; // prevent legacy core handling
+	//if(GOSSIP_TYPE_INVENTORY != go.Type && 0 == go.TextId)
+	//	return true; // prevent legacy core handling
+/*
+	if(0 == go.TextId)
+		switch( go.Type )
+		{
+			case GOSSIP_TYPE_INVENTORY:
+			case GOSSIP_TYPE_BANK_INVENTORY:
+				// prevent legacy core handling
+				return true;
 
+			default:
+				break;
+		}
+*/
 	player->PlayerTalkClass->SendTalking(_Creature->GetMapNpcId(), go.TextId, go.Type);
 	return true;
 }

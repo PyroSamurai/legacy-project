@@ -87,6 +87,7 @@ class Spell
 
 		uint16 GetEntry() { return m_entry; }
 		uint8 GetLevel() { return m_level; }
+		void SetLevel(uint8 level) { m_level = level; }
 		SpellInfo const* GetProto() const;
 		bool LoadSpellFromDB();
 

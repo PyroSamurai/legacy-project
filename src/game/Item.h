@@ -24,7 +24,7 @@
 #include "ItemPrototype.h"
 
 struct SpellEntry;
-class Bag;
+class Pet;
 class QueryResult;
 
 typedef struct
@@ -37,7 +37,7 @@ typedef struct
 enum InventoryChangeFailure
 {
 	EQUIP_ERR_OK                                 = 0,
-	EQUPE_ERR_CANT_EQUIP_LEVEL_I                 = 1,
+	EQUIP_ERR_CANT_EQUIP_LEVEL_I                 = 1,
 	EQUIP_ERR_ERR_CANT_EQUIP_SKILL               = 2,
 	EQUIP_ERR_ITEM_DOESNT_GO_TO_SLOT             = 3,
 	EQUIP_ERR_BAG_FULL                           = 4,
@@ -174,26 +174,37 @@ class LEGACY_DLL_SPEC Item : public Object
 		uint8 GetGemCountWithID(uint32 GemID) const {}
 
 		uint8 GetSlot() const { return m_slot; }
-		Bag *GetContainer() { return m_container; }
-		uint8 GetBagSlot() const;
+		Pet *GetContainer() { return m_container; }
+		//uint8 GetBagSlot() const;
 		void SetSlot(uint8 slot) { m_slot = slot; }
-		uint16 GetPos() const { return uint16(GetBagSlot()) << 8 | GetSlot(); }
-		void SetContainer(Bag *container) { m_container = container; }
-		bool CanGoIntoBag(ItemPrototype const *pBagProto);
+		//uint16 GetPos() const { return uint16(GetBagSlot()) << 8 | GetSlot(); }
+		void SetContainer(Pet *container) { m_container = container; }
+		//bool CanGoIntoBag(ItemPrototype const *pBagProto);
 
-		bool IsInBag() const { return m_container != NULL; }
+		bool IsInPet() const { return m_container != NULL; }
 		bool IsEquipped() const;
+
+		void SendTimeUpdate(Player* owner);
+
+		bool IsBroken() { return false; }
 
 		// Update States
 		ItemUpdateState GetState() const { return uState; }
 		void SetState(ItemUpdateState state, Player *forplayer = NULL);
-
-		void SendTimeUpdate(Player* owner);
+		void AddToUpdateQueueOf(Player *player);
+		void RemoveFromUpdateQueueOf(Player *player);
+		bool IsInUpdateQueue() const { return uQueuePos != -1; }
+		uint16 GetQueuePos() const { return uQueuePos; }
+		void FSetState(ItemUpdateState state)       // forced
+		{
+			uState = state;
+		}
 
 		void DumpItem();
+
 	private:
 		uint8 m_slot;
-		Bag  *m_container;
+		Pet  *m_container;
 		ItemUpdateState uState;
 		int16 uQueuePos;
 		bool  mb_in_trade;          // true if item is currently in trade-window

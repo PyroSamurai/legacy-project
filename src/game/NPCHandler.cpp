@@ -51,7 +51,7 @@ void WorldSession::HandlePlayerClickNpc( WorldPacket & recv_data )
 	///- Temporary guid mapping for npc
 	//uint32 tmp_guid = mapid * MAP_NPCID_MULTIPLIER;
 	//guid = MAKE_GUID(tmp_guid + map_npcid, HIGHGUID_UNIT);
-	guid = ObjectAccessor::Instance().GetNpcGuidByMapNpcId(mapid, map_npcid);
+	guid = objmgr.GetNpcGuidByMapNpcId(mapid, map_npcid);
 
 	sLog.outString(" >> Player '%s' try to interact with %u in %u", GetPlayer()->GetName(), GUID_LOPART(guid), mapid);
 
@@ -77,6 +77,7 @@ void WorldSession::HandlePlayerClickNpc( WorldPacket & recv_data )
 		///- Handle Dialog
 		if(!Script->GossipHello( _player, unit ))
 		{
+			sLog.outDebug("GOSSIP: No script defined. Use core handling");
 			_player->TalkedToCreature( unit->GetEntry(), unit->GetGUID());
 			unit->prepareGossipMenu(_player, 0);
 			unit->sendPreparedGossip( _player );

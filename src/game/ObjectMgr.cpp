@@ -89,6 +89,29 @@ void ObjectMgr::LoadCreatures()
 		return;
 	}
 
+	_LoadCreatures(result);
+}
+
+void ObjectMgr::LoadCreature(uint32 guid)
+{
+	if(!guid) return;
+
+	QueryResult *result = WorldDatabase.PQuery("SELECT * FROM creature WHERE guid = %u", guid);
+
+	if(!result)
+	{
+		sLog.outString();
+		sLog.outString(">> Loaded 0 creature. DB table `creature` %u not found.", guid);
+		return;
+	}
+
+	_LoadCreatures(result, false);
+}
+
+void ObjectMgr::_LoadCreatures(QueryResult *result, bool addtogrid)
+{
+	if(!result) return;
+
 	do
 	{
 		Field *f = result->Fetch();
@@ -125,7 +148,8 @@ void ObjectMgr::LoadCreatures()
 		data.team13        = f[20].GetUInt32();
 		data.team14        = f[21].GetUInt32();
 
-		AddCreatureToGrid(guid, &data);
+		if(addtogrid)
+			AddCreatureToGrid(guid, &data);
 
 
 	} while (result->NextRow());
@@ -134,6 +158,16 @@ void ObjectMgr::LoadCreatures()
 
 	sLog.outString( ">> Loaded %u creatures", mCreatureDataMap.size() );
 	sLog.outString("");
+}
+
+bool ObjectMgr::IsCreatureExists(uint32 guid)
+{
+	CreatureData const* creature = GetCreatureData(guid);
+
+	if(creature)
+		return true;
+	else
+		return false;
 }
 
 void ObjectMgr::AddCreatureToGrid(uint32 guid, CreatureData const* data)
@@ -156,16 +190,47 @@ void ObjectMgr::RemoveCreatureFromGrid(uint32 guid, CreatureData const* data)
 	cell_guids.creatures.erase(guid);
 }
 
-CreatureInfo const* ObjectMgr::GetCreatureTemplate(uint32 id)
+CreatureInfo const* ObjectMgr::GetCreatureTemplate(uint32 entry)
 {
-	return sCreatureStorage.LookupEntry<CreatureInfo>(id);
+	return sCreatureStorage.LookupEntry<CreatureInfo>(entry);
 }
 
-SpellInfo const* ObjectMgr::GetSpellTemplate(uint16 id)
+CreatureInfo const* ObjectMgr::GetCreatureTemplateByModelId(uint32 modelid)
 {
-	return sSpellStorage.LookupEntry<SpellInfo>(id);
+	if( !modelid ) return NULL;
+
+	QueryResult *result = WorldDatabase.PQuery("SELECT entry FROM creature_template WHERE modelid = %u", modelid);
+
+	if( !result )
+	{
+		sLog.outDebug("WORLD: Creature model %u not found.", modelid);
+		return NULL;
+	}
+
+	uint32 entry = (*result)[0].GetUInt32();
+
+	CreatureInfo const * cinfo = GetCreatureTemplate(entry);
+
+	delete result;
+
+	return cinfo;
 }
 
+SpellInfo const* ObjectMgr::GetSpellTemplate(uint16 entry)
+{
+	return sSpellStorage.LookupEntry<SpellInfo>(entry);
+}
+
+uint32 ObjectMgr::GetCreatureGuidByModelId(uint16 modelid) const
+{
+	if( !modelid ) return 0;
+
+	QueryResult* result = WorldDatabase.PQuery("SELECT guid FROM creature c, creature_template t WHERE c.entry = t.entry AND t.modelid = %u LIMIT 1", modelid);
+
+	if( !result ) return 0;
+
+	return (*result)[0].GetUInt32();
+}
 /*
 void ObjectMgr::LoadScripts(ScriptMapMap& scripts, char const* tablename)
 {
@@ -179,7 +244,7 @@ void ObjectMgr::LoadGameObjectScripts()
 
 void ObjectMgr::LoadPetNumber()
 {
-	QueryResult* result = CharacterDatabase.Query("SELECT MAX(id) FROM character_pet");
+	QueryResult* result = CharacterDatabase.Query("SELECT MAX(guid) FROM character_pet");
 	if(result)
 	{
 		Field *f = result->Fetch();
@@ -189,6 +254,11 @@ void ObjectMgr::LoadPetNumber()
 
 	sLog.outString("");
 	sLog.outString(">> Loaded the max pet number: %d", m_hiPetNumber-1);
+}
+
+uint32 ObjectMgr::GeneratePetNumber()
+{
+	return ++m_hiPetNumber;
 }
 
 void ObjectMgr::SetHighestGuids()
@@ -259,7 +329,7 @@ uint32 ObjectMgr::GenerateLowGuid(HighGuid guidhigh)
 			++m_hiCreatureGuid;
 			if(m_hiCreatureGuid==0xFFFFFFFF)
 			{
-				sLog.outError("Pet guid overflow!! Can't continue, shutting down server.");
+				sLog.outError("Creature guid overflow!! Can't continue, shutting down server.");
 				sWorld.m_stopEvent = true;
 			}
 			return m_hiCreatureGuid;
@@ -279,7 +349,7 @@ void ObjectMgr::LoadItemPrototypes()
 	sLog.outString( ">> Loaded %u item prototypes", sItemStorage.RecordCount );
 	sLog.outString( "" );
 
-	sLog.outString(" -       %-5s %15s %5s %3s %5s %5s", "ENTRY","NAME", "TYPE", "LVL", "MODEL", "STACK");
+	//sLog.outString(" -       %-5s %15s %5s %3s %5s %5s", "ENTRY","NAME", "TYPE", "LVL", "MODEL", "STACK");
 	// check data correctness
 	for(uint32 i = 1; i < sItemStorage.MaxEntry; ++i)
 	{
@@ -287,7 +357,7 @@ void ObjectMgr::LoadItemPrototypes()
 		if(!proto)
 			continue;
 
-		sLog.outString(" - Check %5u %15s %5u %3u %5u %5u", proto->ItemId, proto->Name, proto->InventoryType, proto->level, proto->modelid, proto->Stackable);
+		//sLog.outString(" - Check %5u %15s %5u %3u %5u %5u", proto->ItemId, proto->Name, proto->InventoryType, proto->level, proto->modelid, proto->Stackable);
 
 	}
 }
@@ -335,4 +405,44 @@ uint32 ObjectMgr::GetPlayerGuidByAccountId(uint32 acc_id) const
 	uint32 guid = (*result)[0].GetUInt32();
 	delete result;
 	return guid;
+}
+
+// name must be checked to correctness (if received) before call this function
+uint64 ObjectMgr::GetPlayerGUIDByName(std::string name) const
+{
+	uint64 guid = 0;
+
+	CharacterDatabase.escape_string(name);
+
+	// Player name safe to sending to DB (checked at login) and this function using
+	QueryResult *result = CharacterDatabase.PQuery("SELECT guid FROM characters WHERE name = '%s'", name.c_str());
+	if(result)
+	{
+		guid = MAKE_GUID((*result)[0].GetUInt32(), HIGHGUID_PLAYER);
+
+		delete result;
+	}
+
+	return guid;
+}
+
+bool ObjectMgr::GetPlayerNameByGUID(const uint64 &guid, std::string &name) const
+{
+	// prevent DB access for online player
+	if(Player* player = GetPlayer(guid))
+	{
+		name = player->GetName();
+		return true;
+	}
+
+	QueryResult *result = CharacterDatabase.PQuery("SELECT name FROM characters WHERE guid = %u", GUID_LOPART(guid));
+
+	if(result)
+	{
+		name = (*result)[0].GetCppString();
+		delete result;
+		return true;
+	}
+
+	return false;
 }

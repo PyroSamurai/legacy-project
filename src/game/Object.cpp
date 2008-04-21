@@ -42,8 +42,8 @@ Object::Object()
 	m_objectTypeId    = TYPEID_OBJECT;
 	m_objectType      = TYPE_OBJECT;
 
-	m_uint8Values     = 0;
-	m_uint16Values    = 0;
+//	m_uint8Values     = 0;
+//	m_uint16Values    = 0;
 	m_uint32Values    = 0;
 	m_uint32Values_mirror = 0;
 	m_valuesCount     = 0;
@@ -77,11 +77,11 @@ Object::~Object()
 
 void Object::_InitValues()
 {
-	m_uint8Values = new uint8[ m_valuesCount ];
-	memset(m_uint8Values, 0, m_valuesCount*sizeof(uint8));
+//	m_uint8Values = new uint8[ m_valuesCount ];
+//	memset(m_uint8Values, 0, m_valuesCount*sizeof(uint8));
 
-	m_uint16Values = new uint16[ m_valuesCount ];
-	memset(m_uint16Values, 0, m_valuesCount*sizeof(uint16));
+//	m_uint16Values = new uint16[ m_valuesCount ];
+//	memset(m_uint16Values, 0, m_valuesCount*sizeof(uint16));
 
 	m_uint32Values = new uint32[ m_valuesCount ];
 	memset(m_uint32Values, 0, m_valuesCount*sizeof(uint32));
@@ -96,8 +96,8 @@ void Object::_InitValues()
 void Object::_Create( uint32 guidlow, HighGuid guidhigh )
 {
 	if(!m_int32Values) _InitValues();
-	if(!m_uint8Values) _InitValues();
-	if(!m_uint16Values) _InitValues();
+//	if(!m_uint8Values) _InitValues();
+//	if(!m_uint16Values) _InitValues();
 	if(!m_uint32Values) _InitValues();
 
 	SetUInt32Value( OBJECT_FIELD_GUID, guidlow );
@@ -115,6 +115,25 @@ bool Object::PrintIndexError(uint32 index, bool set) const
 	return false;
 }
 
+void Object::SetInt32Value( uint16 index, int32 value )
+{
+	ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
+
+	if(m_int32Values[ index ] != value)
+	{
+		m_int32Values[ index ] = value;
+
+		if(m_inWorld)
+		{
+			if(!m_objectUpdated)
+			{
+				ObjectAccessor::Instance().AddUpdateObject(this);
+				m_objectUpdated = true;
+			}
+		}
+	}
+}
+/*
 void Object::SetUInt8Value( uint16 index, uint8 value)
 {
 	ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
@@ -152,7 +171,7 @@ void Object::SetUInt16Value( uint16 index, uint16 value )
 		}
 	}
 }
-
+*/
 void Object::SetUInt32Value( uint16 index, uint32 value )
 {
 	ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
@@ -189,6 +208,22 @@ void Object::SetUInt64Value( uint16 index, const uint64 &value )
 			}
 		}
 	}
+}
+
+void Object::ApplyModUInt32Value(uint16 index, int32 val, bool apply)
+{
+	int32 cur = GetUInt32Value(index);
+	cur += (apply ? val : -val);
+	if(cur < 0)
+		cur = 0;
+	SetUInt32Value(index, cur);
+}
+
+void Object::ApplyModInt32Value(uint16 index, int32 val, bool apply)
+{
+	int32 cur = GetInt32Value(index);
+	cur += (apply ? val : -val);
+	SetInt32Value(index, cur);
 }
 
 void Object::SendUpdateToPlayer(Player* player)

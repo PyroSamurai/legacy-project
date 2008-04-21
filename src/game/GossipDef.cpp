@@ -66,7 +66,7 @@ void PlayerMenu::SendTalking( uint8 map_npcid, uint16 textId, uint8 dialog_type)
 
 	switch( dialog_type )
 	{
-		case 0x02:
+		case GOSSIP_TYPE_INVENTORY: //0x02:
 		{
 			data.Initialize( 0x1B );
 			data << (uint8 ) 0x03;
@@ -77,8 +77,8 @@ void PlayerMenu::SendTalking( uint8 map_npcid, uint16 textId, uint8 dialog_type)
 			break;
 		}
 
-		case 0x01:
-		case 0x06:
+		case GOSSIP_TYPE_PLAIN:  //0x01:
+		case GOSSIP_TYPE_SELECT: //0x06:
 		default:
 		{
 			pSession->GetPlayer()->IncTalkedSequence();
@@ -94,6 +94,20 @@ void PlayerMenu::SendTalking( uint8 map_npcid, uint16 textId, uint8 dialog_type)
 			data << (uint16) 0x0000;
 			data << (uint16) 0x0000;
 			data << (uint16) textId;
+			pSession->SendPacket(&data, true);
+			break;
+		}
+
+		case GOSSIP_TYPE_BANK:
+		{
+			pSession->GetPlayer()->IncTalkedSequence();
+			sLog.outDebug("GOSSIP: Bank dialog");
+			data.Initialize( 0x1D );
+			data << (uint8 ) textId;
+			pSession->SendPacket(&data);
+
+			data.Initialize( 0x14 );
+			data << (uint8 ) 0x09;
 			pSession->SendPacket(&data);
 			break;
 		}
@@ -102,12 +116,24 @@ void PlayerMenu::SendTalking( uint8 map_npcid, uint16 textId, uint8 dialog_type)
 
 void PlayerMenu::SendMenu(uint8 map_npcid, uint16 textId)
 {
-	m_menuOpen = true;
-	SendTalking(map_npcid, textId, GOSSIP_TYPE_SELECT);
+	///- if not vendor dialog, set it to plain
+	if(textId >= 10000)
+		SendTalking(map_npcid, textId);
+	else
+	{
+		m_menuOpen = true;
+		SendTalking(map_npcid, textId, GOSSIP_TYPE_SELECT);
+	}
 }
 
 void PlayerMenu::SendSellMenu(uint8 map_npcid, uint16 textId)
 {
-	m_menuOpen = true;
-	SendTalking(map_npcid, textId, GOSSIP_TYPE_INVENTORY);
+	///- if not vendor dialog, set it to plain
+	if(textId >= 10000)
+		SendTalking(map_npcid, textId);
+	else
+	{
+		m_menuOpen = true;
+		SendTalking(map_npcid, textId, GOSSIP_TYPE_INVENTORY);
+	}
 }

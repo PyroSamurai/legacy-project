@@ -109,7 +109,7 @@ void Player::SendUnknownImportant()
 void Player::UpdateMap2Npc()
 {
 	uint16 mapid = GetMapId();
-	QueryResult *result = WorldDatabase.PQuery("select map_npcid, position_x, position_y from creature where mapid = '%u'", mapid);
+	QueryResult *result = WorldDatabase.PQuery("select map_npcid, pos_x, pos_y from creature where mapid = '%u'", mapid);
 
 	if( !result )
 	{

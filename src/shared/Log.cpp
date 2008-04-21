@@ -35,6 +35,18 @@ enum LogType
 
 const int LogType_count = int(LogError) + 1;
 
+void Log::InitColors(std::string str)
+{
+}
+
+void Log::SetColor(bool stdout_stream, Color color)
+{
+}
+
+void Log::ResetColor(bool stdout_stream)
+{
+}
+
 void Log::SetLogLevel(char *Level)
 {
 	int32 NewLevel = atoi((char*)Level);
@@ -54,6 +66,36 @@ void Log::Initialize()
 	m_logLevel  = sConfig.GetIntDefault("LogLevel", 3);
 
 	dberLogfile = fopen("dberr.log", "w");
+}
+
+void Log::outTimestamp(FILE* file)
+{
+	time_t t = time(NULL);
+	tm* aTm = localtime(&t);
+	//       YYYY    year
+	//       MM      month   (2 digits 01-12)
+	//       DD      day     (2 digits 01-31)
+	//       HH      hour    (2 digits 00-23)
+	//       MM      minutes (2 digits 00-59)
+	//       SS      seconds (2 digits 00-59)
+	fprintf(file, "%-4d-%02d-%02d %02d:%02d:%02d ", aTm->tm_year+1900, aTm->tm_mon+1, aTm->tm_mday, aTm->tm_hour, aTm->tm_min, aTm->tm_sec);
+}
+
+void Log::outTime()
+{
+	time_t t = time(NULL);
+	tm* aTm = localtime(&t);
+	//       YYYY    year
+	//       MM      month   (2 digits 01-12)
+	//       DD      day     (2 digits 01-31)
+	//       HH      hour    (2 digits 00-23)
+	//       MM      minutes (2 digits 00-59)
+	//       SS      seconds (2 digits 00-59)
+	printf("%02d:%02d:%02d ", aTm->tm_hour, aTm->tm_min, aTm->tm_sec);
+}
+
+void Log::outTitle( const char * str )
+{
 }
 
 void Log::outString()
@@ -208,6 +250,42 @@ void Log::outErrorDb( const char * err, ... )
 	fflush(stderr);
 }
 
+void Log::outBasic( const char * str, ... )
+{
+	if( !str ) return;
+	va_list ap;
+
+	if( m_logLevel > 0 )
+	{
+		if(m_colored)
+			SetColor(true, m_colors[LogDetails]);
+
+		if(m_includeTime)
+			outTime();
+
+		va_start(ap, str);
+		vprintf( str, ap );
+		va_end(ap);
+
+		if(m_colored)
+			ResetColor(true);
+
+		printf( "\n" );
+
+	}
+
+	if(logfile && m_logFileLevel > 0 )
+	{
+		outTimestamp(logfile);
+		va_start(ap, str);
+		vfprintf(logfile, str, ap);
+		fprintf(logfile, "\n" );
+		va_end(ap);
+		fflush(logfile);
+	}
+	fflush(stdout);
+}
+
 void outstring_log(const char * str, ...)
 {
 	if( !str ) return;
@@ -219,6 +297,22 @@ void outstring_log(const char * str, ...)
 	va_end(ap);
 
 	LeGACY::Singleton<Log>::Instance().outString(buf);
+}
+
+void Log::outChar(const char * str, ... )
+{
+	if(!str) return;
+
+	if(charLogfile)
+	{
+		va_list ap;
+		outTimestamp(charLogfile);
+		va_start(ap, str);
+		vfprintf(charLogfile, str, ap);
+		fprintf(charLogfile, "\n" );
+		va_end(ap);
+		fflush(charLogfile);
+	}
 }
 
 void debug_log(const char * str, ...)

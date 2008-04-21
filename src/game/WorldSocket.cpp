@@ -29,6 +29,7 @@
 #include "NameTables.h"
 #include "Policies/SingletonImp.h"
 #include "WorldLog.h"
+#include "Util.h"
 
 #include "sockets/Utility.h"
 
@@ -102,12 +103,14 @@ void WorldSocket::LogPacket(WorldPacket packet, uint8 origin)
 }
 
 /// Copy the packet to the to-be-sent queue
-void WorldSocket::SendPacket(WorldPacket *packet)
+void WorldSocket::SendPacket(WorldPacket *packet, bool log)
 {
 	WorldPacket *pck = new WorldPacket(*packet);
 	ASSERT(pck);
 	pck->Finalize();
-	if (m_logPacket)
+	//if (m_logPacket)
+	//	LogPacket(*pck, 0);
+	if( log )
 		LogPacket(*pck, 0);
 	_sendQueue.add(pck);
 }
@@ -128,7 +131,7 @@ void WorldSocket::OnAccept()
 	sWorldSocketMgr.AddSocket(this);
 //	Utility::ResolveLocal();
 	sLog.outString("New client connected.");
-//	_HandleLogonChallenge();
+	_HandleLogonChallenge();
 }
 
 /// Log Client Header
@@ -190,14 +193,14 @@ void WorldSocket::OnRead()
 		{
 			case CMSG_LOGON_CHALLENGE: // Logon Challenge
 			{
-				_HandleLogonChallenge();
+				//_HandleLogonChallenge();
 				break;
 			}
 		
 			case CMSG_AUTH_RESPONSE:
 			{
-				_HandleAuthSession(packet);
-//				break;
+				if( !_HandleAuthSession(packet) )
+					break;
 			}
 
 			default:
@@ -287,9 +290,15 @@ void WorldSocket::_HandleLogonChallenge()
 }
 
 /// Handle the client authentication packet
-void WorldSocket::_HandleAuthSession(WorldPacket& recvPacket)
+bool WorldSocket::_HandleAuthSession(WorldPacket& recvPacket)
 {
-	CHECK_PACKET_SIZE(recvPacket, 1+4+4);
+	//CHECK_PACKET_SIZE(recvPacket, 1+4+4);
+	if(recvPacket.size() < (1+4+4))
+	{
+		SizeError(recvPacket, 1+4+4);
+		return false;
+	}
+
 	sLog.outString("Entering _HandleAuthSession");
 
 	// Saved packet for use in Login Opcode
@@ -305,40 +314,53 @@ void WorldSocket::_HandleAuthSession(WorldPacket& recvPacket)
 	savedPacket >> patchVer;
 	savedPacket >> password;
 
-	QueryResult *result = loginDatabase.PQuery("SELECT * FROM accounts WHERE accountid = '%u' AND password = md5('%s') AND online = 0", accountId, password.c_str());
+	std::string md5pass1 = md5(password);
+
+	QueryResult *result = loginDatabase.PQuery("SELECT online, gmlevel FROM accounts WHERE accountid = '%u' AND md5pass1 = '%s'", accountId, md5pass1.c_str());
 
 	///- Stop if the account is not found
 	if( !result )
 	{
-		sLog.outString("Invalid user login");
+		sLog.outDebug("Invalid user login");
 		WorldPacket packet;
 		packet.Initialize( SMSG_AUTH_LOGON, 1 );
-		//packet.SetOpcode( SMSG_AUTH_LOGON ); packet.Prepare();
 		packet << (uint16) 0x0006;
 		SendPacket(&packet);
 
 		_HandleLogonChallenge();
 
-		return;
+		return false;
+	}
+
+	uint8 online = (*result)[0].GetUInt8();
+
+	if( online )
+	{
+		sLog.outDebug("Account is online");
+		WorldPacket packet;
+		packet.Initialize( 0x00 );
+		packet << (uint8 ) 0x13;
+		SendPacket(&packet);
+
+		return false;
 	}
 
 	///- kick already loaded player with same account (if any) and remove session
 	if(!sWorld.RemoveSession(accountId))
 	{
-		return;
+		return false;
 	}
 
 	loginDatabase.PExecute("UPDATE accounts set online = 1 WHERE accountid = '%u'", accountId);
 
-	Field* f = result->Fetch();
-	uint32 security = f[2].GetUInt32();
+	uint32 security = (*result)[1].GetUInt32();
 
 	_session = new WorldSession(accountId, this, security);
 	
 	ASSERT(_session);
 	sWorld.AddSession(_session);
 
-	result = CharacterDatabase.PQuery("SELECT * FROM characters WHERE accountid = '%u' AND psswd = md5('%s') AND online = 0", accountId, password.c_str());
+	result = CharacterDatabase.PQuery("SELECT accountid FROM characters WHERE accountid = '%u' AND online = 0", accountId);
 
 	///- Create new character challenge if character is not found
 	if( !result )
@@ -351,7 +373,7 @@ void WorldSocket::_HandleAuthSession(WorldPacket& recvPacket)
 		packet << (uint8) 0x00;
 		SendPacket(&packet);
 
-		return;
+		return false;
 
 	}
 
@@ -362,7 +384,7 @@ void WorldSocket::_HandleAuthSession(WorldPacket& recvPacket)
 	ZThread::Thread::sleep(10);
 #endif
 
-	return;
+	return true;
 
 }
 

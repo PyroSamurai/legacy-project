@@ -42,7 +42,7 @@ class WorldSocket : public TcpSocket
 		void LogPacket(WorldPacket packet, uint8 origin);
 
 		//void SendImmediatePacket(WorldPacket* packet);
-		void SendPacket(WorldPacket* packet);
+		void SendPacket(WorldPacket* packet, bool log=false);
 		void CloseSocket();
 
 		void OnAccept();
@@ -67,7 +67,7 @@ class WorldSocket : public TcpSocket
 
 	protected:
 		void _HandleLogonChallenge();
-		void _HandleAuthSession(WorldPacket& recvPacket);
+		bool _HandleAuthSession(WorldPacket& recvPacket);
 		void _HandlePlayerInfo(uint32 uid, std::string password);
 		void _HandlePing(WorldPacket& recvPacket);
 

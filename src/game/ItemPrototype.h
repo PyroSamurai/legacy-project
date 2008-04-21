@@ -23,12 +23,21 @@
 
 enum ItemModType
 {
-	ITEM_MOD_INT         = 0,
-	ITEM_MOD_ATK         = 1,
-	ITEM_MOD_DEF         = 2,
-	ITEM_MOD_HPX         = 3,
-	ITEM_MOD_SPX         = 4,
-	ITEM_MOD_AGI         = 5
+	ITEM_MOD_NONE          = 0,
+	ITEM_MOD_MAX_HP        = 1,
+	ITEM_MOD_MAX_SP        = 2,
+	ITEM_MOD_INT           = 3,
+	ITEM_MOD_ATK           = 4,
+	ITEM_MOD_DEF           = 5,
+	ITEM_MOD_HPX           = 6,
+	ITEM_MOD_SPX           = 7,
+	ITEM_MOD_AGI           = 8,
+	ITEM_MOD_MIND          = 9,
+	ITEM_MOD_ELEMENT_EARTH = 10,
+	ITEM_MOD_ELEMENT_WATER = 11,
+	ITEM_MOD_ELEMENT_FIRE  = 12,
+	ITEM_MOD_ELEMENT_WIND  = 13,
+	ITEM_MOD_SOCKET        = 14,
 };
 
 #define MAX_ITEM_MOD       3
@@ -181,7 +190,7 @@ struct ItemPrototype
 	char*  Name;
 	char*  TypeDesc;
 	uint32 InventoryType;
-	uint32 level;
+	uint32 RequiredLevel;
 	char*  attribute;
 	char*  slot;
 	uint32 EquipmentSlot;

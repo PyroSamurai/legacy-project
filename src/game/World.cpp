@@ -132,6 +132,10 @@ void World::SetInitialWorldSettings()
 
 
 
+	sLog.outString( "Loading the max pet number..." );
+	objmgr.LoadPetNumber();
+
+
 	///- Load and initialized scripts
 	sLog.outString( "Loading Scripts..." );
 	objmgr.LoadQuestStartScripts();   // must be after load Creature/Gameobject(Template/Data) and QuestTemplate
