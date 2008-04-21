@@ -80,11 +80,11 @@ struct CreatureInfo
 	uint32 stat_agi;
 	uint32 level;
 	uint32 element;
-	uint32 skill1;
-	uint32 skill2;
-	uint32 skill3;
-	uint32 skill4;
-	uint32 skill5;
+	uint32 spell1;
+	uint32 spell2;
+	uint32 spell3;
+	uint32 spell4;
+	uint32 spell5;
 	uint32 drop1;
 	uint32 drop2;
 	uint32 drop3;
@@ -158,7 +158,7 @@ class LEGACY_DLL_SPEC Creature : public Unit
 		void Update( uint32 time );
 
 		uint8 GetMapNpcId();// { return (GetGUIDLow()-(GetMapId()*MAP_NPCID_MULTIPLIER)); }
-		uint16 GetModelId() { return GetUInt16Value(UNIT_FIELD_DISPLAYID); }
+		uint16 GetModelId() { return GetUInt32Value(UNIT_FIELD_DISPLAYID); }
 		void GetRespawnCoord(uint16 &x, uint16 &y) const { x = respawn_cord[0]; y = respawn_cord[1]; }
 
 		bool isPet() const { return m_isPet; }

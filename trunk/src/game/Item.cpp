@@ -73,7 +73,7 @@ void Item::SetState(ItemUpdateState state, Player *forplayer)
 	if (uState == ITEM_NEW && state == ITEM_REMOVED)
 	{
 		// pretend the item never existed
-		//RemoveFromUpdateQueueOf(forplayer);
+		RemoveFromUpdateQueueOf(forplayer);
 		delete this;
 		return;
 	}
@@ -82,7 +82,7 @@ void Item::SetState(ItemUpdateState state, Player *forplayer)
 	{
 		// new items must stay in the new state until saved
 		if (uState != ITEM_NEW) uState = state;
-		//AddToUpdateQueueOf(forplayer);
+		AddToUpdateQueueOf(forplayer);
 	}
 	else
 	{
@@ -93,14 +93,105 @@ void Item::SetState(ItemUpdateState state, Player *forplayer)
 	}
 }
 
+void Item::AddToUpdateQueueOf(Player *player)
+{
+	if(IsInUpdateQueue()) return;
+
+	if(!player)
+	{
+		player = GetOwner();
+		if(!player)
+		{
+			sLog.outError("Item::AddToUpdateQueueOf - GetPlayer didn't find a player matching owner's guid (%u)!", GUID_LOPART(GetOwnerGUID()));
+			return;
+		}
+	}
+
+	if( player->GetGUID() != GetOwnerGUID())
+	{
+		sLog.outError("Item::AddToUpdateQueueOf - Owner's guid (%u) and player's guid (%u) don't match!", GUID_LOPART(GetOwnerGUID()), player->GetGUIDLow());
+		return;
+	}
+
+	if(player->m_itemUpdateQueueBlocked) return;
+
+	//sLog.outDebug("Item::AddToUpdateQueueOf - Item %u add to update queue", GetEntry());
+	player->m_itemUpdateQueue.push_back(this);
+	uQueuePos = player->m_itemUpdateQueue.size()-1;
+}
+
+void Item::RemoveFromUpdateQueueOf(Player *player)
+{
+	if(!IsInUpdateQueue()) return;
+
+	if(!player)
+	{
+		player = GetOwner();
+		if(!player)
+		{
+			sLog.outError("Item::RemoveFromUpdateQueueOf - GetPlayer didn't find a player matching owner's guid (%u)!", GUID_LOPART(GetOwnerGUID()));
+			return;
+		}
+	}
+
+	if( player->GetGUID() != GetOwnerGUID())
+	{
+		sLog.outError("Item::RemoveFromUpdateQueueOf - Owner's guid (%u) and player's guid (%u) don't match!", GUID_LOPART(GetOwnerGUID()), player->GetGUIDLow());
+		return;
+	}
+
+	if( player->m_itemUpdateQueueBlocked) return;
+
+	player->m_itemUpdateQueue[uQueuePos] = NULL;
+	uQueuePos = -1;
+}
+
+bool Item::IsEquipped() const
+{
+	return !IsInPet() && m_slot < EQUIPMENT_SLOT_END;
+}
+
 void Item::SaveToDB()
 {
-	uint32 guid =GetGUIDLow();
+	uint32 guid = GetGUIDLow();
+
 	switch (uState)
 	{
-		default:
+		case ITEM_NEW:
+		{
+			CharacterDatabase.PExecute("DELETE FROM item_instance WHERE guid = %u", guid);
+			std::ostringstream ss;
+			ss << "INSERT INTO item_instance (guid, owner_guid, data ) "
+				<< " VALUES (" << guid << ", " << GUID_LOPART(GetOwnerGUID())
+				<< ", '";
+			for(uint16 i = 0; i < m_valuesCount; i++)
+				ss << GetUInt32Value(i) << " ";
+			ss << "' )";
+			CharacterDatabase.Execute( ss.str().c_str() );
+		} break;
+		case ITEM_CHANGED:
+		{
+			std::ostringstream ss;
+			ss << "UPDATE item_instance SET data = '";
+
+			for(uint16 i = 0; i < m_valuesCount; i++)
+				ss << GetUInt32Value(i) << " ";
+
+			ss << "', owner_guid = " << GUID_LOPART(GetOwnerGUID())
+				<< " WHERE guid = " << guid;
+
+			CharacterDatabase.Execute( ss.str().c_str() );
+		} break;
+		case ITEM_REMOVED:
+		{
+			CharacterDatabase.PExecute("DELETE FROM item_instance WHERE guid = %u", guid);
+			delete this;
+			return;
+		};
+		case ITEM_UNCHANGED:
 			break;
 	}
+	SetState(ITEM_UNCHANGED);
 }
 
 bool Item::LoadFromDB(uint32 guid, uint64 owner_guid, QueryResult *result)
@@ -109,7 +200,7 @@ bool Item::LoadFromDB(uint32 guid, uint64 owner_guid, QueryResult *result)
 	bool delete_result = false;
 	if(!result)
 	{
-		result = CharacterDatabase.PQuery("SELECT entry, 0,0,0,0, item_instance.* FROM item_instance WHERE guid = '%u'", guid);
+		result = CharacterDatabase.PQuery("SELECT data FROM item_instance WHERE guid = '%u'", guid);
 		delete_result = true;
 	}
 
@@ -123,10 +214,17 @@ bool Item::LoadFromDB(uint32 guid, uint64 owner_guid, QueryResult *result)
 
 	_Create(guid, HIGHGUID_ITEM);
 
-	// Load item values
-	SetUInt32Value(OBJECT_FIELD_ENTRY, f[0].GetUInt32());
+	if(!LoadValues(f[0].GetString()))
+	{
+		sLog.outError("ERROR: Item #%d have broken data in `data` field. Can't be loaded.", guid);
+		if(delete_result) delete result;
+		return false;
+	}
 
-	SetUInt32Value(ITEM_FIELD_STACK_COUNT, f[8].GetUInt32());
+	// Load item values
+	//SetUInt32Value(OBJECT_FIELD_ENTRY, f[0].GetUInt32());
+
+	//SetUInt32Value(ITEM_FIELD_STACK_COUNT, f[2].GetUInt32());
 
 	// overwrite possible wrong/corrupted guid
 	SetUInt64Value(OBJECT_FIELD_GUID,MAKE_GUID(guid,HIGHGUID_ITEM));
@@ -157,24 +255,21 @@ Player* Item::GetOwner() const
 	return objmgr.GetPlayer(GetOwnerGUID());
 }
 
+/*
 uint8 Item::GetBagSlot() const
 {
 	//return m_container ? m_container->GetSlot() : uint8(INVENTORY_SLOT_BAG_0);
 }
-
-bool Item::IsEquipped() const
-{
-	return !IsInBag() && m_slot < EQUIPMENT_SLOT_END;
-}
+*/
 
 bool Item::CanBeTraded() const
 {
 }
-
+/*
 bool Item::CanGoIntoBag(ItemPrototype const *pBagProto)
 {
 }
-
+*/
 // Though the client has the information in the item's data field
 // we have to send SMSG_TIME_UPDATE to display the remaining
 // time

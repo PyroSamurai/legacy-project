@@ -47,6 +47,8 @@ Unit::Unit( WorldObject *instantiator )
 	m_state = 0;
 	m_deathState = ALIVE;
 	m_levelUp = false;
+	m_itemSet = 0;
+	m_itemSetApplied = false;
 }
 
 Unit::~Unit()
@@ -89,6 +91,15 @@ void Unit::SetPet(Pet* pet)
 {
 	SetUInt64Value(UNIT_FIELD_SUMMON, pet ? pet->GetGUID() : 0);
 
+}
+
+void Unit::SetLevel(uint32 lvl)
+{
+	SetUInt32Value(UNIT_FIELD_LEVEL, lvl);
+
+	// group update
+//	if(GetTypeId() == TYPEID_PLAYER)
+//		((Player*)this)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_LEVEL);
 }
 
 void Unit::Update( uint32 p_time )
@@ -160,22 +171,22 @@ void Unit::SendMonsterMove(uint16 NewPosX, uint16 NewPosY, uint32 Time)
 
 uint16 Unit::GetAttackPower()
 {
-	uint16 atk = GetUInt16Value(UNIT_FIELD_ATK) + 1;
-	uint8  lvl = GetUInt8Value(UNIT_FIELD_LEVEL);
+	uint16 atk = GetUInt32Value(UNIT_FIELD_ATK) + GetInt32Value(UNIT_FIELD_ATK_MOD) + 1;
+	uint8  lvl = GetUInt32Value(UNIT_FIELD_LEVEL);
 	return (atk + (uint16)(lvl * 0.5));
 }
 
 uint16 Unit::GetMagicPower()
 {
-	uint16 mag = GetUInt16Value(UNIT_FIELD_INT) + 1;
-	uint8  lvl = GetUInt8Value(UNIT_FIELD_LEVEL);
+	uint16 mag = GetUInt32Value(UNIT_FIELD_INT) + GetInt32Value(UNIT_FIELD_INT_MOD) + 1;
+	uint8  lvl = GetUInt32Value(UNIT_FIELD_LEVEL);
 	return (mag + (uint16)(lvl * 0.5));
 }
 
 uint16 Unit::GetDefensePower()
 {
-	uint16 def = GetUInt16Value(UNIT_FIELD_DEF);
-	uint8  lvl = GetUInt8Value(UNIT_FIELD_LEVEL);
+	uint16 def = GetUInt32Value(UNIT_FIELD_DEF) + GetInt32Value(UNIT_FIELD_DEF_MOD);
+	uint8  lvl = GetUInt32Value(UNIT_FIELD_LEVEL);
 	return (def + (uint16)(lvl * 0.5));
 }
 
@@ -184,7 +195,7 @@ bool Unit::CanHaveSpell(Spell* spell)
 	if( !spell )
 		return false;
 
-	uint8 el = GetUInt8Value(UNIT_FIELD_ELEMENT);
+	uint8 el = GetUInt32Value(UNIT_FIELD_ELEMENT);
 	switch( el )
 	{
 		case ELEMENT_EARTH:
@@ -235,7 +246,7 @@ bool Unit::AddSpell(uint16 entry, uint8 level)
 
 	if( !CanHaveSpell(spell) )
 	{
-		//sLog.outString("UNIT: '%s' element %s can not have spell <%s> element %s", GetName(), LookupNameElement(GetUInt8Value(UNIT_FIELD_ELEMENT), g_elementNames), sinfo->Name, LookupNameElement(sinfo->Element, g_elementNames));
+		//sLog.outString("UNIT: '%s' element %s can not have spell <%s> element %s", GetName(), LookupNameElement(GetUInt32Value(UNIT_FIELD_ELEMENT), g_elementNames), sinfo->Name, LookupNameElement(sinfo->Element, g_elementNames));
 		delete spell;
 		return false;
 	}
@@ -244,6 +255,17 @@ bool Unit::AddSpell(uint16 entry, uint8 level)
 
 	m_spells.insert( pair<uint16, Spell*>(entry, spell) );
 	return true;
+}
+
+void Unit::SetSpellLevel(uint16 entry, uint8 level)
+{
+	if(!entry || !level) return;
+
+	Spell* spell = FindSpell(entry);
+	
+	if(!spell) return;
+
+	spell->SetLevel(level);
 }
 
 bool Unit::HaveSpell(uint16 entry)
@@ -366,7 +388,7 @@ void Unit::AddExpGained(uint32 xp)
 {
 	uint8  lvl = getLevel();
 
-	uint8  birth_lvl = GetUInt8Value(UNIT_FIELD_REBORN);
+	uint8  birth_lvl = GetUInt32Value(UNIT_FIELD_REBORN);
 
 	double power = 2.9;
 	switch( birth_lvl )
@@ -407,7 +429,7 @@ void Unit::AddExpGained(uint32 xp)
 void Unit::LevelUp()
 {
 	uint8 lvl = getLevel() + 1;
-	SetUInt8Value(UNIT_FIELD_LEVEL, lvl);
+	SetUInt32Value(UNIT_FIELD_LEVEL, lvl);
 	m_levelUp = true;
 
 	sLog.outDebug("EXPERIENCE: Player '%s' is level up to [%u] tnl now is <%u>", GetName(), lvl, (uint32) round(pow(lvl + 1, 2.9) + 5));
@@ -415,8 +437,9 @@ void Unit::LevelUp()
 	uint16 spell_point = GetUInt32Value(UNIT_FIELD_SPELL_POINT);
 	uint16 stat_point  = GetUInt32Value(UNIT_FIELD_STAT_POINT);
 
-	SetUInt16Value(UNIT_FIELD_SPELL_POINT, spell_point + 2);
-	SetUInt16Value(UNIT_FIELD_STAT_POINT,  stat_point  + 2);
+	///- TODO: Check for Pet if all spell point maxed out
+	SetUInt32Value(UNIT_FIELD_SPELL_POINT, spell_point + 2);
+	SetUInt32Value(UNIT_FIELD_STAT_POINT,  stat_point  + 2);
 }
 
 bool Unit::isLevelUp()
@@ -450,4 +473,26 @@ uint32 Unit::GetExpGained()
 	uint32 xp  = GetUInt32Value(UNIT_FIELD_XP);
 	uint32 tnl = GetUInt32Value(UNIT_FIELD_NEXT_LEVEL_XP);
 	return xp + tnl;// + (6 * ceil(getLevel() / 2.9) );
+}
+
+uint16 Unit::GetHPMax() const
+{
+	uint8  level   = GetUInt32Value(UNIT_FIELD_LEVEL);
+	uint16 hpx     = GetUInt32Value(UNIT_FIELD_HPX);
+	uint16 hpx_mod = GetInt32Value(UNIT_FIELD_HPX_MOD);
+	uint16 hp_max  = ((hpx + hpx_mod) * 4) + 80 + level;
+	//sLog.outDebug("UNIT: Calculating MAX HP level %u hpx %u hpx_mod %u = %u", level, hpx, hpx_mod, hp_max);
+
+	return hp_max;
+}
+
+uint16 Unit::GetSPMax() const
+{
+	uint8  level   = GetUInt32Value(UNIT_FIELD_LEVEL);
+	uint16 spx     = GetUInt32Value(UNIT_FIELD_SPX);
+	uint16 spx_mod = GetInt32Value(UNIT_FIELD_SPX_MOD);
+	uint16 sp_max  = ((spx + spx_mod) * 2) + 60 + level;
+	//sLog.outDebug("UNIT: Calculating MAX SP level %u spx %u spx_mod %u = %u", level, spx, spx_mod, sp_max);
+
+	return sp_max;
 }

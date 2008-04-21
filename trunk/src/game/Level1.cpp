@@ -28,9 +28,51 @@
 #include "Log.h"
 #include "MapManager.h"
 #include "ObjectAccessor.h"
+#include "NameTables.h"
 
-bool ChatHandler::HandleLookupAreaCommand(char const* args)
+bool ChatHandler::HandleLookupAreaCommand(const char* args)
 {
 	sLog.outDebug("COMMAND: HandleLookupAreaCommand");
+	return false;
+}
+
+bool ChatHandler::HandleLookupNpcCommand(const char* args)
+{
+	if( !args || !m_session )
+		return false;
+
+	// .querynpc <entry>
+	sLog.outDebug("COMMAND: HandleQueryNpcCommand");
+
+	std::string npcname = args;
+	WorldDatabase.escape_string(npcname);
+
+	QueryResult *result = WorldDatabase.PQuery("SELECT entry, modelid, name, level, element, npcflag FROM creature_template where name "_LIKE_" '""%%%s%%%""' ORDER BY entry", npcname.c_str());
+
+	if( !result )
+	{
+	PSendGmMessage("Npc '%s' not found.", npcname.c_str());
 	return true;
+	}
+
+	do
+	{
+		Field *f = result->Fetch();
+		uint16 entry     = f[0].GetUInt16();
+		uint16 modelid   = f[1].GetUInt16();
+		std::string name = f[2].GetCppString();
+		uint8  lvl       = f[3].GetUInt8();
+		uint8  el        = f[4].GetUInt8();
+		uint32 npcflag   = f[5].GetUInt32();
+		PSendGmMessage("Npc lvl %3u, el %5s, entry %4u, npcid %5u, flag %u, name '%s'", lvl, LookupNameElement(el, g_elementNames), entry, modelid, npcflag, name.c_str());
+	} while (result->NextRow());
+
+	delete result;
+	return true;
+}
+
+bool ChatHandler::HandleModifyGoldCommand(const char* args)
+{
+	sLog.outDebug("COMMAND: HandleModifyGoldCommand");
+	return false;
 }

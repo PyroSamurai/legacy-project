@@ -30,7 +30,7 @@
 #include "ObjectAccessor.h"
 #include "GossipDef.h"
 
-bool ChatHandler::HandleNpcTalkCommand(char const* args)
+bool ChatHandler::HandleNpcTalkCommand(const char* args)
 {
 	if(!args)
 		return false;
@@ -46,6 +46,8 @@ bool ChatHandler::HandleNpcTalkCommand(char const* args)
 	uint8 dialog_type = 0;
 	if(type == "plain")
 		dialog_type = 0x01;
+	else if(type == "bank")
+		dialog_type = 0x05;
 	else if(type == "select")
 		dialog_type = 0x06;
 	else
@@ -61,8 +63,26 @@ bool ChatHandler::HandleNpcTalkCommand(char const* args)
 	return true;
 }
 
-bool ChatHandler::HandleNpcInfoCommand(char const* args)
+bool ChatHandler::HandleNpcInfoCommand(const char* args)
 {
 	sLog.outDebug("COMMAND: HandleNpcInfoCommand");
-	return true;
+	return false;
+}
+
+bool ChatHandler::HandleBanCommand(const char* args)
+{
+	sLog.outDebug("COMMAND: HandleBanCommand");
+	return false;
+}
+
+bool ChatHandler::HandleUnBanCommand(const char* args)
+{
+	sLog.outDebug("COMMAND: HandleUnBanCommand");
+	return false;
+}
+
+bool ChatHandler::HandleLevelUpCommand(const char* args)
+{
+	sLog.outDebug("COMMAND: HandleLevelUpCommand");
+	return false;
 }

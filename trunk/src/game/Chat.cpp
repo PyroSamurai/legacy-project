@@ -43,22 +43,46 @@ ChatCommand * ChatHandler::getCommandTable()
 
 	static ChatCommand lookupCommandTable[] =
 	{
-		{ "area", SEC_MODERATOR, &ChatHandler::HandleLookupAreaCommand, "", NULL }
+		{ "area", SEC_MODERATOR, &ChatHandler::HandleLookupAreaCommand, "", NULL },
+		{ "npc", SEC_MODERATOR, &ChatHandler::HandleLookupNpcCommand, "", NULL },
 	};
 
 	static ChatCommand npcCommandTable[] =
 	{
-		{ "talk", SEC_ADMINISTRATOR, &ChatHandler::HandleNpcTalkCommand, "", NULL },
-		{ "info", SEC_ADMINISTRATOR, &ChatHandler::HandleNpcInfoCommand, "", NULL },
+		{ "talk", SEC_GAMEMASTER, &ChatHandler::HandleNpcTalkCommand, "", NULL },
+		{ "info", SEC_GAMEMASTER, &ChatHandler::HandleNpcInfoCommand, "", NULL },
+		{ "add", SEC_GAMEMASTER, &ChatHandler::HandleNpcAddCommand, "", NULL },
+		{ "edit", SEC_GAMEMASTER, &ChatHandler::HandleNpcEditCommand, "", NULL },
+	};
+
+	static ChatCommand petCommandTable[] =
+	{
+		{ "add", SEC_GAMEMASTER, &ChatHandler::HandlePetAddCommand, "", NULL },
+	};
+
+	static ChatCommand itemCommandTable[] =
+	{
+		{ "add", SEC_GAMEMASTER, &ChatHandler::HandleItemAddCommand, "", NULL },
 	};
 
 	static ChatCommand commandTable[] =
 	{
 		{ "debug", SEC_MODERATOR, NULL, "", debugCommandTable },
 		{ "lookup", SEC_ADMINISTRATOR, NULL, "", lookupCommandTable },
-		{ "npc", SEC_ADMINISTRATOR, NULL, "", npcCommandTable },
+		{ "npc", SEC_GAMEMASTER, NULL, "", npcCommandTable },
+		{ "item", SEC_ADMINISTRATOR, NULL, "", itemCommandTable },
+		{ "pet", SEC_GAMEMASTER, NULL, "", petCommandTable },
 		{ "warp", SEC_GAMEMASTER, &ChatHandler::HandleWarpCommand, "", NULL },
 		{ "unstuck", SEC_PLAYER, &ChatHandler::HandleUnstuckCommand, "", NULL },
+		{ "changelevel", SEC_ADMINISTRATOR, &ChatHandler::HandleChangeLevelCommand, "", NULL },
+		{ "save", SEC_PLAYER, &ChatHandler::HandleSaveCommand, "", NULL },
+		{ "saveall", SEC_GAMEMASTER, &ChatHandler::HandleSaveAllCommand, "", NULL },
+		{ "ban", SEC_ADMINISTRATOR, &ChatHandler::HandleBanCommand, "", NULL },
+		{ "unban", SEC_ADMINISTRATOR, &ChatHandler::HandleUnBanCommand, "", NULL },
+		{ "levelup", SEC_ADMINISTRATOR, &ChatHandler::HandleLevelUpCommand, "", NULL },
+		{ "gold", SEC_MODERATOR, &ChatHandler::HandleModifyGoldCommand, "", NULL },
+		{ "password", SEC_PLAYER, &ChatHandler::HandlePasswordCommand, "", NULL },
+
 	};
 
 	if(load_command_table)
@@ -143,7 +167,7 @@ bool ChatHandler::hasStringAbbr(const char* s1, const char* s2)
 // Note: target_guid used only in CHAT_MSG_WHISPER_INFORM mode (in this case channelName ignored)
 void ChatHandler::FillMessageData( WorldPacket *data, WorldSession* session, uint8 type, const char *channelName, uint64 target_guid, const char *message, Unit* speaker)
 {
-	sLog.outDebug("FillMessageData '%s'", message);
+	//sLog.outDebug("FillMessageData '%s'", message);
 	data->Initialize( 0x02 );
 	*data << (uint8 ) type;
 
@@ -172,6 +196,23 @@ void ChatHandler::PSendSysMessage(const char *format, ...)
 	vsnprintf(str,1024,format,ap);
 	va_end(ap);
 	SendSysMessage(str);
+}
+
+void ChatHandler::SendGmMessage(const char *str)
+{
+	WorldPacket data;
+	FillMessageData(&data, CHAT_MSG_GM, 0, str);
+	m_session->SendPacket(&data);
+}
+
+void ChatHandler::PSendGmMessage(const char *format, ...)
+{
+	va_list ap;
+	char str [1024];
+	va_start(ap, format);
+	vsnprintf(str,1024,format,ap);
+	va_end(ap);
+	SendGmMessage(str);
 }
 
 int ChatHandler::ParseCommands(const char* text)

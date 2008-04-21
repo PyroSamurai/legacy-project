@@ -33,8 +33,24 @@ enum PetType
 	RIDING_PET    = 2
 };
 
+enum PetUpdateState
+{
+	PET_UNCHANGED       = 0,
+	PET_CHANGED         = 1,
+	PET_NEW             = 2,
+	PET_REMOVED         = 3
+};
+
 #define MAX_PET_SKILL 4
 #define MAX_PET_ITEMS 6
+
+enum PetChangeFailure
+{
+	PET_ERR_OK                         = 0,
+	PET_ERR_PET_NOT_FOUND              = 1,
+	PET_ERR_PET_CANT_BE_SWAPPED        = 2,
+	PET_ERR_PET_CANT_BE_SUMMONED       = 3
+};
 
 class Pet : public Creature
 {
@@ -43,13 +59,16 @@ class Pet : public Creature
 		virtual ~Pet();
 
 		bool LoadPetFromDB(Unit* owner, uint32 guid);
-		bool Create(uint32 guid, uint32 Entry, const CreatureInfo *cinfo);
+		bool Create(uint32 guid, uint32 entry, Player* owner);
+		bool Create(uint32 guid, uint32 entry, const CreatureInfo *cinfo);
+		virtual void SaveToDB();
+		virtual void DeleteFromDB();
 
 		PetType getPetType() const { return m_petType; }
 		void setPetType(PetType type) { m_petType = type; }
 
-		uint8 GetSlotPosition() { return m_slotPosition; }
-		void SetSlotPosition(uint8 newslot) { m_slotPosition = newslot; }
+		uint8 GetSlot() { return m_slot; }
+		void SetSlot(uint8 slot) { m_slot = slot; }
 
 		bool isBattle() { return m_battle == 1; }
 		void SetBattle(uint8 mode) { m_battle = mode; }
@@ -57,11 +76,11 @@ class Pet : public Creature
 		uint8 GetLoyalty() const { return m_loyalty; }
 		void SetLoyalty(uint8 loyalty) { m_loyalty = loyalty; }
 
-		uint16 GetSkillPoint() const { return m_skillPoint; }
-		void SetSkillPoint(uint16 point) { m_skillPoint = point; }
+		//uint16 GetSkillPoint() const { return m_skillPoint; }
+		//void SetSkillPoint(uint16 point) { m_skillPoint = point; }
 
-		uint16 GetStatPoint() const { return m_statPoint; }
-		void SetStatPoint(uint16 point) { m_statPoint = point; }
+		//uint16 GetStatPoint() const { return m_statPoint; }
+		//void SetStatPoint(uint16 point) { m_statPoint = point; }
 
 		//uint16 GetSkill(uint8 index) { return m_skill[ index ]; }
 		//void SetSkill(uint8 index, uint16 skill) { m_skill[ index ] = skill; }
@@ -69,31 +88,45 @@ class Pet : public Creature
 		//uint8 GetSkillLevel(uint8 index) { return m_skillLevel[ index ]; }
 		//void SetSkillLevel(uint8 index, uint8 level) { m_skillLevel[ index ] = level; }
 
-		void SetEquip(uint8 slot, Item *pItem, bool swap);
+		void SetEquip(uint8 slot, Item *pItem);
 		Item* GetEquip(uint8 slot) { return m_items[slot]; }
 		uint16 GetEquipModelId(uint8 slot) const;
 
+		void SetOwnerGUID(uint64 guid) { SetUInt64Value(ITEM_FIELD_OWNER, guid);}
 		uint32 GetOwnerAccountId() const;
+
+		// Update States
+		PetUpdateState GetState() const { return uState; }
+		void SetState(PetUpdateState state, Player *forplayer = NULL);
+		void AddToUpdateQueueOf(Player *player);
+		void RemoveFromUpdateQueueOf(Player *player);
+		bool IsInUpdateQueue() const { return uQueuePos != -1; }
+		uint16 GetQueuePos() const { return uQueuePos; }
+		void FSetState(PetUpdateState state) // forced
+		{
+			uState = state;
+		}
 
 		void DumpPet();
 	protected:
 
 	private:
-		void SaveToDB(); // overwrited of Creature::SaveToDB
-		void DeleteFromDB(); // overwrited of Creature::DeleteFromDB
 
 		Item* m_items[MAX_PET_ITEMS];
 
 		PetType m_petType;
 		uint8   m_loyalty;
-		uint8   m_slotPosition;
+		uint8   m_slot;
 		uint8   m_battle;
 
-		uint16  m_skillPoint;
-		uint16  m_statPoint;
+		//uint16  m_skillPoint;
+		//uint16  m_statPoint;
 
 		uint16  m_skill[MAX_PET_SKILL];
 		uint8   m_skillLevel[MAX_PET_SKILL];
+
+		PetUpdateState uState;
+		int16   uQueuePos;
 
 };
 

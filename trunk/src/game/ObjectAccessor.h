@@ -209,12 +209,6 @@ class LEGACY_DLL_DECL ObjectAccessor : public LeGACY::Singleton<ObjectAccessor, 
 
 		void Update(uint32 diff);
 
-		uint64 GetNpcGuidByMapNpcId(uint16 mapid, uint8 map_npcid) const
-		{
-			uint64 guid = (mapid * MAP_NPCID_MULTIPLIER);
-			return MAKE_GUID(guid + map_npcid, HIGHGUID_UNIT);
-		}
-
 		static void UpdateObject(Object* obj, Player* exceptPlayer);
 	private:
 		void RemoveAllObjectsInRemoveList();

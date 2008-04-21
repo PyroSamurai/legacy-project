@@ -166,7 +166,7 @@ void Creature::sendPreparedGossip(Player* player)
 		return;
 
 	uint8 mapNpcId = GetMapNpcId();//(GetGUIDLow() / 100) - GetMapId();
-	player->PlayerTalkClass->SendGossipMenu( GetNpcTextId(), mapNpcId );
+	player->PlayerTalkClass->SendGossipMenu( mapNpcId, GetNpcTextId() );
 }
 
 void Creature::OnGossipSelect(Player* player, uint32 sequence, uint32 option)
@@ -233,7 +233,11 @@ uint16 Creature::GetNpcTextId()
 
 GossipItem Creature::GetNpcGossip(uint32 sequence, uint32 action)
 {
-	QueryResult *result = WorldDatabase.PQuery("SELECT textid, gossip_type FROM npc_gossip WHERE npc_guid = %u AND sequence = %u AND action = %u", GetGUIDLow(), sequence, action - GOSSIP_OPTION_START);
+	///- TODO: Implement lazy loading later on
+
+	///- TODO: Change to WHERE entry = GetEntry() for more generalization
+	
+	QueryResult *result = WorldDatabase.PQuery("SELECT textid, gossip_type FROM npc_gossip WHERE npc_guid = %u AND sequence = %u AND (action = %u or action = 0)", GetGUIDLow(), sequence, action - GOSSIP_OPTION_START);
 
 	GossipItem go;
 
@@ -370,30 +374,30 @@ bool Creature::CreateFromProto(uint32 guidlow, uint32 Entry, uint32 team, const 
 		return false;
 	}
 
-	SetUInt16Value(UNIT_FIELD_DISPLAYID, cinfo->modelid);
+	SetUInt32Value(UNIT_FIELD_DISPLAYID, cinfo->modelid);
 	SetName(GetCreatureInfo()->Name);
 	sLog.outDebug("CREATURE: >> Creature::CreateFromProto '%s' %u '%s'", GetName(), GetMapId(), GetCreatureInfo()->ScriptName);
 
-	SetUInt16Value(UNIT_FIELD_HP, cinfo->hp);
-	SetUInt16Value(UNIT_FIELD_SP, cinfo->sp);
-	SetUInt16Value(UNIT_FIELD_HP_MAX, cinfo->hp);
-	SetUInt16Value(UNIT_FIELD_SP_MAX, cinfo->sp);
-	SetUInt16Value(UNIT_FIELD_INT, cinfo->stat_int);
-	SetUInt16Value(UNIT_FIELD_ATK, cinfo->stat_atk);
-	SetUInt16Value(UNIT_FIELD_DEF, cinfo->stat_def);
-	SetUInt16Value(UNIT_FIELD_AGI, cinfo->stat_agi);
+	SetUInt32Value(UNIT_FIELD_HP, cinfo->hp);
+	SetUInt32Value(UNIT_FIELD_SP, cinfo->sp);
+	SetUInt32Value(UNIT_FIELD_HP_MAX, cinfo->hp);
+	SetUInt32Value(UNIT_FIELD_SP_MAX, cinfo->sp);
+	SetUInt32Value(UNIT_FIELD_INT, cinfo->stat_int);
+	SetUInt32Value(UNIT_FIELD_ATK, cinfo->stat_atk);
+	SetUInt32Value(UNIT_FIELD_DEF, cinfo->stat_def);
+	SetUInt32Value(UNIT_FIELD_AGI, cinfo->stat_agi);
 
 
-	SetUInt8Value(UNIT_FIELD_LEVEL, cinfo->level);
-	SetUInt8Value(UNIT_FIELD_ELEMENT, cinfo->element);
+	SetUInt32Value(UNIT_FIELD_LEVEL, cinfo->level);
+	SetUInt32Value(UNIT_FIELD_ELEMENT, cinfo->element);
 
 	///- TODO: fix this, need adjusment
 	///- Default all creature have level 10 spells
-	AddSpell(cinfo->skill1, 10);
-	AddSpell(cinfo->skill2, 10);
-	AddSpell(cinfo->skill3, 10);
-	AddSpell(cinfo->skill4, 10);
-	AddSpell(cinfo->skill5, 10);
+	AddSpell(cinfo->spell1, 10);
+	AddSpell(cinfo->spell2, 10);
+	AddSpell(cinfo->spell3, 10);
+	AddSpell(cinfo->spell4, 10);
+	AddSpell(cinfo->spell5, 10);
 
 
 	SetUInt32Value(UNIT_NPC_FLAGS, cinfo->npcflag);
@@ -691,8 +695,8 @@ uint8 Creature::GetMapNpcId()
 	uint16 mapid   = GetMapId();
 	uint8  mapnpcid = guidlow - (mapid * MAP_NPCID_MULTIPLIER);
 
-	//sLog.outString(" ********* ");
-	//sLog.outString(" Creature::GetMapNpcId guidlow %u mapid %u mapnpcid %u", guidlow, mapid, mapnpcid);
+	sLog.outString(" ********* ");
+	sLog.outString(" Creature::GetMapNpcId guidlow %u mapid %u mapnpcid %u", guidlow, mapid, mapnpcid);
 
 	return mapnpcid;
 

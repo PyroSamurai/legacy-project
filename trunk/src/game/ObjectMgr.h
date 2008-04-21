@@ -143,6 +143,19 @@ class ObjectMgr
 
 
 		uint32 GetPlayerGuidByAccountId(const uint32 acc_id) const;
+		uint64 GetPlayerGUIDByName(std::string name) const;
+		bool GetPlayerNameByGUID(const uint64 &guid, std::string &name) const;
+
+		uint32 GenerateNpcGuidLow(uint16 mapid, uint8 map_npcid) const
+		{
+			return (mapid * MAP_NPCID_MULTIPLIER) + map_npcid;
+		}
+
+		uint64 GetNpcGuidByMapNpcId(uint16 mapid, uint8 map_npcid) const
+		{
+			uint32 guid = GenerateNpcGuidLow(mapid, map_npcid);
+			return MAKE_GUID(guid, HIGHGUID_UNIT);
+		}
 
 		void LoadGameObjectScripts();
 		void LoadQuestEndScripts() {}
@@ -156,9 +169,12 @@ class ObjectMgr
 
 		void LoadCreatureTemplates();
 		void LoadCreatures();
+		void LoadCreature(uint32 guid);
+		void _LoadCreatures(QueryResult *result, bool addtogrid=true);
 		void LoadItemPrototypes();
 		void LoadSpellPrototypes();
 
+		bool IsCreatureExists(uint32 guid);
 
 
 
@@ -172,9 +188,11 @@ class ObjectMgr
 
 
 
-		CreatureInfo const *GetCreatureTemplate( uint32 id );
-		SpellInfo const *GetSpellTemplate( uint16 id );
+		CreatureInfo const *GetCreatureTemplate( uint32 entry );
+		CreatureInfo const *GetCreatureTemplateByModelId( uint32 modelid );
+		SpellInfo const *GetSpellTemplate( uint16 entry );
 
+		uint32 GetCreatureGuidByModelId(uint16 modelid) const;
 
 
 		OpcodeTableMap opcodeTable;
@@ -197,10 +215,12 @@ class ObjectMgr
 		void SetHighestGuids();
 
 		uint32 GenerateLowGuid(HighGuid guidhigh);
+		uint32 GeneratePetNumber();
 
 	protected:
 		uint32 m_hiCharGuid;
 		uint32 m_hiCreatureGuid;
+		uint32 m_hiPetGuid;
 		uint32 m_hiItemGuid;
 		uint32 m_hiGoGuid;
 

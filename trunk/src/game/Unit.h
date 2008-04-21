@@ -40,6 +40,11 @@ enum InventorySlot
 	NULL_SLOT               = 255,
 };
 
+enum PetSlot
+{
+	NULL_PET_SLOT           = 255
+};
+
 enum DeathState
 {
 	ALIVE     = 0,
@@ -66,7 +71,7 @@ enum UnitState
 	UNIT_STATE_ALL_STATE = 0xFFFF
 };
 
-#define CREATURE_MAX_SPELLS 4
+#define CREATURE_MAX_SPELLS 5
 #define CREATURE_DROP_ITEM_MAX 10
 
 class LEGACY_DLL_SPEC Unit : public WorldObject
@@ -100,9 +105,12 @@ class LEGACY_DLL_SPEC Unit : public WorldObject
 					UNIT_STATE_STUNED);
 		}
 
-		uint32 getLevel() const { return GetUInt8Value(UNIT_FIELD_LEVEL); }
+		uint32 getLevel() const { return GetUInt32Value(UNIT_FIELD_LEVEL); }
 		void SetLevel(uint32 lvl);
 
+		uint32 GetHealth() const { return GetUInt32Value(UNIT_FIELD_HP); }
+		uint16 GetHPMax() const;
+		uint16 GetSPMax() const;
 
 		uint64 const& GetOwnerGUID() const { return GetUInt64Value(UNIT_FIELD_SUMMONEDBY); }
 		uint64 GetPetGUID() const { return GetUInt64Value(UNIT_FIELD_SUMMON); }
@@ -157,6 +165,7 @@ class LEGACY_DLL_SPEC Unit : public WorldObject
 
 		bool CanHaveSpell(Spell* spell);
 		bool AddSpell(uint16 entry, uint8 level);
+		void SetSpellLevel(uint16 entry, uint8 level);
 		bool HaveSpell(uint16 entry);
 		Spell* GetSpell(uint16 entry) { return FindSpell(entry); }
 		Spell* FindSpell(uint16 entry);
@@ -182,6 +191,11 @@ class LEGACY_DLL_SPEC Unit : public WorldObject
 		/*******************************************************************/
 		uint16 GetRandomSpell(uint8 ai_difficulty);
 
+		void IncItemSet() { if(m_itemSet<5) m_itemSet++; else m_itemSet=5; }
+		void DecItemSet() { if(m_itemSet>0) m_itemSet--; else m_itemSet=0; }
+		uint8 GetItemSetCount() { return m_itemSet; }
+		bool isItemSetApplied() { return m_itemSetApplied; }
+		void ItemSetApplied(bool apply) { m_itemSetApplied = apply; }
 	protected:
 		explicit Unit( WorldObject *instantiator );
 
@@ -196,6 +210,9 @@ class LEGACY_DLL_SPEC Unit : public WorldObject
 		uint32 m_state;
 
 		bool   m_levelUp;
+
+		uint8  m_itemSet;
+		bool   m_itemSetApplied;
 };
 
 #endif

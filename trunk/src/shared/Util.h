@@ -23,6 +23,7 @@
 
 #include <string>
 #include <vector>
+#include <openssl/md5.h>
 
 typedef std::vector<std::string> Tokens;
 
@@ -122,5 +123,8 @@ inline void normalizePlayerName(std::string& name)
 
 bool IsIPAddress(char const* ipaddress);
 uint32 CreatePIDFile(std::string filename);
+
+std::string md5(std::string text);
+
 
 #endif

@@ -47,7 +47,7 @@ class LEGACY_DLL_SPEC WorldSession
 
 		void SizeError(WorldPacket const& packet, uint32 size) const;
 
-		void SendPacket(WorldPacket* packet);
+		void SendPacket(WorldPacket* packet, bool log=false);
 		void QueuePacket(WorldPacket& packet);
 
 
@@ -109,6 +109,8 @@ class LEGACY_DLL_SPEC WorldSession
 		void HandlePlayerSelectDialogOpcodes(WorldPacket& recvPacket);
 
 	private:
+
+		std::string new_name;
 
 		Player *_player;
 		WorldSocket *_socket;

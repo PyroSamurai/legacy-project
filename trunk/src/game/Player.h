@@ -34,7 +34,19 @@
 #include <string>
 #include <vector>
 
-#define MAX_PET_SLOT  5 // max can carry 4 pet slot, 0 = empty slot do not use
+enum PetSlots
+{
+	PET_SLOT_START       = 0,
+	PET_SLOT_1           = 0,
+	PET_SLOT_2           = 1,
+	PET_SLOT_3           = 2,
+	PET_SLOT_4           = 3,
+	PET_SLOT_5           = 4,
+	PET_SLOT_END         = 5
+};
+
+#define MAX_PET_SLOT  PET_SLOT_END // max can carry 4 pet slot, 0 = empty slot do not use
+
 #define MAX_PLAYER_SPELL 254
 
 class Creature;
@@ -43,56 +55,14 @@ class BattleSystem;
 
 enum CharacterFields
 {
-	FD_GUID = 0,
-	FD_ACCOUNTID, 
-	FD_PSSWD,
-	FD_GENDER,
-	FD_ELEMENT,
-	FD_FACE,
-	FD_HAIR,
+	FD_GUID              = 0,
+	FD_ACCOUNTID,
+	FD_DATA,
 	FD_CHARNAME,
-	FD_REBORN,
-	FD_LEVEL,
-	FD_RANK,
 	FD_MAPID,
 	FD_POSX,
 	FD_POSY,
-	FD_HP,
-	FD_SP,
-	FD_XP_GAIN,
-	FD_XP_TNL,
-
-	FD_ST_INT,
-	FD_ST_ATK,
-	FD_ST_DEF,
-	FD_ST_HPX,
-	FD_ST_SPX,
-	FD_ST_AGI,
-
-	FD_SKILL_GAIN,
-	FD_STAT_GAIN,
-
-	FD_HAIR_COLOR_R,
-	FD_HAIR_COLOR_G,
-	FD_HAIR_COLOR_B,
-	FD_SKIN_COLOR_R,
-	FD_SKIN_COLOR_G,
-	FD_SKIN_COLOR_B,
-	FD_SHIRT_COLOR,
-	FD_MISC_COLOR,
-
 	FD_ONLINE_STATUS,
-
-	FD_GOLD_IN_HAND,
-	FD_GOLD_IN_BANK,
-
-	FD_SECURITY_LEVEL,
-
-	FD_UNK1,
-	FD_UNK2,
-	FD_UNK3,
-	FD_UNK4,
-	FD_UNK5
 };
 
 class Item;
@@ -299,7 +269,10 @@ enum PlayerLoginQueryIndex
 class LEGACY_DLL_SPEC Player : public Unit
 {
 	friend class WorldSession;
-
+	friend void Item::AddToUpdateQueueOf(Player *player);
+	friend void Item::RemoveFromUpdateQueueOf(Player *player);
+	friend void Pet::AddToUpdateQueueOf(Player *player);
+	friend void Pet::RemoveFromUpdateQueueOf(Player *player);
 	public:
 		explicit Player (WorldSession *session);
 		~Player();
@@ -314,7 +287,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 
 		uint32 GetAccountId() { return m_session->GetAccountId(); };
 
-		bool Create ( uint32 guidlow, WorldPacket &data );
+		bool Create ( uint32 guidlow, std::string new_name, WorldPacket &data, std::string &pass1, std::string &pass2 );
 	
 		void Update( uint32 time );
 
@@ -346,15 +319,26 @@ class LEGACY_DLL_SPEC Player : public Unit
 		void SendUnknownImportant();
 
 		/*********************************************************/
+		/***                    PET SYSTEM                     ***/
+		/*********************************************************/
+		Pet* CreatePet( uint32 pet ) const;
+		uint8 CanSummonPet( uint8 slot, uint8 &dest, Pet *pet, bool swap) const;
+		uint8 FindSummonSlot( uint8 slot, bool swap ) const;
+		Pet* SummonPet( uint8 pos, Pet* pet );
+		void VisualizePet( uint8 pos, Pet* pet);
+
+		/*********************************************************/
 		/***                 STORAGE SYSTEM                    ***/
 		/*********************************************************/
 
 		uint8 FindEquipSlot( ItemPrototype const* proto, uint32 slot, bool swap ) const;
+		uint8 FindPetEquipSlot( Pet* pet, ItemPrototype const* proto, uint32 slot, bool swap ) const;
 		Item* CreateItem( uint32 item, uint32 count ) const;
 		uint32 GetItemCount( uint32 item, Item* eItem = NULL ) const;
 		uint32 GetBankItemCount( uint32 item, Item* eItem = NULL ) const;
 		Item* GetItemByGuid( uint64 guid ) const;
 		Item* GetItemByPos( uint8 slot ) const;
+		Item* GetPetItemByPos( Pet* pet, uint8 slot ) const;
 
 		static bool IsInventoryPos( uint8 slot );
 		static bool IsEquipmentPos( uint8 slot );
@@ -371,8 +355,11 @@ class LEGACY_DLL_SPEC Player : public Unit
 		uint8 CanStoreItems( Item **pItem, int count) const;
 		uint8 CanEquipNewItem( uint8 slot, uint8 &dest, uint32 item, uint32 count, bool swap ) const;
 		uint8 CanEquipItem( uint8 slot, uint8 &dest, Item *pItem, bool swap, bool not_loading = true ) const;
+		uint8 CanPetEquipItem( Pet* pet, uint8 slot, uint8 &dest, Item *pItem, bool swap, bool not_loading = true ) const;
+		uint8 CanUseItemFor( Unit* unit, Item* item ) const;
 		uint8 CanUnequipItems( uint32 item, uint32 count ) const;
 		uint8 CanUnequipItem( uint8 src, bool swap ) const;
+		uint8 CanPetUnequipItem( Pet* pet, uint8 src, bool swap ) const;
 		uint8 CanBankItem( uint8 slot, uint8 &dest, Item *pItem, bool swap, bool not_loading = true ) const;
 		uint8 CanUseItem( Item *pItem, bool not_loading = true ) const;
 		bool CanUseItem( ItemPrototype const *pItem );
@@ -380,17 +367,19 @@ class LEGACY_DLL_SPEC Player : public Unit
 		Item* StoreItem( uint8 pos, Item *pItem, bool update );
 		Item* EquipNewItem( uint8 pos, uint32 item, uint32 count, bool update );
 		Item* EquipItem( uint8 pos, Item *pItem, bool update );
+		Item* PetEquipItem( Pet* pet, uint8 pos, Item *pItem, bool update );
 
 		bool  AddNewInventoryItem(uint32 entry, uint32 count);
 
 		void QuickEquipItem( uint8 pos, Item *pItem);
 		void VisualizeItem( uint8 pos, Item *pItem);
 
-		void QuickPetEquipItem( uint32 pet_guid, uint8 pos, Item *pItem);
-		void VisualizePetItem( uint32 pet_guid, uint8 pos, Item *pItem);
+		void QuickPetEquipItem( Pet* pet, uint8 pos, Item *pItem);
+		void VisualizePetItem( Pet* pet, uint8 pos, Item *pItem);
 
 		Item* BankItem( uint8 pos, Item *pItem, bool update );
 		void RemoveItem( uint8 slot );
+		void PetRemoveItem( Pet* pet, uint8 slot );
 
 		void DestroyItem( uint8 slot, bool update );
 		void DestroyItemCount( uint32 item, uint32 count, bool update, bool unequip_check = false);
@@ -427,6 +416,8 @@ class LEGACY_DLL_SPEC Player : public Unit
 
 
 		void _ApplyAllItemMods();
+		void _ApplyItemModsFor(Unit* unit, Item* item, bool apply);
+		void _ApplyItemSetModsFor(Unit* unit, bool apply);
 
 		/*********************************************************/
 		/***                  GROUP SYSTEM                     ***/
@@ -479,11 +470,13 @@ class LEGACY_DLL_SPEC Player : public Unit
 		}
 		uint16 GetLastPositionX() { return m_lastPositionX; }
 		uint16 GetLastPositionY() { return m_lastPositionY; }
+
 		void UpdateVisibilityOf(WorldObject* target);
 		void UpdateRelocationToSet();
 		void UpdatePlayer();
-		void UpdateLevel();
+		void UpdatePlayerLevel();
 		void _updatePlayer(uint8 flagStatus, uint8 modifier, uint16 value);
+
 		void UpdatePet();
 		void UpdatePet(uint8 slot);
 		void UpdatePetBattle();
@@ -521,9 +514,17 @@ class LEGACY_DLL_SPEC Player : public Unit
 		/**********************************************************/
 		/***                    LOAD SYSTEM                     ***/
 		/**********************************************************/
-		bool _LoadPet(QueryResult *result);
-		bool _LoadInventory(QueryResult *result);
-		bool _LoadSpell(QueryResult *result);
+		void _LoadPets(QueryResult *result);
+		void _LoadInventory(QueryResult *result);
+		void _LoadSpells(QueryResult *result);
+
+		/**********************************************************/
+		/***                    SAVE SYSTEM                     ***/
+		/**********************************************************/
+		void _SavePets();
+		void _SaveInventory();
+		void _SaveSpells();
+
 		uint16 m_lastPositionX;
 		uint16 m_lastPositionY;
 
@@ -540,13 +541,18 @@ class LEGACY_DLL_SPEC Player : public Unit
 
 		uint32 m_nextSave;
 
-		uint32 m_GMFlags;
+		std::vector<Item*> m_itemUpdateQueue;
+		bool m_itemUpdateQueueBlocked;
 
+		std::vector<Pet*>  m_petUpdateQueue;
+		bool m_petUpdateQueueBlocked;
+
+		uint32 m_GMFlags;
 
 		Item*  m_items[PLAYER_SLOTS_COUNT];
 		Pet*   m_pets[MAX_PET_SLOT];
 		Pet*   m_battlePet;
-
+/*
 		uint8  m_reborn;
 		uint8  m_element;
 		uint8  m_gender;
@@ -572,21 +578,21 @@ class LEGACY_DLL_SPEC Player : public Unit
 
 		uint16 m_hp_max;
 		uint16 m_sp_max;
-
+*/
 		///- TODO: Fix
 		//   We will need this to be signed
 		//   modifiers can have negative value
-		uint32 m_atk_mod, m_def_mod, m_int_mod, m_agi_mod, m_hpx_mod, m_spx_mod;
+//		uint32 m_atk_mod, m_def_mod, m_int_mod, m_agi_mod, m_hpx_mod, m_spx_mod;
 
-		uint32 m_gold_hand;
-		uint32 m_gold_bank;
-
+//		uint32 m_gold_hand;
+//		uint32 m_gold_bank;
+/*
 		uint16 m_unk1;
 		uint16 m_unk2;
 		uint16 m_unk3;
 		uint16 m_unk4;
 		uint16 m_unk5;
-
+*/
 	private:
 		GridReference<Player> m_gridRef;
 
@@ -598,6 +604,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 //		SpellMap m_spells;
 
 		Player* i_battleMaster;
+
 };
 
 #endif

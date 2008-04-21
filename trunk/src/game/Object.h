@@ -105,6 +105,7 @@ class LEGACY_DLL_SPEC Object
 			return m_int32Values[ index ];
 		}
 
+		/*
 		const uint8& GetUInt8Value( uint16 index ) const
 		{
 			ASSERT( index < m_valuesCount || PrintIndexError( index, false) );
@@ -116,6 +117,7 @@ class LEGACY_DLL_SPEC Object
 			ASSERT( index < m_valuesCount || PrintIndexError( index, false) );
 			return m_uint16Values[ index ];
 		}
+		*/
 
 		const uint32& GetUInt32Value( uint16 index ) const
 		{
@@ -135,14 +137,19 @@ class LEGACY_DLL_SPEC Object
 		}
 
 		void SetInt32Value(  uint16 index,         int32  value );
-		void SetUInt8Value(  uint16 index,         uint8  value );
-		void SetUInt16Value( uint16 index,        uint16  value );
+		//void SetUInt8Value(  uint16 index,         uint8  value );
+		//void SetUInt16Value( uint16 index,        uint16  value );
 		void SetUInt32Value( uint16 index,        uint32  value );
 		void SetUInt64Value( uint16 index,  const uint64 &value );
 		void SetFloatValue(  uint16 index,         float  value );
 		void SetStatFloatValue( uint16 index, float value);
 		void SetStatInt32Value( uint16 index, int32 value);
 
+		void ApplyModUInt32Value(uint16 index, int32 val, bool apply);
+		void ApplyModInt32Value(uint16 index, int32 val, bool apply);
+		void ApplyModUInt64Value(uint16 index, int32 val, bool apply);
+		void ApplyModPositiveFloatValue(uint16 index, float val, bool apply);
+		void ApplyModSignedFloatValue(uint16 index, float val, bool apply);
 
 
 
@@ -192,8 +199,8 @@ class LEGACY_DLL_SPEC Object
 			float  *m_floatValues;
 		};
 
-		uint8  *m_uint8Values;
-		uint16 *m_uint16Values;
+		//uint8  *m_uint8Values;
+		//uint16 *m_uint16Values;
 
 		uint32 *m_uint32Values_mirror;
 

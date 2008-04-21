@@ -64,6 +64,8 @@ class ChatHandler
 
 		void SendSysMessage(const char *str);
 		void PSendSysMessage(const char *format, ...) ATTR_PRINTF(2,3);
+		void SendGmMessage(const char *str);
+		void PSendGmMessage(const char *format, ...) ATTR_PRINTF(2,3);
 
 		int ParseCommands(const char* text);
 
@@ -74,19 +76,33 @@ class ChatHandler
 
 		ChatCommand* getCommandTable();
 
-		///- LEVEL 0
+		///- LEVEL 0 SEC_PLAYER
 		bool HandleUnstuckCommand(const char* args);
+		bool HandleSaveCommand(const char* args);
+		bool HandlePasswordCommand(const char* args);
 
-		///- LEVEL 1
+		///- LEVEL 1 SEC_MODERATOR
 		bool HandleLookupAreaCommand(const char* args);
+		bool HandleLookupNpcCommand(const char* args);
+		bool HandleLookupItemCommand(const char* args);
+		bool HandleModifyGoldCommand(const char* args);
 
-		///- LEVEL 2
-		bool HandleGetItemState(const char* args);
+		///- LEVEL 2 SEC_GAMEMASTER
 		bool HandleWarpCommand(const char* args);
-
-		///- LEVEL 3
+		bool HandleSaveAllCommand(const char* args);
 		bool HandleNpcTalkCommand(const char* args);
 		bool HandleNpcInfoCommand(const char* args);
+		bool HandleNpcAddCommand(const char* args);
+		bool HandleNpcEditCommand(const char* args);
+		bool HandlePetAddCommand(const char* args);
+		bool HandleItemAddCommand(const char* args);
+
+		///- LEVEL 3 SEC_ADMINISTRATOR
+		bool HandleGetItemState(const char* args);
+		bool HandleBanCommand(const char* args);
+		bool HandleUnBanCommand(const char* args);
+		bool HandleChangeLevelCommand(const char* args);
+		bool HandleLevelUpCommand(const char* args);
 
 		// common global flag
 		static bool load_command_table;

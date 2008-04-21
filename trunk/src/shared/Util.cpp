@@ -206,3 +206,20 @@ uint32 CreatePIDFile(std::string filename)
     return (uint32)pid;
 }
 
+std::string md5(std::string text)
+{
+	MD5_CTX ctx;
+	MD5_Init(&ctx);
+	MD5_Update(&ctx, text.c_str(), text.length());
+	unsigned char buff[16] = "";
+	MD5_Final((unsigned char*)buff, &ctx);
+	char asciihash[33];
+	int p = 0;
+	for(int i = 0; i < 16; i++)
+	{
+		::sprintf(&asciihash[p], "%02x", buff[i]);
+		p += 2;
+	}
+	asciihash[32] = '\0';
+	return std::string(asciihash);
+}

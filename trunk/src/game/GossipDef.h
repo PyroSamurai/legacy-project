@@ -32,9 +32,10 @@ class WorldSession;
 
 enum GossipType
 {
-	GOSSIP_TYPE_PLAIN                  = 0x01,
-	GOSSIP_TYPE_INVENTORY              = 0x02,
-	GOSSIP_TYPE_SELECT                 = 0x06,
+	GOSSIP_TYPE_PLAIN                  = 0x01, //  1
+	GOSSIP_TYPE_INVENTORY              = 0x02, //  2
+	GOSSIP_TYPE_SELECT                 = 0x06, //  6
+	GOSSIP_TYPE_BANK                   = 0x1D, // 29
 };
 
 enum GossipOption
@@ -57,6 +58,7 @@ struct GossipItem
 {
 	GossipItem() : TextId(0), Type(GOSSIP_TYPE_PLAIN) {}
 
+	uint32 ZoneId;
 	uint16 TextId;
 	uint8  Type;
 };
