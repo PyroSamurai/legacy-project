@@ -458,14 +458,43 @@ void Unit::AddKillItemDropped(uint16 itemId)
 
 uint16 Unit::GetItemDropped(uint8 index)
 {
-	return 20619;
-	return 26001;
+	CreatureInfo const* cinfo = objmgr.GetCreatureTemplate(GetEntry());
 
-	//return 49001;
-	if( rand_chance() < 50 )
-		return 26001;
-	else
-		return 34011;
+	if( !cinfo )
+		return 0;
+
+	double dice = rand_chance();
+	double drop_rate = 100 + (index * 5) - (33.33 * sWorld.getRate(RATE_DROP_ITEMS));
+
+	sLog.outDebug("ITEM DROPPED: Chance for item to drop is %-3.2f versus rate %-3.2f", dice, drop_rate);
+	if( dice < drop_rate )
+		return 0;
+
+	switch( index )
+	{
+		case 0:
+			return cinfo->drop1;
+		case 1:
+			return cinfo->drop2;
+		case 2:
+			return cinfo->drop3;
+		case 3:
+			return cinfo->drop4;
+		case 4:
+			return cinfo->drop5;
+		case 5:
+			return cinfo->drop6;
+		case 6:
+			return cinfo->drop7;
+		case 7:
+			return cinfo->drop8;
+		case 8:
+			return cinfo->drop9;
+		case 9:
+			return cinfo->drop10;
+		default:
+			return 0;
+	}
 }
 
 uint32 Unit::GetExpGained()
