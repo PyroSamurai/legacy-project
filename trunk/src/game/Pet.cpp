@@ -243,7 +243,7 @@ void Pet::AddToUpdateQueueOf(Player *player)
 
 	player->m_petUpdateQueue.push_back(this);
 	uQueuePos = player->m_petUpdateQueue.size()-1;
-	//sLog.outDebug("Pet::AddToUpdateQueueOf - Owner: %s, Pet: %s add to update queue %i", player->GetName(), GetName(), uQueuePos);
+	sLog.outDebug("Pet::AddToUpdateQueueOf - Owner: %s, Pet: %s add to update queue %i", player->GetName(), GetName(), uQueuePos);
 }
 
 void Pet::RemoveFromUpdateQueueOf(Player *player)
@@ -318,7 +318,8 @@ void Pet::SaveToDB()
 				ss << GetUInt32Value(i) << " ";
 			}
 
-			ss << "' WHERE guid = " << guid;
+			ss << "', mode_battle = " << uint32(isBattle() ? 1 : 0)
+				<< " WHERE guid = " << guid;
 			CharacterDatabase.Execute( ss.str().c_str() );
 		} break;
 

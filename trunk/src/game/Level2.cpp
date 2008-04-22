@@ -390,6 +390,7 @@ bool ChatHandler::HandlePetAddCommand(const char* args)
 	uint8 dest;
 	if( player->CanSummonPet( NULL_PET_SLOT, dest, pet, false ) == PET_ERR_OK )
 	{
+		pet->SetLoyalty(60);
 		player->SummonPet( dest, pet );
 		player->UpdatePetCarried();
 		PSendGmMessage("Pet '%s' created for player '%s'", pet->GetName(), player->GetName());

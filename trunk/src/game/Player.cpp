@@ -1044,7 +1044,19 @@ void Player::UpdateBattlePet()
 
 void Player::SetBattlePet(Pet* pet)
 {
+	if( m_battlePet )
+	{
+		m_battlePet->SetBattle(0);
+		m_battlePet->SetState(PET_CHANGED);
+	}
+
 	m_battlePet = pet;
+
+	if( pet )
+	{
+		pet->SetBattle(1);
+		pet->SetState(PET_CHANGED);
+	}
 }
 
 Pet* Player::GetPetByGuid(uint32 pet_guid) const
@@ -1450,8 +1462,10 @@ void Player::UpdatePlayerLevel()
 
 void Player::UpdatePetLevel(Pet* pet)
 {
-	uint8 slot = GetPetSlot(pet);
+	//uint8 slot = GetPetSlot(pet);
 
+	uint8 slot = pet->GetSlot();
+	sLog.outDebug("UPDATE PET: Updating Pet slot %u", slot);
 	_updatePet(slot, 0x23, 1, pet->getLevel());
 	pet->resetLevelUp();
 }

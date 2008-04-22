@@ -2176,7 +2176,9 @@ void BattleSystem::AddHitExpGained(Unit* hitter, Unit* victim, bool linked)
 void BattleSystem::AddKillItemDropped(BattleAction* action)
 {
 	double dice = rand_chance();
-	if( dice < (10 * sWorld.getRate(RATE_DROP_ITEMS)) )
+	double drop_rate = 100 - (33.33 * sWorld.getRate(RATE_DROP_ITEMS));
+	sLog.outDebug("ITEM DROPPED: Chance for drop is %-3.2f versus rate %-3.2f", dice, drop_rate);
+	if( dice < drop_rate )
 		return;
 
 	uint8 a = action->GetAttackerCol();
@@ -2224,7 +2226,7 @@ void BattleSystem::AddKillItemDropped(BattleAction* action)
 				m_itemDropped.push_back(new ItemDropped(a,b,item,x,y));
 				player->DumpPlayer("inventory");
 			}
-			break;
+			//break;
 		}
 	}
 }
@@ -2273,7 +2275,7 @@ void BattleSystem::GiveExpGained()
 */
 		sLog.outDebug("EXPERIENCE: Giving '%s' experience %u", pet->GetName(), pet->GetExpGained());
 
-		(*it)->_updatePet((*it)->GetPetSlot(pet), UPD_FLAG_XP, 1, pet->GetExpGained());
+		(*it)->_updatePet(pet->GetSlot(), UPD_FLAG_XP, 1, pet->GetExpGained());
 
 		//(*it)->GetSession()->SendPacket(&data);
 
