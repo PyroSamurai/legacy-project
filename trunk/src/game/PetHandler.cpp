@@ -62,3 +62,29 @@ void WorldSession::HandlePetCommandOpcodes( WorldPacket & recv_data )
 
 	_player->UpdateBattlePet();
 }
+
+void WorldSession::HandlePetReleaseOpcode( WorldPacket & recv_data )
+{
+	sLog.outDebug( "WORLD: Recvd CMSG_PET_COMMAND_RELEASE Message" );
+	CHECK_PACKET_SIZE( recv_data, 1+1 );
+
+	uint8 subcmd;
+	uint8 petslot;
+
+	recv_data >> subcmd;
+	recv_data >> petslot;
+
+	if( petslot <= PET_SLOT_START || petslot > MAX_PET_SLOT )
+		return;
+
+	switch ( subcmd )
+	{
+		case 0x01: // unknown
+			break;
+
+		case 0x02:
+			_player->ReleasePet(petslot-1);
+			break;
+	}
+}
+

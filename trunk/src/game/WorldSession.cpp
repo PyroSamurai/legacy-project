@@ -97,6 +97,9 @@ void WorldSession::FillOpcodeHandlerHashTable()
 	objmgr.opcodeTable[ CMSG_PET_COMMAND ] = OpcodeHandler(STATUS_LOGGEDIN,
 			&WorldSession::HandlePetCommandOpcodes );
 
+	objmgr.opcodeTable[ CMSG_PET_COMMAND_RELEASE ] = OpcodeHandler(STATUS_LOGGEDIN,
+			&WorldSession::HandlePetReleaseOpcode );
+
 	objmgr.opcodeTable[ CMSG_USE_INVENTORY_ITEM ] = OpcodeHandler(STATUS_LOGGEDIN, 
 			&WorldSession::HandleUseItemOpcodes );
 

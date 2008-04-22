@@ -37,7 +37,7 @@ enum ClientOpcodes
 	CMSG_PLAYER_ENTER_MAP_COMPLETED                           = 12,
 	CMSG_GROUP_COMMAND                                        = 13,
 	CMSG_UNKNOWN_14                                           = 14,
-	CMSG_UNKNOWN_15                                           = 15,
+	CMSG_PET_COMMAND_RELEASE                                  = 15,
 	CMSG_UNKNOWN_16                                           = 16,
 	CMSG_USE_ITEM_TO_PET                                      = 17,
 	CMSG_UNKNOWN_18                                           = 18,

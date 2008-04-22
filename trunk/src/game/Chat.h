@@ -95,6 +95,7 @@ class ChatHandler
 		bool HandleNpcAddCommand(const char* args);
 		bool HandleNpcEditCommand(const char* args);
 		bool HandlePetAddCommand(const char* args);
+		bool HandlePetReleaseCommand(const char* args);
 		bool HandleItemAddCommand(const char* args);
 
 		///- LEVEL 3 SEC_ADMINISTRATOR

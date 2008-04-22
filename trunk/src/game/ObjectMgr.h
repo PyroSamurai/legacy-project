@@ -138,7 +138,7 @@ class ObjectMgr
 		Player* GetPlayer(uint32 guid) const { return ObjectAccessor::FindPlayer(guid); }
 
 
-		static ItemPrototype const* GetItemPrototype(uint32 id) { return sItemStorage.LookupEntry<ItemPrototype>(id); }
+		static ItemPrototype const* GetItemPrototype(uint32 entry) { return sItemStorage.LookupEntry<ItemPrototype>(entry); }
 		uint32 GetItemEntryByModelId(uint32 modelid);
 
 

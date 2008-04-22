@@ -175,7 +175,7 @@ bool ChatHandler::HandleNpcEditCommand(const char* args)
 
 	uint8  map_npcid = atoi(map_npcid_text);
 
-	// .npc edit team <mapnpcid> <group1> ... <group10>
+	// .npc edit team <mapnpcid> [group1] ... [group10]
 	// .npc edit pos  <mapnpcid> idle|random <x> <y>
 	sLog.outDebug("COMAND: HandleEditNpcCommand");
 
@@ -294,6 +294,56 @@ bool ChatHandler::HandleNpcEditCommand(const char* args)
 
 bool ChatHandler::HandleItemAddCommand(const char* args)
 {
+	if( !args || !m_session )
+		return false;
+
+	char* namepart = strtok((char*)args, " ");
+	char* model_text = strtok(NULL, " ");
+	char* count_text = strtok(NULL, " ");
+
+	if( !namepart || !model_text )
+		return false;
+
+	//. item add <player> <model> [count]
+
+	sLog.outDebug("COMMAND: HandleItemAddCommand");
+
+	std::string player_name = namepart;
+	uint16 modelid = atoi(model_text);
+	uint16 count = count_text ? atoi(count_text) : 1;
+
+	if( count <= 0 ) count = 1;
+	if( count > 50 ) count = 50;
+
+	uint32 player_guid = objmgr.GetPlayerGUIDByName(player_name);
+	Player* player = objmgr.GetPlayer(player_guid);
+	if( !player )
+	{
+		PSendGmMessage("Player '%s' not found.", player_name.c_str());
+		return true;
+	}
+
+	uint32 entry = objmgr.GetItemEntryByModelId(modelid);
+	ItemPrototype const* pProto = objmgr.GetItemPrototype(entry);
+
+	if( !pProto )
+	{
+		PSendGmMessage("Item %u is invalid.", modelid);
+		return true;
+	}
+
+	if( !player->AddNewInventoryItem(entry, count) )
+	{
+		PSendGmMessage("Failed to add item '%s' to '%s' inventory.", pProto->Name, player->GetName());
+		return true;
+	}
+
+	PSendGmMessage("Item '%s' added for '%s' to inventory.", pProto->Name, player->GetName());
+
+	///- visualize item for player inventory
+	player->UpdateInventoryForItem(modelid, count);
+
+	return true;
 }
 
 bool ChatHandler::HandlePetAddCommand(const char* args)
@@ -302,15 +352,90 @@ bool ChatHandler::HandlePetAddCommand(const char* args)
 		return false;
 
 	char* namepart = strtok((char*)args, " ");
-	char* entry_text = strtok(NULL, " ");
+	char* model_text = strtok(NULL, " ");
 
-	if( !namepart || !entry_text )
+	if( !namepart || !model_text )
 		return false;
 
-	// .pet add <player> <entry>
+	// .pet add <player> <model>
 
 	sLog.outDebug("COMMAND: HandlePetAddCommand");
 
 	std::string player_name = namepart;
+	uint16 modelid = atoi(model_text);
+
+	uint32 player_guid = objmgr.GetPlayerGUIDByName(player_name);
+	Player* player = objmgr.GetPlayer(player_guid);
+	if( !player )
+	{
+		PSendGmMessage("Player '%s' not found.", player_name.c_str());
+		return true;
+	}
+
+	CreatureInfo const *cinfo = objmgr.GetCreatureTemplateByModelId(modelid);
+
+	if( !cinfo )
+	{
+		PSendGmMessage("Pet %u is invalid.", modelid);
+		return true;
+	}
+
+	Pet* pet = player->CreatePet( cinfo->Entry );
+	if( !pet )
+	{
+		PSendGmMessage("Failed to create pet %u.", modelid); 
+		return true;
+	}
+
+	uint8 dest;
+	if( player->CanSummonPet( NULL_PET_SLOT, dest, pet, false ) == PET_ERR_OK )
+	{
+		player->SummonPet( dest, pet );
+		player->UpdatePetCarried();
+		PSendGmMessage("Pet '%s' created for player '%s'", pet->GetName(), player->GetName());
+	}
+	else
+	{
+		PSendGmMessage("Player '%s' can not summon pet '%s'. Slot is full.", player->GetName(), pet->GetName());
+		delete pet;
+	}
+
+	return true;
 }
 
+bool ChatHandler::HandlePetReleaseCommand(const char* args)
+{
+	if( !args || !m_session )
+		return false;
+
+	char* namepart = strtok((char*)args, " ");
+	char* slot_text = strtok(NULL, " ");
+
+	if( !namepart )
+		return false;
+
+	// .pet release <player> [slot]
+
+	sLog.outDebug("COMMAND: HandlePetReleaseCommand");
+
+	std::string player_name = namepart;
+	uint8 slot = (slot_text ? atoi(slot_text) : 1);
+
+	if( slot == PET_SLOT_START || slot > MAX_PET_SLOT )
+	{
+		PSendGmMessage("Slot must be between 1 and 4");
+		return true;
+	}
+
+	uint32 player_guid = objmgr.GetPlayerGUIDByName(player_name);
+	Player* player = objmgr.GetPlayer(player_guid);
+	if( !player )
+	{
+		PSendGmMessage("Player '%s' not found.", player_name.c_str());
+		return true;
+	}
+
+	player->ReleasePet(slot-1);
+
+	PSendGmMessage("Player '%s' pet slot %u released.", player->GetName(), slot);
+}

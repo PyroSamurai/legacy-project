@@ -564,6 +564,8 @@ void Player::_LoadPets(QueryResult* result)
 		return;
 
 	uint8 count = 0;
+	// prevent pet from being added to the queue when stored
+	m_petUpdateQueueBlocked = true;
 	do
 	{
 		Field *f = result->Fetch();
@@ -582,7 +584,11 @@ void Player::_LoadPets(QueryResult* result)
 
 		count++;
 
-		m_pets[slot] = pet;
+		SummonPet( slot, pet );
+
+		//m_pets[slot] = pet;
+		//pet->SetSlot(slot);
+
 
 		if( pet->isBattle() )
 			m_battlePet = pet;
@@ -598,6 +604,7 @@ void Player::_LoadPets(QueryResult* result)
 	} while( result->NextRow() );
 
 	if (delete_result) delete result;
+	m_petUpdateQueueBlocked = false;
 
 	return;
 }
@@ -667,7 +674,7 @@ void Player::DumpPlayer(const char* section)
 			if( m_pets[slot] )
 			{
 				sLog.outDebug("");
-				sLog.outDebug(" @@ Pet slot %3u %-10.10s is %s GUID(%u)", slot + 1, m_pets[slot]->GetName(), (m_pets[slot]->isBattle() ? "Battle" : "Resting"), m_pets[slot]->GetGUIDLow());
+				sLog.outDebug(" @@ Pet slot %3u %-10.10s is %s GUID(%u)", m_pets[slot]->GetSlot(), m_pets[slot]->GetName(), (m_pets[slot]->isBattle() ? "Battle" : "Resting"), m_pets[slot]->GetGUIDLow());
 				m_pets[slot]->DumpPet();
 			}
 
@@ -1233,7 +1240,7 @@ void Player::UpdatePetCarried()
 			continue;
 
 		petcount++;
-		data << (uint8 ) petcount;
+		data << (uint8 ) (pet->GetSlot() + 1); //petcount;
 		data << (uint16) pet->GetModelId(); // pet npc id ;
 		data << (uint32) pet->GetExpGained();//0; // pet total xp 0x010D9A19
 
@@ -1241,7 +1248,7 @@ void Player::UpdatePetCarried()
 
 		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_HP);  // pet current hp
 		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_SP);  // pet current sp
-		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_INT); // pet base stat int
+		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_INT); // pet stat int
 		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_ATK); // pet stat atk
 		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_DEF); // pet stat def
 		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_AGI); // pet stat agi
@@ -1557,6 +1564,19 @@ void Player::UpdateInventory()
 
 	if( !count )
 		return;
+
+	if( m_session )
+		m_session->SendPacket(&data);
+}
+
+void Player::UpdateInventoryForItem(uint16 modelid, uint8 count)
+{
+	WorldPacket data;
+	data.Initialize( 0x17 );
+	data << (uint8 ) 0x06;
+	data << (uint16) modelid;
+	data << (uint16) count;
+	data << (uint32) 0;
 
 	if( m_session )
 		m_session->SendPacket(&data);
@@ -1948,10 +1968,16 @@ uint8 Player::FindSummonSlot( uint8 slot, bool swap ) const
 {
 	sLog.outDebug("PETS: FindSummonSlot '%u'", slot);
 	uint8 slots;
-	slots = NULL_PET_SLOT;
 
-	///- TODO: Fix this to empty slot
-	slots = slot;
+	slots = NULL_PET_SLOT;
+	for(uint8 i = PET_SLOT_START; i < PET_SLOT_END; i++)
+	{
+		if( !m_pets[i] )
+		{
+			slots = i;
+			break;
+		}
+	}
 
 	if( slot != NULL_PET_SLOT )
 	{
@@ -2017,6 +2043,21 @@ void Player::VisualizePet( uint8 pos, Pet *pPet)
 
 	pPet->SetState(PET_CHANGED, this);
 	//sLog.outDebug("PETS: VisualizePet '%s' slot %u", pPet->GetName(), pos);
+}
+
+void Player::ReleasePet( uint8 slot )
+{
+	if( slot > MAX_PET_SLOT )
+		return;
+
+	if( !m_pets[slot] )
+		return;
+
+	m_pets[slot]->SetState(PET_REMOVED);
+	m_pets[slot] = NULL;
+
+	_SavePets();
+
 }
 
 ///////////////////// INVENTORY SYSTEM //////////////////////////////////

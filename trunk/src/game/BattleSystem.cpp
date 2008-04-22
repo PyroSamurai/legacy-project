@@ -1582,12 +1582,14 @@ int32 BattleSystem::GetDamage(Unit* attacker, Unit* victim, const SpellInfo* sin
 	}
 
 	int   diffLevel = attacker->getLevel() - victim->getLevel();
+	diffLevel = (diffLevel > 0 ? diffLevel : 1);
+
 	uint8 a_el = attacker->GetUInt32Value(UNIT_FIELD_ELEMENT);
 	uint8 v_el = victim->GetUInt32Value(UNIT_FIELD_ELEMENT);
 
 	float dmg_multiplier = GetDamageMultiplier(a_el, v_el);
 
-	float dmg_school = (diffLevel > 0 ? diffLevel : 0);
+	float dmg_school = 0;
 
 	uint16 atk_pow = attacker->GetAttackPower();
 	uint16 mag_pow = attacker->GetMagicPower();
@@ -1601,23 +1603,26 @@ int32 BattleSystem::GetDamage(Unit* attacker, Unit* victim, const SpellInfo* sin
 		case SPELL_DAMAGE_MECH:
 		{
 			if( sinfo->Entry == SPELL_BASIC )
-				dmg_school *= atk_pow;
+				dmg_school = atk_pow;
 			else
-				dmg_school *= mag_pow;
+				dmg_school = mag_pow;
 
 			break;
 		}
 
 		case SPELL_DAMAGE_ATK_INT:
 		{
-			dmg_school *= atk_pow + (mag_pow / 2);
+			dmg_school = atk_pow + (mag_pow / 2);
 			break;
 		}
 
 		default:
-			dmg_school *= atk_pow;
+			dmg_school = atk_pow;
 			break;
 	}
+
+	///- Add Level bonus to produce pure damage school
+	dmg_school = dmg_school + (diffLevel * (dmg_school * 0.25));
 
 	float dmg = dmg_school * dmg_multiplier * (spell_level * 0.1);
 
