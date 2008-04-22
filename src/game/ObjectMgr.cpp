@@ -415,7 +415,7 @@ uint64 ObjectMgr::GetPlayerGUIDByName(std::string name) const
 	CharacterDatabase.escape_string(name);
 
 	// Player name safe to sending to DB (checked at login) and this function using
-	QueryResult *result = CharacterDatabase.PQuery("SELECT guid FROM characters WHERE name = '%s'", name.c_str());
+	QueryResult *result = CharacterDatabase.PQuery("SELECT guid FROM characters WHERE name COLLATE utf8_bin = '%s'", name.c_str());
 	if(result)
 	{
 		guid = MAKE_GUID((*result)[0].GetUInt32(), HIGHGUID_PLAYER);

@@ -45,6 +45,7 @@ ChatCommand * ChatHandler::getCommandTable()
 	{
 		{ "area", SEC_MODERATOR, &ChatHandler::HandleLookupAreaCommand, "", NULL },
 		{ "npc", SEC_MODERATOR, &ChatHandler::HandleLookupNpcCommand, "", NULL },
+		{ "item", SEC_MODERATOR, &ChatHandler::HandleLookupItemCommand, "", NULL},
 	};
 
 	static ChatCommand npcCommandTable[] =
@@ -58,6 +59,7 @@ ChatCommand * ChatHandler::getCommandTable()
 	static ChatCommand petCommandTable[] =
 	{
 		{ "add", SEC_GAMEMASTER, &ChatHandler::HandlePetAddCommand, "", NULL },
+		{ "release", SEC_GAMEMASTER, &ChatHandler::HandlePetReleaseCommand, "", NULL },
 	};
 
 	static ChatCommand itemCommandTable[] =

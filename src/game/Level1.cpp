@@ -41,18 +41,18 @@ bool ChatHandler::HandleLookupNpcCommand(const char* args)
 	if( !args || !m_session )
 		return false;
 
-	// .querynpc <entry>
-	sLog.outDebug("COMMAND: HandleQueryNpcCommand");
+	// .lookup npc <name>
+	sLog.outDebug("COMMAND: HandleLookupNpcCommand");
 
 	std::string npcname = args;
 	WorldDatabase.escape_string(npcname);
 
-	QueryResult *result = WorldDatabase.PQuery("SELECT entry, modelid, name, level, element, npcflag FROM creature_template where name "_LIKE_" '""%%%s%%%""' ORDER BY entry", npcname.c_str());
+	QueryResult *result = WorldDatabase.PQuery("SELECT entry, modelid, name, level, element, npcflag FROM creature_template where name "_LIKE_" '""%%%s%%%""' ORDER BY name, entry", npcname.c_str());
 
 	if( !result )
 	{
-	PSendGmMessage("Npc '%s' not found.", npcname.c_str());
-	return true;
+		PSendGmMessage("Npc '%s' not found.", npcname.c_str());
+		return true;
 	}
 
 	do
@@ -69,6 +69,42 @@ bool ChatHandler::HandleLookupNpcCommand(const char* args)
 
 	delete result;
 	return true;
+}
+
+bool ChatHandler::HandleLookupItemCommand(const char* args)
+{
+	if( !args || !m_session )
+		return false;
+
+	// .lookup item <name>
+	sLog.outDebug("COMMAND: HandleLookupItemCommand");
+
+	std::string itemname = args;
+	WorldDatabase.escape_string(itemname);
+
+	QueryResult *result = WorldDatabase.PQuery("SELECT modelid, name, type, level, attribute, slot FROM item_template WHERE name "_LIKE_" '""%%%s%%%""' ORDER BY name, entry", itemname.c_str());
+
+	if( !result )
+	{
+		PSendGmMessage("Item '%s' not found.", itemname.c_str());
+		return true;
+	}
+
+	do
+	{
+		Field *f = result->Fetch();
+		uint16 modelid           = f[0].GetUInt16();
+		std::string name         = f[1].GetCppString();
+		std::string type         = f[2].GetCppString();
+		uint8 level              = f[3].GetUInt8();
+		std::string attribute    = f[4].GetCppString();
+		std::string slot         = f[5].GetCppString();
+		PSendGmMessage("Item lvl %3u, itemid %5u, attr [%s], name '%s'", level, modelid, (!attribute.empty() ? attribute.c_str() : "-"), name.c_str());
+	} while (result->NextRow());
+
+	delete result;
+	return true;
+		
 }
 
 bool ChatHandler::HandleModifyGoldCommand(const char* args)

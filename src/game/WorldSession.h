@@ -100,6 +100,7 @@ class LEGACY_DLL_SPEC WorldSession
 
 		void HandlePlayerAttackOpcode(WorldPacket& recvPacket);
 		void HandlePetCommandOpcodes(WorldPacket& recvPacket);
+		void HandlePetReleaseOpcode(WorldPacket& recvPacket);
 
 		void HandleGroupOpcodes(WorldPacket& recvPacket);
 

@@ -41,8 +41,15 @@ enum PetSlots
 	PET_SLOT_2           = 1,
 	PET_SLOT_3           = 2,
 	PET_SLOT_4           = 3,
-	PET_SLOT_5           = 4,
-	PET_SLOT_END         = 5
+	PET_SLOT_END         = 4,
+
+	PET_SLOT_BANK_START  = 4,
+	PET_SLOT_BANK_1      = 4,
+	PET_SLOT_BANK_2      = 5,
+	PET_SLOT_BANK_3      = 6,
+	PET_SLOT_BANK_4      = 7,
+	PET_SLOT_BANK_5      = 8,
+	PET_SLOT_BANK_END    = 9
 };
 
 #define MAX_PET_SLOT  PET_SLOT_END // max can carry 4 pet slot, 0 = empty slot do not use
@@ -326,6 +333,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 		uint8 FindSummonSlot( uint8 slot, bool swap ) const;
 		Pet* SummonPet( uint8 pos, Pet* pet );
 		void VisualizePet( uint8 pos, Pet* pet);
+		void ReleasePet( uint8 slot );
 
 		/*********************************************************/
 		/***                 STORAGE SYSTEM                    ***/
@@ -484,6 +492,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 		void _updatePet(uint8 slot, uint8 flagStatus, uint8 modifier, uint32 value);
 
 		void UpdateInventory();
+		void UpdateInventoryForItem(uint16 modelid, uint8 count);
 		void UpdateCurrentEquip();
 		void UpdateCurrentGold();
 		void UpdatePetCarried();
