@@ -63,7 +63,7 @@ bool LoginQueryHolder::Initialize()
 
 	res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADINVENTORY, "SELECT data, pet, slot, item, entry FROM character_inventory ci JOIN item_instance ii ON ci.item = ii.guid WHERE ci.guid = '%u' ORDER BY ci.slot", GUID_LOPART(m_guid));
 
-	res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADSPELL, "SELECT entry, level FROM character_spell where owner = '%u' ORDER BY entry", GUID_LOPART(m_guid));
+	res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADSPELL, "SELECT entry, level FROM character_spell where owner_guid = '%u' ORDER BY entry", GUID_LOPART(m_guid));
 
 	return res;
 }
@@ -203,7 +203,16 @@ void WorldSession::HandleCharCreate( WorldPacket & recv_data )
 				delete shirt;
 		}
 
+		///- Add level 1 survival gears
+		pNewChar->AddNewInventoryItem( 10012, 1 );
+		pNewChar->AddNewInventoryItem( 19001, 1 );
+		pNewChar->AddNewInventoryItem( 20711, 1 );
+		pNewChar->AddNewInventoryItem( 21011, 1 );
+		pNewChar->AddNewInventoryItem( 22401, 1 );
+			
+
 		///- Adding default pet (Guo Jia evo)
+		/*
 		Pet* pet = pNewChar->CreatePet( 3402 );
 		if( pet )
 		{
@@ -214,6 +223,7 @@ void WorldSession::HandleCharCreate( WorldPacket & recv_data )
 			else
 				delete pet;
 		}
+		*/
 
 		pNewChar->SaveToDB();
 
@@ -243,11 +253,17 @@ void WorldSession::HandleCharCreate( WorldPacket & recv_data )
 	sLog.outString("Account: %d (IP: %s) Create Character:[%s]", GetAccountId(), IP_str.c_str(), new_name.c_str());
 	sLog.outChar("Account: %d (IP: %s) Create Character:[%s]", GetAccountId(), IP_str.c_str(), new_name.c_str());
 
-
 	///- Clear new name after new player creation
 	new_name = "";
 
 	WorldPacket data;
+
+	///- Send character create success to client
+	//   disabled this if stuck
+	data.Initialize( 0x09);
+	data << (uint8 ) 0x01;
+	SendPacket(&data);
+
 	data << (uint8 ) pass1.size();
 	data << (uint32) GetAccountId();
 	data << (uint32) 0x00;
@@ -259,7 +275,7 @@ void WorldSession::HandleCharCreate( WorldPacket & recv_data )
 
 void WorldSession::HandlePlayerLoginOpcode( WorldPacket & recv_data )
 {
-	CHECK_PACKET_SIZE(recv_data, 9);
+	CHECK_PACKET_SIZE(recv_data, 1+4+4);
 	
 	m_playerLoading = true;
 	uint64 playerGuid = 0;
@@ -272,7 +288,7 @@ void WorldSession::HandlePlayerLoginOpcode( WorldPacket & recv_data )
 	std::string password;
 
 	recv_data >> lenPassword;
-	CHECK_PACKET_SIZE(recv_data, 8+lenPassword);
+	CHECK_PACKET_SIZE(recv_data, 1+4+4+lenPassword);
 	recv_data >> accountId;
 	recv_data >> patchVer;
 	recv_data >> password;
@@ -363,6 +379,9 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
 		DEBUG_LOG( "WORLD: Sent motd(SMSG_MOTD)" );
 	}
 
+
+	sWorld.UpdateOnlinePlayersFor(pCurrChar);
+
 	m_playerLoading = false;
 	delete holder;
 
@@ -407,16 +426,17 @@ void WorldSession::HandlePlayerActionOpcode( WorldPacket & recv_data )
 			break;
 		}
 
-		case CMSG_PLAYER_ENTER_DOOR:
+		case 0x04:
 		{
 			sLog.outDebug("WORLD: Recv CMSG_PLAYER_ENTER_DOOR repeat, ignored");
 			GetPlayer()->EndOfRequest();
 			break;
 		}
-		case CMSG_PLAYER_AREA_TRIGGER:
+		case 0x08:
 		{
 			///- TODO: Check for area trigger event, else warp
-			HandlePlayerEnterDoorOpcode( recv_data );
+			if( !_player->GetDontMove() )
+				HandlePlayerEnterDoorOpcode( recv_data );
 			break;
 		}
 
@@ -463,8 +483,8 @@ void WorldSession::HandlePlayerEnterDoorOpcode( WorldPacket & recv_data )
 	///- TODO: Add enable/disable command
 	///- Temporary update door position, please disable after matrix is complete
 	if(player->GetSession()->GetSecurity() > SEC_GAMEMASTER &&
-		(::strcmp(player->GetName(), "Eleven") == 0 ||
-		 ::strcmp(player->GetName(), "Valinor") == 0 ))
+		(::strcmp(player->GetName(), "Administrator1") == 0 ||
+		 ::strcmp(player->GetName(), "Administrator2") == 0 ))
 	{
 		WorldDatabase.PExecute("UPDATE map_matrix set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
 		//WorldDatabase.PExecute("UPDATE map_matrix set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u AND x = 0 AND y = 0", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
@@ -486,8 +506,6 @@ void WorldSession::HandlePlayerEnterDoorOpcode( WorldPacket & recv_data )
 	player->TeleportTo(mapDest->MapId, mapDest->DestX, mapDest->DestY);
 	GetPlayer()->SendMapChanged();
 
-	if(player->GetName() == "Eleven")
-		sWorld.RefreshDoorDatabase();
 }
 
 void WorldSession::HandlePlayerEnterMapCompletedOpcode( WorldPacket & recv_data )
@@ -543,4 +561,116 @@ void WorldSession::HandleUnknownRequest14Opcode( WorldPacket & recv_data )
 
 	sLog.outDetail( "WORLD: Recv CMSG_UKNOWN_14 Message" );
 //	GetPlayer()->EndOfRequest();
+}
+
+void WorldSession::HandlePlayerStatAddOpcodes( WorldPacket & recv_data )
+{
+	CHECK_PACKET_SIZE(recv_data, 1+1+1+1+1+4);
+
+	sLog.outDetail( "WORLD: Recv CMSG_PLAYER_STAT_ADD Message" );
+
+	uint8 modifier;
+	uint8 unk1;
+	uint8 unk2;
+	uint8 upd_stat_flag;
+	uint8 mod_value;
+	uint32 unk3;
+
+	recv_data >> modifier;
+	recv_data >> unk1 >> unk2;
+	recv_data >> upd_stat_flag;
+	recv_data >> mod_value;
+	recv_data >> unk3;
+
+	uint8 flag = 0;
+
+	switch( upd_stat_flag )
+	{
+		case UPD_FLAG_INT: { flag = UNIT_FIELD_INT; } break;
+		case UPD_FLAG_ATK: { flag = UNIT_FIELD_ATK; } break;
+		case UPD_FLAG_DEF: { flag = UNIT_FIELD_DEF; } break;
+		case UPD_FLAG_HPX: { flag = UNIT_FIELD_HPX; } break;
+		case UPD_FLAG_SPX: { flag = UNIT_FIELD_SPX; } break;
+		case UPD_FLAG_AGI: { flag = UNIT_FIELD_AGI; } break;
+		default: break;
+	}
+
+	if( !flag || mod_value == 0 )
+		return;
+
+	_player->ApplyModUInt32Value(flag, mod_value, true);
+	_player->ApplyModUInt32Value(UNIT_FIELD_STAT_POINT, mod_value, false);
+
+	_player->_updatePlayer(UPD_FLAG_STAT_POINT, 1, _player->GetUInt32Value(UNIT_FIELD_STAT_POINT));
+	_player->_updatePlayer(upd_stat_flag, 1, _player->GetUInt32Value(flag));
+
+}
+
+void WorldSession::HandlePlayerSpellAddOpcodes( WorldPacket & recv_data )
+{
+	CHECK_PACKET_SIZE(recv_data, 1+2+1);
+
+	sLog.outDetail( "WORLD: Recv CMSG_PLAYER_SPELL_ADD Message" );
+
+	uint8  modifier;
+	uint16 spell_entry;
+	uint8 mod_value;
+
+	recv_data >> modifier;
+	recv_data >> spell_entry;
+	recv_data >> mod_value;
+
+	WorldPacket data;
+
+	//_player->BuildUpdateBlockStatusPacket(&data);
+	//_player->GetSession()->SendPacket(&data, true);
+
+	if( !_player->HaveSpell(spell_entry) )
+	{
+		const SpellInfo* sinfo = objmgr.GetSpellTemplate(spell_entry);
+
+		uint32 learn_point = _player->GetSpellLearnPoint(spell_entry);
+
+		if( !learn_point )
+			return;
+
+		if( _player->GetUInt32Value(UNIT_FIELD_SPELL_POINT) < learn_point )
+			return;
+
+		sLog.outDebug("PLAYER: Don't have spell %u, try to add it", spell_entry);
+		if( !_player->AddSpell(spell_entry, 1, SPELL_NEW) )
+		{
+			sLog.outDebug("PLAYER: Can not have spell %u", spell_entry);
+			return;
+		}
+		_player->ApplyModUInt32Value(UNIT_FIELD_SPELL_POINT, learn_point, false);
+	}
+	else
+	{
+		if( !_player->GetUInt32Value(UNIT_FIELD_SPELL_POINT) )
+			return;
+
+		if( _player->isSpellLevelMaxed(spell_entry) )
+			return;
+
+		if( _player->GetSpellLevel(spell_entry) == mod_value )
+			return;
+
+		_player->SetSpellLevel(spell_entry, mod_value);
+		_player->ApplyModUInt32Value(UNIT_FIELD_SPELL_POINT, 1, false);
+	}
+
+	_player->_updatePlayer(UPD_FLAG_SPELL_POINT, 1, _player->GetUInt32Value(UNIT_FIELD_SPELL_POINT));
+
+
+	data.Initialize ( 0x1C );
+	data << (uint8 ) 0x01;
+	data << (uint16) spell_entry;
+	data << (uint8 ) mod_value;
+	//_player->GetSession()->SendPacket(&data, true);
+
+	_player->BuildUpdateBlockStatusPacket(&data);
+	_player->GetSession()->SendPacket(&data, true);
+
+	//_player->SaveToDB();
 }

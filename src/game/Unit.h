@@ -164,13 +164,16 @@ class LEGACY_DLL_SPEC Unit : public WorldObject
 		uint16 GetDefensePower();
 
 		bool CanHaveSpell(Spell* spell);
-		bool AddSpell(uint16 entry, uint8 level);
+		bool AddSpell(uint16 entry, uint8 level, SpellUpdateState state);
 		void SetSpellLevel(uint16 entry, uint8 level);
+		void AddSpellLevel(uint16 entry, uint8 value);
 		bool HaveSpell(uint16 entry);
+		bool isSpellLevelMaxed(uint16 entry);
+		uint32 GetSpellLearnPoint(uint16 entry);
 		Spell* GetSpell(uint16 entry) { return FindSpell(entry); }
 		Spell* FindSpell(uint16 entry);
 		Spell* GetSpellByPos(uint8 pos);
-		uint8 GetSpellLevel(const SpellInfo* sinfo);
+		uint8 GetSpellLevel(uint16 entry);
 		uint8 GetSpellLevelByPos(uint8 pos);
 
 		/*******************************************************************/

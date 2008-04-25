@@ -39,6 +39,14 @@ enum ElementTypes
 	ELEMENT_NONE                     = 5,
 };
 
+enum HeraldItemId
+{
+	ITEM_ROCKY_GOLEM                 = 23086,
+	ITEM_WATER_GODDES,
+	ITEM_PHOENIX,
+	ITEM_GREEN_DRAGON
+};
+
 #define MAX_ELEMENT_ID                 6
 
 enum MapTypes

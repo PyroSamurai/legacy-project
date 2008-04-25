@@ -59,13 +59,13 @@ class BattleAction
 		void SetTarget(uint8 col, uint8 row) { _tgtCol = col; _tgtRow = row; }
 		void SetTargetCol(uint8 col) { _tgtCol = col; }
 		void SetTargetRow(uint8 row) { _tgtRow = row; }
-		void SetAgility(uint16 agi) { _agility = agi; }
+		void SetAgility(int32 agi) { _agility = agi; }
 		uint8  GetAttackerCol() const { return _atkCol; }
 		uint8  GetAttackerRow() const { return _atkRow; }
 		uint8  GetTargetCol() const { return _tgtCol; }
 		uint8  GetTargetRow() const { return _tgtRow; }
 		uint16 GetSkill() const { return _skill; }
-		uint16 GetAgility() const { return _agility; }
+		int32  GetAgility() const { return _agility; }
 
 		BattleAction& operator=(const BattleAction &obj)
 		{
@@ -90,7 +90,7 @@ class BattleAction
 		uint16 _skill;
 		uint8  _tgtCol;
 		uint8  _tgtRow;
-		uint16 _agility;
+		int32  _agility;
 };
 
 typedef std::list<BattleAction*> UnitActionTurn;

@@ -67,6 +67,12 @@ ChatCommand * ChatHandler::getCommandTable()
 		{ "add", SEC_GAMEMASTER, &ChatHandler::HandleItemAddCommand, "", NULL },
 	};
 
+	static ChatCommand vendorCommandTable[] =
+	{
+		{ "add", SEC_GAMEMASTER, &ChatHandler::HandleVendorAddItemCommand, "", NULL },
+		{ "del", SEC_GAMEMASTER, &ChatHandler::HandleVendorDelItemCommand, "", NULL },
+	};
+
 	static ChatCommand commandTable[] =
 	{
 		{ "debug", SEC_MODERATOR, NULL, "", debugCommandTable },
@@ -74,6 +80,7 @@ ChatCommand * ChatHandler::getCommandTable()
 		{ "npc", SEC_GAMEMASTER, NULL, "", npcCommandTable },
 		{ "item", SEC_ADMINISTRATOR, NULL, "", itemCommandTable },
 		{ "pet", SEC_GAMEMASTER, NULL, "", petCommandTable },
+		{ "vendor", SEC_GAMEMASTER, NULL, "", vendorCommandTable },
 		{ "warp", SEC_GAMEMASTER, &ChatHandler::HandleWarpCommand, "", NULL },
 		{ "unstuck", SEC_PLAYER, &ChatHandler::HandleUnstuckCommand, "", NULL },
 		{ "changelevel", SEC_ADMINISTRATOR, &ChatHandler::HandleChangeLevelCommand, "", NULL },

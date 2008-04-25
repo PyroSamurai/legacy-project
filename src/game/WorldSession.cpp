@@ -105,6 +105,15 @@ void WorldSession::FillOpcodeHandlerHashTable()
 
 	objmgr.opcodeTable[ CMSG_GROUP_COMMAND ] = OpcodeHandler(STATUS_LOGGEDIN,
 			&WorldSession::HandleGroupOpcodes );
+
+	objmgr.opcodeTable[ CMSG_PLAYER_STAT_ADD ] = OpcodeHandler(STATUS_LOGGEDIN,
+			&WorldSession::HandlePlayerStatAddOpcodes );
+
+	objmgr.opcodeTable[ CMSG_PLAYER_SPELL_ADD ] = OpcodeHandler(STATUS_LOGGEDIN,
+			&WorldSession::HandlePlayerSpellAddOpcodes );
+
+	objmgr.opcodeTable[ CMSG_PLAYER_TRANSAC_ITEM ] = OpcodeHandler(STATUS_LOGGEDIN,
+			&WorldSession::HandlePlayerTransacItemOpcodes );
 }
 
 void WorldSession::SizeError(WorldPacket const& packet, uint32 size) const

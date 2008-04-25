@@ -365,3 +365,28 @@ void World::SetPlayerLimit(int32 limit, bool needUpdate)
 	//	loginDatabase.PExecute("UPDATE realmlist SET allowedSecurityLevel = '%u' WHERE id = '%d'", uint8(GetPlayerSecurityLimit()),realmID);
 
 }
+
+void World::UpdateOnlinePlayersFor(Player* player)
+{
+	HashMapHolder<Player>::MapType& playerMap = HashMapHolder<Player>::GetContainer();
+	for(HashMapHolder<Player>::MapType::iterator iter = playerMap.begin(); iter != playerMap.end(); ++iter)
+	{
+		if(iter->second->IsInWorld() && player->IsInWorld())
+		{
+			// skip if my self, i know i'm online now
+			if( iter->second == player )
+				continue;
+
+			// skip if same map, already handled by grid notifier
+			if( iter->second->GetMapId() == player->GetMapId() )
+				continue;
+
+			WorldPacket data;
+			player->BuildUpdateBlockVisibilityForOthersPacket(&data);
+			iter->second->GetSession()->SendPacket(&data);
+
+			iter->second->BuildUpdateBlockVisibilityForOthersPacket(&data);
+			player->GetSession()->SendPacket(&data);
+		}
+	}
+}

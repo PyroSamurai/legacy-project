@@ -41,8 +41,8 @@ bool compare_agility(BattleAction* first, BattleAction* second)
 ///- comparing target position for sorting ascending
 bool compare_target_position(BattleAction* first, BattleAction* second)
 {
-	if( (first->GetTargetCol() < second->GetTargetCol()) ||
-		(first->GetTargetRow() < second->GetTargetRow()) )
+	if( (first->GetTargetCol() > second->GetTargetCol()) ||
+		(first->GetTargetRow() > second->GetTargetRow()) )
 		return true;
 	else
 		return false;
@@ -729,7 +729,7 @@ void BattleSystem::AddBattleAction(BattleAction* action)
 //	if( !pTarget || pTarget->isDead() )
 //		action = RedirectTarget(action);
 
-	uint16 agility = pAttacker->GetUInt32Value(UNIT_FIELD_AGI);
+	int32 agility = pAttacker->GetUInt32Value(UNIT_FIELD_AGI) + pAttacker->GetInt32Value(UNIT_FIELD_AGI_MOD);
 
 	///- TODO:
 	// Check Golem status buf
@@ -738,7 +738,7 @@ void BattleSystem::AddBattleAction(BattleAction* action)
 
 	action->SetAgility(agility);
 
-	sLog.outString("COMBAT: >> Push Back Unit '%s' Agility: %u", pAttacker->GetName(), action->GetAgility());
+	sLog.outString("COMBAT: >> Push Back Unit '%s' Agility: %d", pAttacker->GetName(), action->GetAgility());
 	//BattleAction *act = new BattleAction(action);
 	m_unitTurn.push_back(action);
 }
@@ -813,7 +813,7 @@ void BattleSystem::BuildActions()
 
 	for(UnitActionTurn::const_iterator itr = m_unitTurn.begin(); itr != m_unitTurn.end(); ++itr)
 	{
-		sLog.outString("COMBAT: == Action Turn Agility: %u", (*itr)->GetAgility());
+		sLog.outString("COMBAT: == Action Turn Agility: %d", (*itr)->GetAgility());
 	}
 
 	uint8 i_action = 0;
@@ -1547,7 +1547,7 @@ UnitActionTurn BattleSystem::ParseSpell(BattleAction* action, uint8 hit, bool li
 	} // end switch
 
 	///- sort it before sending back, for better animation
-	hitInfo.sort(compare_target_position);
+	//hitInfo.sort(compare_target_position);
 
 	return hitInfo;
 }
@@ -1594,7 +1594,7 @@ int32 BattleSystem::GetDamage(Unit* attacker, Unit* victim, const SpellInfo* sin
 	uint16 atk_pow = attacker->GetAttackPower();
 	uint16 mag_pow = attacker->GetMagicPower();
 	uint16 def_pow = victim->GetDefensePower();
-	uint8  spell_level = attacker->GetSpellLevel(sinfo);
+	uint8  spell_level = attacker->GetSpellLevel(sinfo->Entry);
 
 	switch( sinfo->Type )
 	{
@@ -1622,9 +1622,16 @@ int32 BattleSystem::GetDamage(Unit* attacker, Unit* victim, const SpellInfo* sin
 	}
 
 	///- Add Level bonus to produce pure damage school
-	dmg_school = dmg_school + (diffLevel * (dmg_school * 0.25));
+	dmg_school = dmg_school + (diffLevel * 2);
 
-	float dmg = dmg_school * dmg_multiplier * (spell_level * 0.1);
+	sLog.outDebug("DAMAGE: Pure Damage School is %.2f", dmg_school);
+
+	//float dmg = dmg_school + (dmg_school * spell_level * 0.05);
+	float dmg = dmg_school + (dmg_school * spell_level * (sinfo->LearnPoint * 0.1));
+	dmg /= sinfo->hit;
+	dmg *= dmg_multiplier;
+
+	sLog.outDebug("DAMAGE: Damage rate per hit is %.2f", dmg);
 
 	///- Linked attack bonus damage 25%
 	if( linked )

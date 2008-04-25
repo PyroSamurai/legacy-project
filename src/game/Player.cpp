@@ -142,7 +142,7 @@ Player::~Player ()
 		data.Initialize( 0x01 );
 		data << (uint8 ) 0x01;
 		data << GetAccountId();
-		SendMessageToSet(&data, false);
+		SendMessageToAll(&data, false);
 	}
 }
 
@@ -279,7 +279,7 @@ bool Player::Create( uint32 accountId, std::string new_name, WorldPacket& data, 
 	SetUInt32Value(UNIT_FIELD_SPELL_POINT, 0);
 	SetUInt32Value(UNIT_FIELD_STAT_POINT, 0);
 
-	SetUInt32Value(PLAYER_GOLD_INHAND, 100000);
+	SetUInt32Value(PLAYER_GOLD_INHAND, 0);
 	SetUInt32Value(PLAYER_GOLD_INBANK, 0);
 	return true;
 }
@@ -328,6 +328,22 @@ void Player::SendMessageToSet(WorldPacket *data, bool self)
 {
 //	sLog.outString("Player::SendMessageToSet");
 	MapManager::Instance().GetMap(GetMapId(), this)->MessageBroadcast(this, data, self);
+}
+
+void Player::SendMessageToAll(WorldPacket *data, bool self)
+{
+	HashMapHolder<Player>::MapType& playerMap = HashMapHolder<Player>::GetContainer();
+	for(HashMapHolder<Player>::MapType::iterator iter = playerMap.begin(); iter != playerMap.end(); ++iter)
+	{
+		if(iter->second->IsInWorld())
+		{
+			if( iter->second == this && !self )
+				continue;
+
+			iter->second->GetSession()->SendPacket(data);
+			sLog.outDebug("Object '%s' is in world", iter->second->GetName());
+		}
+	}
 }
 
 /********************************************************************/
@@ -421,6 +437,7 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder)
 	sLog.outDebug(" - HP & SP : %u/%u %u/%u", GetUInt32Value(UNIT_FIELD_HP), GetUInt32Value(UNIT_FIELD_HP_MAX), GetUInt32Value(UNIT_FIELD_SP), GetUInt32Value(UNIT_FIELD_SP_MAX));
 	sLog.outDebug(" - Map Id  : %u [%u,%u]", GetMapId(), GetPositionX(), GetPositionY());
 
+	DumpPlayer("spell");
 	DumpPlayer("equip");
 	DumpPlayer("pet");
 	return true;
@@ -611,6 +628,11 @@ void Player::_LoadPets(QueryResult* result)
 
 void Player::_LoadSpells(QueryResult* result)
 {
+
+	for (SpellMap::iterator itr = m_spells.begin(); itr != m_spells.end(); ++itr)
+		delete itr->second;
+	m_spells.clear();
+
 	bool delete_result = false;
 	if( !result )
 	{
@@ -628,13 +650,15 @@ void Player::_LoadSpells(QueryResult* result)
 		uint16 entry = f[0].GetUInt16();
 		uint8  level = f[1].GetUInt8();
 
-		if( !AddSpell(entry, level) )
+		if( !AddSpell(entry, level, SPELL_UNCHANGED) )
 		{
 			sLog.outError("SPELL: Player %s has an invalid spell (id: #%u), deleted.", GetName(), entry );
 			continue;
 		}
 
 		count++;
+
+		sLog.outDebug("SPELL: Player %s add spell id: #%u", GetName(), entry);
 
 		if(count > MAX_PLAYER_SPELL)
 			break;
@@ -1022,6 +1046,20 @@ void Player::_SaveInventory()
 
 void Player::_SaveSpells()
 {
+	for(SpellMap::const_iterator itr = m_spells.begin(), next = m_spells.begin(); itr != m_spells.end(); itr = next)
+	{
+		next++;
+		if( itr->second->GetState() == SPELL_REMOVED || itr->second->GetState() == SPELL_CHANGED )
+			CharacterDatabase.PExecute("DELETE FROM character_spell WHERE owner_guid = %u AND entry = %u", GetGUIDLow(), itr->first);
+
+		if( itr->second->GetState() == SPELL_NEW || itr->second->GetState() == SPELL_CHANGED )
+			CharacterDatabase.PExecute("INSERT INTO character_spell (owner_guid, entry, level) VALUES (%u, %u, %u)", GetGUIDLow(), itr->first, itr->second->GetLevel());
+
+		if( itr->second->GetState() == SPELL_REMOVED)
+			_removeSpell(itr->first);
+		else
+			itr->second->SetState(SPELL_UNCHANGED);
+	}
 }
 
 void Player::UpdateBattlePet()
@@ -1215,6 +1253,7 @@ void Player::SendInitialPacketsBeforeAddToMap()
 {
 	WorldPacket data;
 
+	UpdatePlayer();
 	BuildUpdateBlockVisibilityPacket(&data);
 	GetSession()->SendPacket(&data);
 
@@ -1234,7 +1273,7 @@ void Player::SendInitialPacketsBeforeAddToMap()
 
 void Player::SendInitialPacketsAfterAddToMap()
 {
-	UpdatePlayer();
+	//UpdatePlayer();
 	UpdateCurrentGold();
 }
 
@@ -1348,12 +1387,12 @@ void Player::BuildUpdateBlockStatusPacket(WorldPacket *data)
 	*data << (uint16) GetUInt32Value(UNIT_FIELD_SP_MAX); //m_sp_max;
 	*data << (uint16) 0;
 
-	*data << (uint16) GetInt32Value(UNIT_FIELD_ATK_MOD); //m_atk_mod;
-	*data << (uint16) GetInt32Value(UNIT_FIELD_DEF_MOD); //m_def_mod;
-	*data << (uint16) GetInt32Value(UNIT_FIELD_INT_MOD); //m_int_mod;
-	*data << (uint16) GetInt32Value(UNIT_FIELD_AGI_MOD); //m_agi_mod;
-	*data << (uint16) GetInt32Value(UNIT_FIELD_HPX_MOD); //m_hpx_mod;
-	*data << (uint16) GetInt32Value(UNIT_FIELD_SPX_MOD); //m_spx_mod;
+	*data << (uint32) GetInt32Value(UNIT_FIELD_ATK_MOD); //m_atk_mod;
+	*data << (uint32) GetInt32Value(UNIT_FIELD_DEF_MOD); //m_def_mod;
+	*data << (uint32) GetInt32Value(UNIT_FIELD_INT_MOD); //m_int_mod;
+	*data << (uint32) GetInt32Value(UNIT_FIELD_AGI_MOD); //m_agi_mod;
+	*data << (uint32) GetInt32Value(UNIT_FIELD_HPX_MOD); //m_hpx_mod;
+	*data << (uint32) GetInt32Value(UNIT_FIELD_SPX_MOD); //m_spx_mod;
 
 	*data << (uint16) GetUInt32Value(UNIT_MORAL_DONGWU); //m_unk1; // Dong Wu
 	*data << (uint16) GetUInt32Value(UNIT_MORAL_2); //m_unk2;
@@ -1394,69 +1433,52 @@ void Player::BuildUpdateBlockStatusPacket(WorldPacket *data)
 	}
 }
 
+///- Update Player main attribute
+//   called in login and before/after engaging
 void Player::UpdatePlayer()
 {
-
-	///- TODO: Update only when changes
-	//_updatePlayer( 0x1B, 1, m_stat_int );
-	//_updatePlayer( 0x1C, 1, m_stat_atk );
-	//_updatePlayer( 0x1D, 1, m_stat_def );
-	//_updatePlayer( 0x1E, 1, m_stat_agi );
-	//_updatePlayer( 0x1F, 1, m_stat_hpx );
-	//_updatePlayer( 0x20, 1, m_stat_spx );
-
-	//_updatePlayer( 0x23, 1, m_level );
-	//_updatePlayer( 0x24, 1, m_xp_gain );
-	//_updatePlayer( 0x25, 1, m_skill );
-	//_updatePlayer( 0x26, 1, m_stat );
-
-	//_updatePlayer( 0x40, 1, 100 ); // loyalty
-
 	int32 val = 0;
 	uint8 mod = 0;
 
-	///- This always updated before/after engaging
-
-	_updatePlayer( 0x19, 1, GetUInt32Value(UNIT_FIELD_HP)); //m_hp );
-	_updatePlayer( 0x1A, 1, GetUInt32Value(UNIT_FIELD_SP)); //m_sp );
+	_updatePlayer( 0x19, 1, GetUInt32Value(UNIT_FIELD_HP));
+	_updatePlayer( 0x1A, 1, GetUInt32Value(UNIT_FIELD_SP));
 
 	val = GetInt32Value(UNIT_FIELD_HPX_MOD);
 	mod = val == 0 ? 0 : (val > 0 ? 1 : 2);
 	_updatePlayer( UPD_FLAG_HPX_MOD, mod, abs(val) );
-	//_updatePlayer( 0xCF, 1, m_hpx_mod );
 	
 	val = GetInt32Value(UNIT_FIELD_SPX_MOD);
 	mod = val == 0 ? 0 : (val > 0 ? 1 : 2);
 	_updatePlayer( UPD_FLAG_SPX_MOD, mod, abs(val) );
-	//_updatePlayer( 0xD0, 1, m_spx_mod );
 
 	val = GetInt32Value(UNIT_FIELD_ATK_MOD);
 	mod = val == 0 ? 0 : (val > 0 ? 1 : 2);
 	_updatePlayer( UPD_FLAG_ATK_MOD, mod, abs(val) );
-	//_updatePlayer( 0xD2, 1, m_atk_mod );
 
 	val = GetInt32Value(UNIT_FIELD_DEF_MOD);
 	mod = val == 0 ? 0 : (val > 0 ? 1 : 2);
 	_updatePlayer( UPD_FLAG_DEF_MOD, mod, abs(val) );
-	//_updatePlayer( 0xD3, 1, m_def_mod );
 
 	val = GetInt32Value(UNIT_FIELD_INT_MOD);
 	mod = val == 0 ? 0 : (val > 0 ? 1 : 2);
 	_updatePlayer( UPD_FLAG_INT_MOD, mod, abs(val) );
-	//_updatePlayer( 0xD4, 1, m_int_mod );
 
 	val = GetInt32Value(UNIT_FIELD_AGI_MOD);
 	mod = val == 0 ? 0 : (val > 0 ? 1 : 2);
 	_updatePlayer( UPD_FLAG_AGI_MOD, mod, abs(val) );
-	//_updatePlayer( 0xD6, 1, m_agi_mod );
+
+	///- TODO: Find out what 0xDA and 0xDB Byte Flag
+	val = 0; mod = 1;
+	_updatePlayer( 0xDA, mod, val ); // unknown
+	_updatePlayer( 0xDB, mod, val ); // unknown
 }
 
 void Player::UpdatePlayerLevel()
 {
-	_updatePlayer( 0x23, 1, getLevel() );
-	//_updatePlayer( 0x24, 1, GetExpGained() );
-	_updatePlayer( 0x25, 1, GetUInt32Value(UNIT_FIELD_SPELL_POINT));
-	_updatePlayer( 0x26, 1, GetUInt32Value(UNIT_FIELD_STAT_POINT));
+	_updatePlayer( UPD_FLAG_LEVEL, 1, getLevel() );
+	//_updatePlayer( UPD_FLAG_XP, 1, GetExpGained() );
+	_updatePlayer( UPD_FLAG_SPELL_POINT, 1, GetUInt32Value(UNIT_FIELD_SPELL_POINT));
+	_updatePlayer( UPD_FLAG_STAT_POINT, 1, GetUInt32Value(UNIT_FIELD_STAT_POINT));
 	resetLevelUp();
 }
 
@@ -1762,7 +1784,8 @@ void Player::TeleportTo(uint16 mapid, uint16 pos_x, uint16 pos_y)
 
 	WorldPacket data;
 
-	SetDontMove(true);
+	if( isTeamLeader() )
+		SetDontMove(true);
 
 	Map* map = MapManager::Instance().GetMap(GetMapId(), this);
 	map->Remove(this, false);
@@ -1774,6 +1797,11 @@ void Player::TeleportTo(uint16 mapid, uint16 pos_x, uint16 pos_y)
 	CellPair p = LeGACY::ComputeCellPair(GetPositionX(), GetPositionY());
 	Cell cell(p);
 	MapManager::Instance().GetMap(GetMapId(), this)->EnsureGridLoadedForPlayer(cell, this, true);
+
+	for(TeamList::const_iterator itr = m_team.begin(); itr != m_team.end(); ++itr)
+	{
+		(*itr)->TeleportTo(mapid, pos_x, pos_y);
+	}
 }
 	
 void Player::SendMapChanged()
@@ -1797,7 +1825,13 @@ void Player::SendMapChanged()
 
 	UpdateMap2Npc();
 
-	SetDontMove(false);
+	for(TeamList::const_iterator itr = m_team.begin(); itr != m_team.end(); ++itr)
+	{
+		(*itr)->SendMapChanged();
+	}
+
+	if( isTeamLeader() )
+		SetDontMove(false);
 }
 
 void Player::UpdateRelocationToSet()
@@ -1811,6 +1845,11 @@ void Player::UpdateRelocationToSet()
 	data << (uint8) 0x05;
 	data << GetPositionX() << GetPositionY();
 	SendMessageToSet(&data, false);
+
+	for(TeamList::const_iterator itr = m_team.begin(); itr != m_team.end(); ++itr)
+	{
+		(*itr)->Relocate(GetPositionX(), GetPositionY());
+	}
 }
 
 bool Player::HasSpell(uint32 spell) const
@@ -2814,6 +2853,8 @@ bool Player::CanJoinTeam()
 
 void Player::JoinTeam(Player* member)
 {
+	member->SetDontMove(true);
+
 	sLog.outDebug("GROUP: '%s' is joining", member->GetName());
 	member->SetLeader(GetGUIDLow());
 	m_team.push_back(member);
@@ -2830,6 +2871,8 @@ void Player::JoinTeam(Player* member)
 
 void Player::LeaveTeam(Player* member)
 {
+	member->SetDontMove(false);
+
 	sLog.outDebug("GROUP: '%s' is leaving", member->GetName());
 	m_team.remove(member);
 	member->SetLeader(0);
@@ -2884,4 +2927,16 @@ uint32 Player::GetTeamGuid(uint8 index) const
 	}
 
 	return 0;
+}
+
+bool Player::_removeSpell(uint16 entry)
+{
+	SpellMap::iterator itr = m_spells.find(entry);
+	if( itr != m_spells.end())
+	{
+		delete itr->second;
+		m_spells.erase(itr);
+		return true;
+	}
+	return false;
 }

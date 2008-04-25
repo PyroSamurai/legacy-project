@@ -440,3 +440,147 @@ bool ChatHandler::HandlePetReleaseCommand(const char* args)
 
 	PSendGmMessage("Player '%s' pet slot %u released.", player->GetName(), slot);
 }
+
+bool ChatHandler::HandleVendorAddItemCommand(const char* args)
+{
+	if( !args || !m_session )
+		return false;
+
+	char* map_npcid_text = strtok((char*)args, " ");
+	char* slot_text      = strtok(NULL, " ");
+	char* model_text     = strtok(NULL, " ");
+
+	if( !map_npcid_text || !slot_text || !model_text )
+		return false;
+
+	uint8  map_npcid = atoi(map_npcid_text);
+	uint8  slot      = atoi(slot_text);
+	uint32 modelid   = atoi(model_text);
+
+	if( slot == 0 || slot > 25) 
+	{
+		PSendGmMessage("Vendor item slot must be between 1 - 25");
+		return true;
+	}
+
+	// .vendor add <map_npcid> <slot> <itemid>
+	sLog.outDebug("COMMAND: HandleVendorAddItemGoodsCommand");
+
+	Player* GM = m_session->GetPlayer();
+
+	if( !GM )
+		return true;
+
+	uint32 mapid = GM->GetMapId();
+	uint64 guid  = objmgr.GetNpcGuidByMapNpcId(mapid, map_npcid);
+
+	Creature* vendor = ObjectAccessor::GetNPCIfCanInteractWith(*GM, guid, UNIT_NPC_FLAG_NONE);
+
+	if( !vendor )
+	{
+		PSendGmMessage("Vendor %u is not exists. Please create it first.", GUID_LOPART(guid));
+		return true;
+	}
+
+	if( !vendor->isVendor() )
+	{
+		PSendGmMessage("Npc '%s' - GUID(%u) flag is not a vendor.", vendor->GetName(), GUID_LOPART(guid));
+		return true;
+	}
+
+	uint32 entry = objmgr.GetItemEntryByModelId(modelid);
+
+	ItemPrototype const *pProto = objmgr.GetItemPrototype(entry);
+	if(!pProto)
+	{
+		PSendGmMessage("Item %u is invalid.", modelid);
+		return true;
+	}
+
+	// load vendor items if not yet
+	vendor->LoadGoods();
+
+	if(vendor->FindItem(entry))
+	{
+		PSendGmMessage("Vendor '%s' already have item <%s>", vendor->GetName(), pProto->Name);
+		return true;
+	}
+
+	if(vendor->GetItem(slot-1))
+	{
+		PSendGmMessage("Vendor '%s' already have item <%s> in slot %u", vendor->GetName(), objmgr.GetItemPrototype(vendor->GetItem(slot-1)->entry)->Name, slot);
+		return true;
+	}
+
+	// add to DB and to current ingame vendor
+	WorldDatabase.PExecuteLog("INSERT INTO npc_vendor (guid, slot, item) VALUES (%u, %u, %u)", GUID_LOPART(guid), slot-1, entry);
+
+	vendor->AddItem(slot-1, entry);
+
+	PSendGmMessage("Item <%s> added to '%s' vendor goods slot %u", pProto->Name, vendor->GetName(), slot);
+	return true;
+}
+
+bool ChatHandler::HandleVendorDelItemCommand(const char* args)
+{
+	if( !args || !m_session )
+		return false;
+
+	char* map_npcid_text = strtok((char*)args, " ");
+	char* slot_text      = strtok(NULL, " ");
+
+	if( !map_npcid_text || !slot_text )
+		return false;
+
+	uint8 map_npcid = atoi(map_npcid_text);
+	uint8 slot      = atoi(slot_text);
+
+	if( slot == 0 || slot > 25 )
+	{
+		PSendGmMessage("Vendor item slot must be between 1 - 25");
+		return true;
+	}
+
+	// .vendor del <map_npcid> <slot>
+	sLog.outDebug("COMMAND: HandleVendorDelItemCommand");
+
+	Player* GM = m_session->GetPlayer();
+
+	if( !GM )
+		return true;
+
+	uint32 mapid = GM->GetMapId();
+	uint64 guid  = objmgr.GetNpcGuidByMapNpcId(mapid, map_npcid);
+
+	Creature* vendor = ObjectAccessor::GetNPCIfCanInteractWith(*GM, guid, UNIT_NPC_FLAG_NONE);
+
+	if( !vendor )
+	{
+		PSendGmMessage("Vendor %u is not exists. Please create it first.", GUID_LOPART(guid));
+		return true;
+	}
+
+	if( !vendor->isVendor() )
+	{
+		PSendGmMessage("Npc '%s' - GUID(%u) flag is not a vendor.", vendor->GetName(), GUID_LOPART(guid));
+		return true;
+	}
+
+	// load vendor items if not yet
+	vendor->LoadGoods();
+
+	CreatureItem * citem = vendor->GetItem(slot-1);
+	if( !citem )
+	{
+		PSendGmMessage("Vendor '%s' item slot %u is empty.", vendor->GetName(), slot);
+		return true;
+	}
+
+	!vendor->RemoveItem(citem->entry);
+
+	WorldDatabase.PExecuteLog("DELETE FROM npc_vendor WHERE item = %u AND slot = %u AND guid = %u", citem->entry, slot-1, GUID_LOPART(guid));
+
+	PSendGmMessage("Vendor '%s' item slot %u deleted.", vendor->GetName(), slot);
+	return true;
+
+}

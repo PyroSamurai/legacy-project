@@ -185,11 +185,11 @@ bool Pet::Create(uint32 guidlow, uint32 entry, const CreatureInfo *cinfo)
 	SetUInt32Value(UNIT_FIELD_LEVEL, cinfo->level);
 	SetUInt32Value(UNIT_FIELD_ELEMENT, cinfo->element);
 
-	AddSpell(cinfo->spell1, 1);
-	AddSpell(cinfo->spell2, 1);
-	AddSpell(cinfo->spell3, 1);
-	AddSpell(cinfo->spell4, 1);
-	AddSpell(cinfo->spell5, 1);
+	AddSpell(cinfo->spell1, 1, SPELL_UNCHANGED);
+	AddSpell(cinfo->spell2, 1, SPELL_UNCHANGED);
+	AddSpell(cinfo->spell3, 1, SPELL_UNCHANGED);
+	AddSpell(cinfo->spell4, 1, SPELL_UNCHANGED);
+	AddSpell(cinfo->spell5, 1, SPELL_UNCHANGED);
 
 	return true;
 }
