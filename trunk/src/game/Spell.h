@@ -26,6 +26,14 @@ class Unit;
 class Player;
 class GameObject;
 
+enum SpellUpdateState
+{
+	SPELL_UNCHANGED = 0,
+	SPELL_CHANGED   = 1,
+	SPELL_NEW       = 2,
+	SPELL_REMOVED   = 3
+};
+
 enum SpellCastTargetFlags
 {
 	TARGET_FLAG_HURT              = 0x8000
@@ -56,6 +64,7 @@ enum SpellNumberEntry
 	SPELL_TEACHING                = 14027,   // Guru pembimbing
 	SPELL_UNITED                  = 14028,   // Bersatu
 };
+
 /*
 class SpellCastTargets
 {
@@ -72,29 +81,35 @@ struct SpellInfo
 	uint32 SP;
 	uint32 Element;
 	uint32 hit;
-	uint32 point;
+	uint32 LearnPoint;
 	uint32 LevelMax;
 	uint32 Type;
 	uint32 DamageMod;
 	uint32 Reborn;
+	float  Core;
 };
 
 class Spell
 {
 	public:
-		Spell(uint16 entry, uint8 level) : m_entry(entry), m_level(level) {}
+		Spell(uint16 entry, uint8 level, SpellUpdateState state = SPELL_NEW);
 		~Spell() {}
 
 		uint16 GetEntry() { return m_entry; }
 		uint8 GetLevel() { return m_level; }
 		void SetLevel(uint8 level) { m_level = level; }
+		void AddLevel(uint8 value) { m_level += value; }
 		SpellInfo const* GetProto() const;
-		bool LoadSpellFromDB();
+		SpellUpdateState GetState() { return uState; }
+		void SetState(SpellUpdateState state) { uState = state; }
 
 	private:
 		uint16 m_entry;
 		uint8  m_level;
+
+		SpellUpdateState uState;
 };
 
-typedef std::map<uint16, Spell*> SpellMap;
+//typedef std::map<uint16, Spell*> SpellMap;
+typedef HM_NAMESPACE::hash_map<uint16, Spell*> SpellMap;
 #endif

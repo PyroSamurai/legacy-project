@@ -29,7 +29,7 @@ const char* g_clntOpcodeNames[] =
 	"CMSG_UNKNOWN_5",                         // 5
 	"CMSG_PLAYER_MOVE",                       // 6
 	"CMSG_UNKNOWN_7",                         // 7
-	"CMSG_PLAYER_AREA_TRIGGER",               // 8
+	"CMSG_PLAYER_STAT_ADD",                   // 8
 	"CMSG_CHAR_CREATE",                       // 9
 	"CMSG_UNKNOWN_10",                        // 10
 	"CMSG_USE_ITEM_TO_PLAYER",                // 11
@@ -48,8 +48,8 @@ const char* g_clntOpcodeNames[] =
 	"CMSG_UNKNOWN_24",                        // 24
 	"CMSG_UNKNOWN_25",                        // 25
 	"CMSG_UNKNOWN_26",                        // 26
-	"CMSG_UNKNOWN_27",                        // 27
-	"CMSG_UNKNOWN_28",                        // 28
+	"CMSG_PLAYER_TRANSAC_ITEM",               // 27
+	"CMSG_PLAYER_SPELL_ADD",                  // 28
 	"CMSG_UNKNOWN_29",                        // 29
 	"CMSG_UNKNOWN_30",                        // 30
 	"CMSG_UNKNOWN_31",                        // 31

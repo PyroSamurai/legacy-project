@@ -54,14 +54,11 @@ struct GossipOption
 */
 struct CreatureItem
 {
-	CreatureItem(uint32 _item, uint32 _maxcount, uint32 _incrtime)
-		: id(_item), count(_maxcount), maxcount(_maxcount), incrtime(_incrtime), lastincr((uint32)time(NULL)) {}
+	CreatureItem(uint8 _slot, uint16 _entry)
+		: slot(_slot), entry(_entry) {}
 
-	uint32 id;
-	uint32 count;
-	uint32 maxcount;
-	uint32 incrtime;
-	uint32 lastincr;
+	uint8  slot;
+	uint32 entry;
 };
 
 // from `creature_template` table
@@ -135,6 +132,8 @@ struct CreatureData
 
 typedef std::list<GossipOption> GossipOptionList;
 
+#define MAX_VENDOR_ITEMS 255
+
 #define MAP_NPCID_MULTIPLIER 100
 
 class LEGACY_DLL_SPEC Creature : public Unit
@@ -198,21 +197,25 @@ class LEGACY_DLL_SPEC Creature : public Unit
 		void LoadGoods();     // must be called before access to vendor items, lazy loading at first call
 		void ReloadGoods() { m_itemsLoaded = false; LoadGoods(); }
 
-		CreatureItem* GetItem(uint32 slot)
+		CreatureItem* GetItem(uint8 slot)
 		{
 			if(slot>=m_vendor_items.size()) return NULL;
-			return &m_vendor_items[slot];
+			//return &m_vendor_items[slot];
+			for(CreatureItems::iterator i = m_vendor_items.begin(); i != m_vendor_items.end(); ++i)
+				if(i->slot==slot)
+					return &*i;
+			return NULL;
 		}
 		uint8 GetItemCount() const { return m_vendor_items.size(); }
-		void AddItem(uint32 item, uint32 maxcount, uint32 ptime)
+		void AddItem(uint8 slot, uint16 entry)
 		{
-			m_vendor_items.push_back(CreatureItem(item,maxcount,ptime));
+			m_vendor_items.push_back(CreatureItem(slot,entry));
 		}
-		bool RemoveItem(uint32 item_id)
+		bool RemoveItem(uint16 entry)
 		{
 			for(CreatureItems::iterator i = m_vendor_items.begin(); i != m_vendor_items.end(); ++i)
 			{
-				if(i->id==item_id)
+				if(i->entry==entry)
 				{
 					m_vendor_items.erase(i);
 					return true;
@@ -220,10 +223,10 @@ class LEGACY_DLL_SPEC Creature : public Unit
 			}
 			return false;
 		}
-		CreatureItem* FindItem(uint32 item_id)
+		CreatureItem* FindItem(uint16 entry)
 		{
 			for(CreatureItems::iterator i = m_vendor_items.begin(); i != m_vendor_items.end(); ++i)
-				if(i->id==item_id)
+				if(i->entry==entry)
 					return &*i;
 			return NULL;
 		}

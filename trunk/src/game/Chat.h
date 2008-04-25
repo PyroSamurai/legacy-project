@@ -97,6 +97,8 @@ class ChatHandler
 		bool HandlePetAddCommand(const char* args);
 		bool HandlePetReleaseCommand(const char* args);
 		bool HandleItemAddCommand(const char* args);
+		bool HandleVendorAddItemCommand(const char* args);
+		bool HandleVendorDelItemCommand(const char* args);
 
 		///- LEVEL 3 SEC_ADMINISTRATOR
 		bool HandleGetItemState(const char* args);

@@ -19,9 +19,10 @@
 #include "Spell.h"
 #include "ObjectMgr.h"
 
-bool Spell::LoadSpellFromDB()
+Spell::Spell(uint16 entry, uint8 level, SpellUpdateState state) :
+m_entry(entry), m_level(level)
 {
-	return true;
+	uState = state;
 }
 
 SpellInfo const* Spell::GetProto() const

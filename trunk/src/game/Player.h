@@ -414,6 +414,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 		void SaveToDB();
 
 		void SendMessageToSet(WorldPacket *data, bool self); // overwrite Object::SendMessageToSet
+		void SendMessageToAll(WorldPacket *data, bool self);
 
 		void SendDelayResponse(const uint32);
 
@@ -534,6 +535,8 @@ class LEGACY_DLL_SPEC Player : public Unit
 		void _SaveInventory();
 		void _SaveSpells();
 
+		bool _removeSpell(uint16 entry);
+
 		uint16 m_lastPositionX;
 		uint16 m_lastPositionY;
 
@@ -603,6 +606,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 		uint16 m_unk5;
 */
 	private:
+
 		GridReference<Player> m_gridRef;
 
 		uint64 m_talkedCreatureGuid;

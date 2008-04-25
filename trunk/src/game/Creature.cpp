@@ -391,13 +391,16 @@ bool Creature::CreateFromProto(uint32 guidlow, uint32 Entry, uint32 team, const 
 	SetUInt32Value(UNIT_FIELD_LEVEL, cinfo->level);
 	SetUInt32Value(UNIT_FIELD_ELEMENT, cinfo->element);
 
-	///- TODO: fix this, need adjusment
-	///- Default all creature have level 10 spells
-	AddSpell(cinfo->spell1, 10);
-	AddSpell(cinfo->spell2, 10);
-	AddSpell(cinfo->spell3, 10);
-	AddSpell(cinfo->spell4, 10);
-	AddSpell(cinfo->spell5, 10);
+	///- Default all creature have maxed level spells
+	AddSpell(cinfo->spell1, objmgr.GetSpellTemplate(cinfo->spell1) ? objmgr.GetSpellTemplate(cinfo->spell1)->LevelMax : 0, SPELL_UNCHANGED);
+
+	AddSpell(cinfo->spell2, objmgr.GetSpellTemplate(cinfo->spell2) ? objmgr.GetSpellTemplate(cinfo->spell2)->LevelMax : 0, SPELL_UNCHANGED);
+
+	AddSpell(cinfo->spell3, objmgr.GetSpellTemplate(cinfo->spell3) ? objmgr.GetSpellTemplate(cinfo->spell3)->LevelMax : 0, SPELL_UNCHANGED);
+
+	AddSpell(cinfo->spell4, objmgr.GetSpellTemplate(cinfo->spell4) ? objmgr.GetSpellTemplate(cinfo->spell4)->LevelMax : 0, SPELL_UNCHANGED);
+
+	AddSpell(cinfo->spell5, objmgr.GetSpellTemplate(cinfo->spell5) ? objmgr.GetSpellTemplate(cinfo->spell5)->LevelMax : 0, SPELL_UNCHANGED);
 
 
 	SetUInt32Value(UNIT_NPC_FLAGS, cinfo->npcflag);
@@ -501,14 +504,13 @@ bool Creature::LoadFromDB(uint32 guid, uint32 InstanceId)
 
 void Creature::LoadGoods()
 {
-	/*
 	// already loaded;
 	if(m_itemsLoaded)
 		return;
 
 	m_vendor_items.clear();
 
-	QueryResult *result = WorldDatabase.PQuery("SELECT item, maxcount, incrtime FROM npc_vendor WHERE entry = '%u'", GetEntry());
+	QueryResult *result = WorldDatabase.PQuery("SELECT slot, item FROM npc_vendor WHERE guid = '%u'", GetGUIDLow());
 
 	if(!result) return;
 
@@ -522,21 +524,21 @@ void Creature::LoadGoods()
 			break;
 		}
 
-		uint32 item_id = f[0].GetUInt32();
-		if(!sItemStorage.LookupEntry<ItemPrototype>(item_id))
+		uint8  slot  = f[0].GetUInt8(); 
+		uint32 entry = f[1].GetUInt32();
+		if(!sItemStorage.LookupEntry<ItemPrototype>(entry))
 		{
-			sLog.outErrorDb("Vendor %u have in item list non-existed item %u", GetEntry(), item_id);
+			sLog.outErrorDb("Vendor '%s' have in item list non-existed item %u", GetName(), entry);
 			continue;
 		}
 
-		AddItem( item_id, f[1].GetUInt32(), f[2].GetUInt32() );
+		AddItem( slot, entry );
 	}
 	while ( result->NextRow() );
 
 	delete result;
 
-	m_itemLoaded = true;
-	*/
+	m_itemsLoaded = true;
 }
 /*
 bool Creature::hasQuest(uint32 quest_id) const

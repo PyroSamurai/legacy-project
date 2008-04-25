@@ -98,6 +98,9 @@ void WorldSession::HandleUseItemOpcodes( WorldPacket & recv_data )
 
 			SendPacket(&data, true);
 
+			_player->BuildUpdateBlockVisibilityPacket(&data);
+			_player->SendMessageToSet(&data, false);
+
 			_player->DumpPlayer( "equip" );
 			_player->DumpPlayer( "inventory" );
 			break;
@@ -288,4 +291,118 @@ void WorldSession::HandleUseItemOpcodes( WorldPacket & recv_data )
 	}
 }
 
+void WorldSession::HandlePlayerTransacItemOpcodes(WorldPacket & recv_data)
+{
+	CHECK_PACKET_SIZE(recv_data, 1);
 
+	uint8 transac_type;
+
+	recv_data >> transac_type;
+
+	switch( transac_type )
+	{
+		case 0x01: // Buy from vendor
+		{
+			CHECK_PACKET_SIZE(recv_data, 1+1+2);
+			uint8  vendor_slot;
+			uint16 buy_count; // max 25 * 50 = 1250
+			recv_data >> vendor_slot;
+			recv_data >> buy_count;
+
+			uint64 guid = _player->GetTalkedCreatureGuid();
+			if( !guid )
+				return;
+
+			Creature* vendor = ObjectAccessor::GetNPCIfCanInteractWith(*_player, guid, UNIT_NPC_FLAG_NONE);
+
+			if( !vendor )
+				return;
+
+			// load vendor items if not yet
+			vendor->LoadGoods();
+
+			CreatureItem * citem = vendor->GetItem(vendor_slot);
+			if( !citem )
+				return;
+
+			ItemPrototype const *pProto = objmgr.GetItemPrototype(citem->entry);
+
+			if( !pProto )
+				return;
+
+			uint32 buy_price = pProto->buyprice * buy_count;
+
+			if( _player->GetUInt32Value(PLAYER_GOLD_INHAND) < buy_count )
+				return;
+
+			_player->ApplyModUInt32Value(PLAYER_GOLD_INHAND, buy_price, false);
+
+			_player->AddNewInventoryItem(pProto->modelid, buy_count);
+			_player->UpdateInventoryForItem(pProto->modelid, buy_count);
+
+			_player->_updatePlayer( 0x1A, 2, buy_price );
+
+			WorldPacket data;
+
+			data.Initialize( 0x1B );
+			data << (uint8 ) 0x02;
+			data << (uint8 ) 0x00;
+			_player->GetSession()->SendPacket(&data, true);
+
+		} break;
+
+		case 0x02: // Sell to vendor
+		{
+			CHECK_PACKET_SIZE(recv_data, 1+1+1);
+			uint8 player_slot;
+			uint8 sell_count; // max 50
+
+			recv_data >> player_slot;
+			recv_data >> sell_count;
+
+			uint8 inv_slot = player_slot + INVENTORY_SLOT_ITEM_START - 1;
+			Item* item = _player->GetItemByPos(inv_slot);
+			if( !item )
+				return;
+
+			uint32 sell_price = item->GetProto()->sellprice;
+
+			if( item->GetCount() < sell_count )
+				return;
+
+			item->SetCount( item->GetCount() - sell_count );
+
+			if( item->GetCount() == 0 )
+			{
+				item->SetState(ITEM_REMOVED, _player);
+				//item->SaveToDB();
+				_player->RemoveItem( inv_slot );
+			}
+			else
+				item->SetState(ITEM_CHANGED);
+
+			_player->ApplyModUInt32Value(PLAYER_GOLD_INHAND, (sell_price * sell_count), true);
+
+			WorldPacket data;
+			data.Initialize( 0x17 );
+			data << (uint8 ) 0x09;
+			data << (uint8 ) player_slot;
+			data << (uint8 ) sell_count;
+			_player->GetSession()->SendPacket(&data, true);
+
+			data.Initialize( 0x1A );
+			data << (uint8 ) 0x01;
+			data << (uint32) (sell_price * sell_count);
+			_player->GetSession()->SendPacket(&data, true);
+
+			data.Initialize( 0x1B );
+			data << (uint8 ) 0x02;
+			data << (uint8 ) 0x00;
+			_player->GetSession()->SendPacket(&data, true);
+
+			_player->DumpPlayer("inventory");
+
+		} break;
+	}
+
+}

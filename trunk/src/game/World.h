@@ -142,6 +142,8 @@ class World
 
 		void RefreshDoorDatabase();
 
+		void UpdateOnlinePlayersFor(Player* player);
+
 	private:
 		time_t m_startTime;
 		time_t m_gameTime;

@@ -227,22 +227,22 @@ bool Unit::CanHaveSpell(Spell* spell)
 	}
 }
 
-bool Unit::AddSpell(uint16 entry, uint8 level)
+bool Unit::AddSpell(uint16 entry, uint8 level, SpellUpdateState state)
 {
 	//sLog.outDebug("UNIT: '%s' adding spell <%u> level [%u]", GetName(), entry, level);
 
 	if( !entry )
 		return false;
 
-	Spell* spell = new Spell(entry, level);
-	if( !spell->LoadSpellFromDB() )
+	const SpellInfo * sinfo = objmgr.GetSpellTemplate(entry);
+
+	if( !sinfo )
 	{
 		sLog.outString("UNIT: Spell not found, incorrect spell entry");
-		delete spell;
 		return false;
 	}
 
-	const SpellInfo * sinfo = objmgr.GetSpellTemplate(entry);
+	Spell* spell = new Spell(entry, level, state);
 
 	if( !CanHaveSpell(spell) )
 	{
@@ -265,7 +265,21 @@ void Unit::SetSpellLevel(uint16 entry, uint8 level)
 	
 	if(!spell) return;
 
+	sLog.outDebug("UNIT SPELL: Change spell level to %u", level);
 	spell->SetLevel(level);
+	spell->SetState(SPELL_CHANGED);
+}
+
+void Unit::AddSpellLevel(uint16 entry, uint8 value)
+{
+	if(!entry || !value) return;
+
+	Spell* spell = FindSpell(entry);
+
+	if(!spell) return;
+
+	spell->AddLevel(value);
+	spell->SetState(SPELL_CHANGED);
 }
 
 bool Unit::HaveSpell(uint16 entry)
@@ -278,6 +292,33 @@ bool Unit::HaveSpell(uint16 entry)
 	return false;
 }
 
+bool Unit::isSpellLevelMaxed(uint16 entry)
+{
+	if( !entry || entry == SPELL_BASIC ) return true;
+
+	Spell* spell = FindSpell(entry);
+
+	if( !spell ) return true;
+
+	if( spell->GetLevel() >= spell->GetProto()->LevelMax )
+		return true;
+
+	return false;
+}
+
+uint32 Unit::GetSpellLearnPoint(uint16 entry)
+{
+	const SpellInfo* sinfo = objmgr.GetSpellTemplate(entry);
+
+	if( !sinfo )
+		return 0;
+
+	if( GetUInt32Value(UNIT_FIELD_ELEMENT) == sinfo->Element )
+		return sinfo->LearnPoint;
+
+	return sinfo->LearnPoint * 2;
+}
+
 Spell* Unit::FindSpell(uint16 entry)
 {
 	SpellMap::iterator i = m_spells.find(entry);
@@ -287,12 +328,12 @@ Spell* Unit::FindSpell(uint16 entry)
 	return NULL;
 }
 
-uint8 Unit::GetSpellLevel(const SpellInfo *sinfo)
+uint8 Unit::GetSpellLevel(uint16 entry)
 {
-	if( sinfo->Entry == SPELL_BASIC )
-		return 10;
+	if( entry == SPELL_BASIC )
+		return 1;
 
-	Spell* s = FindSpell(sinfo->Entry);
+	Spell* s = FindSpell(entry);
 	if( !s )
 		return 1;
 
@@ -349,16 +390,16 @@ void Unit::AddKillExp(uint8 enemyLevel, bool linked, bool inTeam, uint8 lowestLe
 	uint8  level   = getLevel();
 	float  xp      = 0;
 
-	uint8 diffLevel = abs(level - enemyLevel);
+	int32 diffLevel = enemyLevel - level;
 	if(level - enemyLevel > 17)
 		///- Player level too high to gained more experience from enemy
 		xp += 0;
 	else if( linked )
 		///- add 10% bonus for linked attack
-		xp += level + diffLevel + ((level + diffLevel) * 0.1);
+		xp += (diffLevel > 0 ? diffLevel : 2) + ((diffLevel > 0 ? diffLevel : 2) * 0.1);
 	else
 		///- single attack, no bonus
-		xp += level + diffLevel;
+		xp += (diffLevel > 0 ? diffLevel : 2);
 
 	if( HaveSpell(SPELL_UNITED) && isType(TYPE_PLAYER) && inTeam )
 	{
@@ -375,7 +416,7 @@ void Unit::AddKillExp(uint8 enemyLevel, bool linked, bool inTeam, uint8 lowestLe
 	}
 
 	float  rate_xp   = sWorld.getRate(RATE_XP_KILL);
-	uint32 xp_gained = (uint32) round(xp * rate_xp);
+	uint32 xp_gained = (uint32) round(pow(xp, rate_xp));
 	AddExpGained(xp_gained);
 }
 
@@ -440,6 +481,11 @@ void Unit::LevelUp()
 	///- TODO: Check for Pet if all spell point maxed out
 	SetUInt32Value(UNIT_FIELD_SPELL_POINT, spell_point + 2);
 	SetUInt32Value(UNIT_FIELD_STAT_POINT,  stat_point  + 2);
+
+	SetUInt32Value(UNIT_FIELD_HP_MAX, GetHPMax());
+	SetUInt32Value(UNIT_FIELD_HP, GetHPMax());
+	SetUInt32Value(UNIT_FIELD_SP_MAX, GetSPMax());
+	SetUInt32Value(UNIT_FIELD_SP, GetSPMax());
 }
 
 bool Unit::isLevelUp()
@@ -458,6 +504,22 @@ void Unit::AddKillItemDropped(uint16 itemId)
 
 uint16 Unit::GetItemDropped(uint8 index)
 {
+	///- TODO: Chance for elementary Creature above level 15 to drop herald item
+	if( getLevel() >= 15 && GetUInt32Value(UNIT_FIELD_ELEMENT) )
+	{
+		double dice_herald = rand_chance();
+		if( dice_herald > 59.91 )
+		{
+			switch( GetUInt32Value(UNIT_FIELD_ELEMENT) )
+			{
+			case ELEMENT_EARTH: return ITEM_ROCKY_GOLEM;
+			case ELEMENT_WATER: return ITEM_WATER_GODDES;
+			case ELEMENT_FIRE:  return ITEM_PHOENIX;
+			case ELEMENT_WIND:  return ITEM_GREEN_DRAGON;
+			}
+		}
+	}
+
 	CreatureInfo const* cinfo = objmgr.GetCreatureTemplate(GetEntry());
 
 	if( !cinfo )
@@ -466,34 +528,23 @@ uint16 Unit::GetItemDropped(uint8 index)
 	double dice = rand_chance();
 	double drop_rate = 100 + (index * 5) - (33.33 * sWorld.getRate(RATE_DROP_ITEMS));
 
-	sLog.outDebug("ITEM DROPPED: Chance for item to drop is %-3.2f versus rate %-3.2f", dice, drop_rate);
+	//sLog.outDebug("ITEM DROPPED: Chance for item to drop is %-3.2f versus rate %-3.2f", dice, drop_rate);
 	if( dice < drop_rate )
 		return 0;
 
 	switch( index )
 	{
-		case 0:
-			return cinfo->drop1;
-		case 1:
-			return cinfo->drop2;
-		case 2:
-			return cinfo->drop3;
-		case 3:
-			return cinfo->drop4;
-		case 4:
-			return cinfo->drop5;
-		case 5:
-			return cinfo->drop6;
-		case 6:
-			return cinfo->drop7;
-		case 7:
-			return cinfo->drop8;
-		case 8:
-			return cinfo->drop9;
-		case 9:
-			return cinfo->drop10;
-		default:
-			return 0;
+		case 0: return cinfo->drop1;
+		case 1: return cinfo->drop2;
+		case 2: return cinfo->drop3;
+		case 3: return cinfo->drop4;
+		case 4: return cinfo->drop5;
+		case 5: return cinfo->drop6;
+		case 6: return cinfo->drop7;
+		case 7: return cinfo->drop8;
+		case 8: return cinfo->drop9;
+		case 9: return cinfo->drop10;
+		default: return 0;
 	}
 }
 
