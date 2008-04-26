@@ -164,9 +164,9 @@ void Master::Run()
 		{
 			loopCounter = 0;
 			sLog.outDetail("Ping MySQL to keep connection alive");
-			//delete WorldDatabase.Query("SELECT 1 FROM accounts LIMIT 1");
+			delete WorldDatabase.Query("SELECT 1 FROM creature LIMIT 1");
 			delete loginDatabase.Query("SELECT 1 FROM accounts LIMIT 1");
-			delete CharacterDatabase.Query("SELECT 1 FROM accounts LIMIT 1");
+			delete CharacterDatabase.Query("SELECT 1 FROM characters LIMIT 1");
 		}
 
 		
