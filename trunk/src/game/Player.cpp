@@ -340,7 +340,7 @@ void Player::SendMessageToAll(WorldPacket *data, bool self)
 			if( iter->second == this && !self )
 				continue;
 
-			iter->second->GetSession()->SendPacket(data);
+			iter->second->GetSession()->SendPacket(data, true);
 			sLog.outDebug("Object '%s' is in world", iter->second->GetName());
 		}
 	}
@@ -1385,7 +1385,7 @@ void Player::BuildUpdateBlockStatusPacket(WorldPacket *data)
 
 	*data << (uint16) GetUInt32Value(UNIT_FIELD_HP_MAX); //m_hp_max;
 	*data << (uint16) GetUInt32Value(UNIT_FIELD_SP_MAX); //m_sp_max;
-	*data << (uint16) 0;
+	//*data << (uint16) 0;
 
 	*data << (uint32) GetInt32Value(UNIT_FIELD_ATK_MOD); //m_atk_mod;
 	*data << (uint32) GetInt32Value(UNIT_FIELD_DEF_MOD); //m_def_mod;
@@ -1400,12 +1400,14 @@ void Player::BuildUpdateBlockStatusPacket(WorldPacket *data)
 	*data << (uint16) GetUInt32Value(UNIT_MORAL_4); //m_unk4;
 	*data << (uint16) GetUInt32Value(UNIT_MORAL_5); //m_unk5;
 
-	*data << (uint16) 0x00;
-	*data << (uint16) 0x0000; //0x0101; // auto attack data ?
+	*data << (uint16) 0;
+	*data << (uint16) 0x0101; // auto attack data ?
 
-	*data << (uint32) 0x00 << (uint32) 0x00 << uint32(0x00) << uint32(0x00);
-	*data << (uint32) 0x00 << (uint32) 0x00 << uint32(0x00) << uint32(0x00);
-	*data << (uint32) 0x00 << (uint8 ) 0x00;
+	*data << (uint32) 0 << (uint32) 0 << (uint32) 0 << (uint32) 0;
+	*data << (uint32) 0 << (uint32) 0 << (uint32) 0 << (uint32) 0;
+	*data << (uint32) 0 << (uint8 ) 0;
+
+	*data << (uint16) 0;
 
 	///- Try to identify skill info packet
 	/*
@@ -1492,7 +1494,7 @@ void Player::UpdatePetLevel(Pet* pet)
 	pet->resetLevelUp();
 }
 
-void Player::_updatePlayer(uint8 updflag, uint8 modifier, uint16 value)
+void Player::_updatePlayer(uint8 updflag, uint8 modifier, uint32 value, uint16 spell_entry)
 {
 	//sLog.outDebug("PLAYER: Update player '%s' flag %3u value %u", GetName(), updflag, value);
 	WorldPacket data;
@@ -1500,8 +1502,9 @@ void Player::_updatePlayer(uint8 updflag, uint8 modifier, uint16 value)
 	data << (uint8 ) 0x01;                  // flag status for main character
 	data << (uint8 ) updflag;               // flag status fields
 	data << (uint8 ) modifier;              // +/- modifier
-	data << (uint16) value;                 // value modifier
-	data << (uint32) 0 << (uint16) 0;
+	data << (uint32) value;                 // value modifier
+	data << (uint16) spell_entry;
+	data << (uint16) 0; // unknown;
 
 	if( m_session )
 		m_session->SendPacket(&data);
@@ -1787,6 +1790,16 @@ void Player::TeleportTo(uint16 mapid, uint16 pos_x, uint16 pos_y)
 	if( isTeamLeader() )
 		SetDontMove(true);
 
+	///- Tell others that i'm leaving
+	data.Initialize( 0x0C );
+	data << (uint32) GetAccountId();
+	data << (uint16) mapid;
+	data << (uint16) pos_x;
+	data << (uint16) pos_y;
+	data << (uint8 ) (isTeamLeader() ? 4 : (!isJoinedTeam() ? 0 : 1));
+	data << (uint8 ) 0x00;
+	SendMessageToSet(&data, false);
+
 	Map* map = MapManager::Instance().GetMap(GetMapId(), this);
 	map->Remove(this, false);
 
@@ -1807,15 +1820,16 @@ void Player::TeleportTo(uint16 mapid, uint16 pos_x, uint16 pos_y)
 void Player::SendMapChanged()
 {
 	WorldPacket data;
-	data.Initialize( 0x0C, 1 );
-	data << GetAccountId();
-	data << GetMapId();
-	data << GetPositionX();
-	data << GetPositionY();
-	data << (uint8) 0x01 << (uint8) 0x00;
+	data.Initialize( 0x0C );
+	data << (uint32) GetAccountId();
+	data << (uint16) GetMapId();
+	data << (uint16) GetPositionX();
+	data << (uint16) GetPositionY();
+	data << (uint8 ) (isTeamLeader() ? 4 : (!isJoinedTeam() ? 0 : 1));
+	data << (uint8 ) 0x00;
 
 	if( m_session )
-		m_session->SendPacket(&data);
+		m_session->SendPacket(&data, true);
 
 
 	Send0504();  // This is important, maybe tell the client to Wait Cursor
@@ -1825,13 +1839,41 @@ void Player::SendMapChanged()
 
 	UpdateMap2Npc();
 
+	uint8 member_count = 0;
 	for(TeamList::const_iterator itr = m_team.begin(); itr != m_team.end(); ++itr)
 	{
 		(*itr)->SendMapChanged();
 	}
 
 	if( isTeamLeader() )
+	{
 		SetDontMove(false);
+	}
+}
+
+void Player::UpdateGroupToSet()
+{
+	if( !isTeamLeader() )
+		return;
+
+	WorldPacket data;
+	data.Initialize( 0x0D );
+	data << (uint8 ) 6;
+	data << (uint32) GetAccountId();
+	data << (uint8 ) m_team.size();
+
+	uint8 member_count = 0;
+	for(TeamList::const_iterator itr = m_team.begin(); itr != m_team.end(); ++itr)
+	{
+		sLog.outDebug("GROUP: Add member #%u '%s' to Group", ++member_count, (*itr)->GetName());
+
+	//	data << (uint8 ) 1; 
+		data << (uint32) (*itr)->GetAccountId();
+
+	}
+
+	SendMessageToSet(&data, true);
+
 }
 
 void Player::UpdateRelocationToSet()
@@ -2845,7 +2887,7 @@ Player* Player::GetBattleMaster()
 
 bool Player::CanJoinTeam()
 {
-	if( !isTeamLeader() )
+	if( isJoinedTeam() )
 		return false;
 
 	return (m_team.size() < 4 ? true : false);
@@ -2887,10 +2929,10 @@ void Player::LeaveTeam(Player* member)
 
 bool Player::isTeamLeader()
 {
-	if( isJoinedTeam() )
-		return false;
+	if( m_team.size() > 0 )
+		return true;
 
-	return true;
+	return false;
 }
 
 bool Player::isJoinedTeam()

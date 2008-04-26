@@ -201,7 +201,7 @@ class LEGACY_DLL_SPEC BattleSystem
 		bool isAtkPosBackRow(const uint8 col);
 
 		Unit* GetBattleUnit(uint8 col, uint8 row);
-		bool isUnitAvail(uint8 col, uint8 row);
+		bool isUnitAvail(uint8 col, uint8 row, bool linked=false);
 
 
 		/*******************************************************************/

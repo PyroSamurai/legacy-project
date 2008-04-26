@@ -228,6 +228,12 @@ void Object::ApplyModInt32Value(uint16 index, int32 val, bool apply)
 
 void Object::SendUpdateToPlayer(Player* player)
 {
+	//if( player->isTeamLeader() )
+	//	return;
+
+	//if( player->isJoinedTeam() )
+	//	return;
+
 	// send update to another players
 	//SendUpdateObjectToAllExcept(player);
 

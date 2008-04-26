@@ -55,7 +55,7 @@ void WorldSession::HandleGroupOpcodes( WorldPacket & recv_data )
 			Player* leader = ObjectAccessor::FindPlayerByAccountId(leaderId);
 			if( !leader ) return;
 
-			if( !leader->isTeamLeader() )
+			if( leader->isJoinedTeam() )
 				return;   // current leader is not a team leader
 
 			data.Initialize( 0x0D );
@@ -68,8 +68,8 @@ void WorldSession::HandleGroupOpcodes( WorldPacket & recv_data )
 		///- Leader Response
 		case 0x03:
 		{
-			if( !_player->isTeamLeader() )
-				return;  // current player is not a team leader
+			if( _player->isJoinedTeam() )
+				return;  // current player is member of team
 
 			if( _player->isBattleInProgress() )
 				return;  // current player is in battle
@@ -85,6 +85,9 @@ void WorldSession::HandleGroupOpcodes( WorldPacket & recv_data )
 
 			if( member->isJoinedTeam() )
 				return;  // current member already joined team
+
+			if( member->isTeamLeader() )
+				return;  // current member is already leader of a team
 
 			if( member->isBattleInProgress() || member->GetBattleMaster() )
 				return;  // current member is in battle
