@@ -438,6 +438,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 		bool isJoinedTeam();
 		void SetLeader(uint32 guid) { m_leaderGuid = guid; }
 		void SetSubleader(uint32 acc_id);
+		void UpdateGroupToSet();
 
 
 		/********************************************************/
@@ -484,7 +485,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 		void UpdateRelocationToSet();
 		void UpdatePlayer();
 		void UpdatePlayerLevel();
-		void _updatePlayer(uint8 flagStatus, uint8 modifier, uint16 value);
+		void _updatePlayer(uint8 flagStatus, uint8 modifier, uint32 value, uint16 spell_entry=0);
 
 		void UpdatePet();
 		void UpdatePet(uint8 slot);

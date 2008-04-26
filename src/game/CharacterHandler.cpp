@@ -258,12 +258,6 @@ void WorldSession::HandleCharCreate( WorldPacket & recv_data )
 
 	WorldPacket data;
 
-	///- Send character create success to client
-	//   disabled this if stuck
-	data.Initialize( 0x09);
-	data << (uint8 ) 0x01;
-	SendPacket(&data);
-
 	data << (uint8 ) pass1.size();
 	data << (uint32) GetAccountId();
 	data << (uint32) 0x00;
@@ -486,12 +480,17 @@ void WorldSession::HandlePlayerEnterDoorOpcode( WorldPacket & recv_data )
 		(::strcmp(player->GetName(), "Administrator1") == 0 ||
 		 ::strcmp(player->GetName(), "Administrator2") == 0 ))
 	{
-		WorldDatabase.PExecute("UPDATE map_matrix set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
-		//WorldDatabase.PExecute("UPDATE map_matrix set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u AND x = 0 AND y = 0", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
+		///- if not bridges that have 2 entrance from 1 map, update it
+		//   else skip
+		if( mapid != 12441 && mapDest->MapId != 12441 )
+		{
 
-		///- do a small delay, make sure matrix data is updated
-		ZThread::Thread::sleep(10);
-		sWorld.RefreshDoorDatabase();
+			WorldDatabase.PExecute("UPDATE map_matrix set x = %u, y = %u WHERE mapid_src = %u AND mapid_dest = %u", player->GetLastPositionX(), player->GetLastPositionY(), mapDest->MapId, mapid);
+
+			///- do a small delay, make sure matrix data is updated
+			ZThread::Thread::sleep(10);
+			sWorld.RefreshDoorDatabase();
+		}
 	}
 
 	///- Send Enter Door action response
@@ -505,6 +504,7 @@ void WorldSession::HandlePlayerEnterDoorOpcode( WorldPacket & recv_data )
 
 	player->TeleportTo(mapDest->MapId, mapDest->DestX, mapDest->DestY);
 	GetPlayer()->SendMapChanged();
+	GetPlayer()->UpdateGroupToSet();
 
 }
 
@@ -662,6 +662,7 @@ void WorldSession::HandlePlayerSpellAddOpcodes( WorldPacket & recv_data )
 
 	_player->_updatePlayer(UPD_FLAG_SPELL_POINT, 1, _player->GetUInt32Value(UNIT_FIELD_SPELL_POINT));
 
+	_player->_updatePlayer(UPD_FLAG_ADD_SPELL, 1, mod_value, spell_entry);
 
 	data.Initialize ( 0x1C );
 	data << (uint8 ) 0x01;
@@ -669,8 +670,8 @@ void WorldSession::HandlePlayerSpellAddOpcodes( WorldPacket & recv_data )
 	data << (uint8 ) mod_value;
 	//_player->GetSession()->SendPacket(&data, true);
 
-	_player->BuildUpdateBlockStatusPacket(&data);
-	_player->GetSession()->SendPacket(&data, true);
+//	_player->BuildUpdateBlockStatusPacket(&data);
+//	_player->GetSession()->SendPacket(&data, true);
 
 	//_player->SaveToDB();
 }

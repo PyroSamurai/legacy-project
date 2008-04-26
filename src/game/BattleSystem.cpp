@@ -231,6 +231,16 @@ void BattleSystem::Engage( Player* player, Creature* enemy )
 	InitAttackerPosition();
 
 	BattleStart();
+
+	///- Update Smoke
+	WorldPacket data;
+	data.Initialize( 0x0B );
+	data << (uint8 ) 0x04;
+	data << (uint8 ) 0x02;
+	data << (uint32) player->GetAccountId();
+	data << (uint16) 0; //unknown
+	data << (uint8 ) enemy->GetMapNpcId(); // still guessing
+	player->SendMessageToSet(&data, false);
 }
 
 void BattleSystem::Engage( Player* enemy )
@@ -667,6 +677,8 @@ Unit* BattleSystem::GetVictim(const BattleAction *action)
 
 bool BattleSystem::NeedRedirectTarget(const BattleAction *action)
 {
+	if( !isUnitAvail( action->GetTargetCol(), action->GetTargetRow() ))
+		return true;
 	//const SpellInfo* sinfo = objmgr.GetSpellTemplate(action->GetSkill());
 
 	// for now only check death state primary target
@@ -1427,7 +1439,7 @@ UnitActionTurn BattleSystem::ParseSpell(BattleAction* action, uint8 hit, bool li
 				}
 				else
 				{
-					if( isUnitAvail( x, y-1 ) )
+					if( isUnitAvail( x, y-1, linked ) )
 					{
 						sLog.outDebug("PARSER: %u,%u Upper hit", x, y-1);
 						hitInfo.push_back(new BattleAction(a,b,s,x,y-1));
@@ -1459,7 +1471,7 @@ UnitActionTurn BattleSystem::ParseSpell(BattleAction* action, uint8 hit, bool li
 				}
 				else
 				{
-					if( isUnitAvail( x, y+1 ) )
+					if( isUnitAvail( x, y+1, linked ) )
 					{
 						sLog.outDebug("PARSER: %u,%u Bottom hit", x, y+1);
 						hitInfo.push_back(new BattleAction(a,b,s,x,y+1));
@@ -1539,8 +1551,11 @@ UnitActionTurn BattleSystem::ParseSpell(BattleAction* action, uint8 hit, bool li
 	case 1:
 	default:
 	{
-		sLog.outDebug("PARSER: %u,%u Primary hit", x, y);
-		hitInfo.push_back(action);
+		if( isUnitAvail( x, y ) )
+		{
+			sLog.outDebug("PARSER: %u,%u Primary hit", x, y);
+			hitInfo.push_back(action);
+		}
 		break;
 	}
 
@@ -1931,6 +1946,12 @@ void BattleSystem::BattleStop()
 	}
 	m_PlayerList.clear();
 
+	///- Update Smoke dissapear
+	data.Initialize( 0x0B );
+	data << (uint8 ) 0;
+	data << (uint32) i_master->GetAccountId();
+	data << (uint16) 0; // unknown;
+	i_master->SendMessageToSet(&data, false);
 }
 
 void BattleSystem::SendMessageToSet(WorldPacket * packet, bool log)
@@ -2129,12 +2150,12 @@ Unit* BattleSystem::GetBattleUnit(uint8 col, uint8 row)
 	return m_BattleUnit[col][row];
 }
 
-bool BattleSystem::isUnitAvail(uint8 col, uint8 row)
+bool BattleSystem::isUnitAvail(uint8 col, uint8 row, bool linked)
 {
 	Unit* unit = GetBattleUnit(col, row);
 
 	if( unit )
-		if( !unit->isDead() )
+		if( !unit->isDead() || linked)
 			return true;
 
 	return false;

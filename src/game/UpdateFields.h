@@ -121,7 +121,9 @@ enum EUnitFields
 	PLAYER_EMOTE                        = UNIT_END + 0x0016, // 1 INT PUBLIC
 	PLAYER_EMOTE_ACTION                 = UNIT_END + 0x0017, // 1 INT PUBLIC
 
-	PLAYER_END                          = UNIT_END + 0x0018,
+	PLAYER_HERALD_CONSUMPTION           = UNIT_END + 0x0018, // 4 INT PUBLIC
+
+	PLAYER_END                          = UNIT_END + 0x001C,
 
 	/*
 	PLAYER_DUEL_ARBITER                 = UNIT_END + 0x0000, // 2 LONG  PUBLIC
@@ -297,6 +299,9 @@ enum UpdateFieldsFlags
 	UPD_FLAG_INT_MOD                    = 0xD4,
 
 	UPD_FLAG_AGI_MOD                    = 0xD6,
+
+
+	UPD_FLAG_ADD_SPELL                  = 0x6E,
 };
 
 #endif
