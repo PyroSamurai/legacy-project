@@ -504,8 +504,18 @@ void WorldSession::HandlePlayerEnterDoorOpcode( WorldPacket & recv_data )
 
 	player->TeleportTo(mapDest->MapId, mapDest->DestX, mapDest->DestY);
 	GetPlayer()->SendMapChanged();
-	GetPlayer()->UpdateGroupToSet();
 
+	///- Force team update to set if team leader
+	if( GetPlayer()->isTeamLeader() )
+	{
+		data.clear();
+		GetPlayer()->BuildUpdateBlockTeam(&data);
+		if( data.size() > 0 )
+			GetPlayer()->SendMessageToSet(&data, true);
+
+		///- Update sub-leader
+		GetPlayer()->UpdateTeamSub();
+	}
 }
 
 void WorldSession::HandlePlayerEnterMapCompletedOpcode( WorldPacket & recv_data )
@@ -541,13 +551,11 @@ void WorldSession::HandlePlayerExpressionOpcode( WorldPacket & recv_data )
 	recv_data >> expressionType;
 	recv_data >> expressionCode;
 
-	WorldPacket data;
-	data.Initialize( 0x20, 1 );
-	data << expressionType;
-	data << GetPlayer()->GetAccountId();
-	data << expressionCode;
+	_player->SetExpression(expressionType, expressionCode);
 
-	GetPlayer()->SendMessageToSet(&data, false);
+	WorldPacket data;
+	_player->BuildUpdateBlockExpression(&data);
+	_player->SendMessageToSet(&data, false);
 }
 
 void WorldSession::HandleUnknownRequest14Opcode( WorldPacket & recv_data )

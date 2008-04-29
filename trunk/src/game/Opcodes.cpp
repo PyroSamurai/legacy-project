@@ -32,7 +32,7 @@ const char* g_clntOpcodeNames[] =
 	"CMSG_PLAYER_STAT_ADD",                   // 8
 	"CMSG_CHAR_CREATE",                       // 9
 	"CMSG_UNKNOWN_10",                        // 10
-	"CMSG_USE_ITEM_TO_PLAYER",                // 11
+	"CMSG_PLAYER_BATTLE_COMMAND",             // 11
 	"CMSG_PLAYER_ENTER_MAP_COMPLETED",        // 12
 	"CMSG_GROUP_COMMAND",                     // 13
 	"CMSG_UNKNOWN_14",                        // 14

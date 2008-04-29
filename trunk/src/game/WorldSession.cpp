@@ -114,6 +114,9 @@ void WorldSession::FillOpcodeHandlerHashTable()
 
 	objmgr.opcodeTable[ CMSG_PLAYER_TRANSAC_ITEM ] = OpcodeHandler(STATUS_LOGGEDIN,
 			&WorldSession::HandlePlayerTransacItemOpcodes );
+
+	objmgr.opcodeTable[ CMSG_PLAYER_BATTLE_COMMAND ] = OpcodeHandler(STATUS_LOGGEDIN,
+			&WorldSession::HandlePlayerBattleCommandOpcodes );
 }
 
 void WorldSession::SizeError(WorldPacket const& packet, uint32 size) const

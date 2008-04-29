@@ -136,7 +136,10 @@ class ObjectMgr
 
 		Player* GetPlayer(const char* name) const { return ObjectAccessor::Instance().FindPlayerByName(name); }
 		Player* GetPlayer(uint32 guid) const { return ObjectAccessor::FindPlayer(guid); }
-
+		Player* GetPlayerByAccountId(uint32 acc_id)
+		{
+			return ObjectAccessor::FindPlayerByAccountId(acc_id);
+		}
 
 		static ItemPrototype const* GetItemPrototype(uint32 entry) { return sItemStorage.LookupEntry<ItemPrototype>(entry); }
 		uint32 GetItemEntryByModelId(uint32 modelid);

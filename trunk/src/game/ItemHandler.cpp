@@ -23,6 +23,7 @@
 #include "Opcodes.h"
 #include "Log.h"
 #include "ObjectMgr.h"
+#include "MapManager.h"
 #include "Player.h"
 #include "Item.h"
 #include "ObjectAccessor.h"
@@ -44,8 +45,77 @@ void WorldSession::HandleUseItemOpcodes( WorldPacket & recv_data )
 
 	recv_data >> useitemtype;
 
+	WorldPacket data;
+
 	switch( useitemtype )
 	{
+		case 0x02: // take item on the floor
+		{
+			CHECK_PACKET_SIZE( recv_data, 1+2+1 );
+			uint16 map_itemid;
+			uint8  amount;
+			recv_data >> map_itemid;
+			recv_data >> amount;
+
+		} break;
+
+		case 0x03: // drop item to floor
+		{
+			CHECK_PACKET_SIZE( recv_data, 1+1+1 );
+			recv_data >> tmp_invslot;
+			recv_data >> amount;
+
+			invslot = tmp_invslot + INVENTORY_SLOT_ITEM_START - 1;
+
+			Item* item = _player->GetItemByPos(invslot);
+			
+			if( !item )
+				return;
+
+			if( item->GetCount() < amount )
+				return;
+
+			Map* map = MapManager::Instance().GetMap(_player->GetMapId(), _player);
+			for(uint8 i = 0; i < amount; i++)
+			{
+				GameObject* go = new GameObject(NULL);
+				if( !go )
+					continue;
+
+				uint16 x = _player->GetPositionX() + irand(-35, 35);
+				uint16 y = _player->GetPositionY() + urand( 10, 35);
+
+				//map->Add(go);
+
+				//go->SetMapId(_player->GetMapId());
+				//go->Relocate(x, y);
+
+				data.Initialize( 0x17 );
+				data << (uint8 ) 0x03;
+				data << (uint16) item->GetModelId();
+				data << (uint16) x; //go->GetPositionX();
+				data << (uint16) y; //go->GetPositionY();
+				data << (uint8 ) 1; // item count
+				_player->SendMessageToSet(&data, true);
+
+			}
+
+			item->SetCount(-amount);
+
+			if(item->GetCount() == 0)
+				item->SetState(ITEM_REMOVED);
+			else
+				item->SetState(ITEM_CHANGED);
+
+			WorldPacket data;
+			data.Initialize( 0x17 );
+			data << (uint8 ) 0x09;
+			data << (uint8 ) tmp_invslot;
+			data << (uint8 ) amount;
+			_player->GetSession()->SendPacket(&data, true);
+
+		} break;
+
 		case 0x0B: // equip to player
 		{
 			CHECK_PACKET_SIZE( recv_data, 1 );
@@ -91,20 +161,21 @@ void WorldSession::HandleUseItemOpcodes( WorldPacket & recv_data )
 
 			_player->UpdatePlayer();
 
-			WorldPacket data;
 			data.Initialize( 0x17 );
 			data << (uint8 ) 0x11;
 			data << (uint8 ) tmp_invslot;
-
 			SendPacket(&data, true);
 
-			_player->BuildUpdateBlockVisibilityPacket(&data);
-			_player->SendMessageToSet(&data, false);
+			///- Update equip to Set
+			data.Initialize( 0x05 );
+			data << (uint8 ) 2;
+			data << (uint32) _player->GetAccountId();
+			data << (uint16) item->GetModelId();
+			_player->SendMessageToAll(&data, true);
 
 			_player->DumpPlayer( "equip" );
 			_player->DumpPlayer( "inventory" );
-			break;
-		}
+		} break;
 
 		case 0x0C: // player unequip item
 		{
@@ -155,8 +226,7 @@ void WorldSession::HandleUseItemOpcodes( WorldPacket & recv_data )
 
 			_player->DumpPlayer( "equip" );
 			_player->DumpPlayer( "inventory" );
-			break;
-		}
+		} break;
 
 		case 0x0F: // consumable item
 		{
@@ -165,8 +235,7 @@ void WorldSession::HandleUseItemOpcodes( WorldPacket & recv_data )
 			recv_data >> amount;
 			recv_data >> target; // 0 to player
 			recv_data >> unk1;
-			break;
-		}
+		} break;
 
 		case 0x11: // equip to pet
 		{
@@ -228,8 +297,7 @@ void WorldSession::HandleUseItemOpcodes( WorldPacket & recv_data )
 			data << (uint8 ) tmp_invslot;
 
 			SendPacket(&data);
-			break;
-		}
+		} break;
 
 		case 0x12: // pet unequip item
 		{
@@ -285,8 +353,7 @@ void WorldSession::HandleUseItemOpcodes( WorldPacket & recv_data )
 			data << (uint8 ) tmp_invslot;
 
 			SendPacket(&data);
-			break;
-		}
+		} break;
 
 	}
 }
@@ -340,7 +407,8 @@ void WorldSession::HandlePlayerTransacItemOpcodes(WorldPacket & recv_data)
 			_player->AddNewInventoryItem(pProto->modelid, buy_count);
 			_player->UpdateInventoryForItem(pProto->modelid, buy_count);
 
-			_player->_updatePlayer( 0x1A, 2, buy_price );
+			//_player->_updatePlayer( 0x1A, 2, buy_price );
+			_player->UpdateGold(-buy_price);
 
 			WorldPacket data;
 
@@ -383,6 +451,7 @@ void WorldSession::HandlePlayerTransacItemOpcodes(WorldPacket & recv_data)
 
 			_player->ApplyModUInt32Value(PLAYER_GOLD_INHAND, (sell_price * sell_count), true);
 
+			///- Update item in inventory
 			WorldPacket data;
 			data.Initialize( 0x17 );
 			data << (uint8 ) 0x09;
@@ -390,11 +459,10 @@ void WorldSession::HandlePlayerTransacItemOpcodes(WorldPacket & recv_data)
 			data << (uint8 ) sell_count;
 			_player->GetSession()->SendPacket(&data, true);
 
-			data.Initialize( 0x1A );
-			data << (uint8 ) 0x01;
-			data << (uint32) (sell_price * sell_count);
-			_player->GetSession()->SendPacket(&data, true);
+			///- Update gold in hand
+			_player->UpdateGold(sell_price * sell_count);
 
+			///- Sell dialog
 			data.Initialize( 0x1B );
 			data << (uint8 ) 0x02;
 			data << (uint8 ) 0x00;

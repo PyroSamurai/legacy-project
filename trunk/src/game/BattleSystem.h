@@ -126,16 +126,18 @@ class LEGACY_DLL_SPEC BattleSystem
 		bool FindNewMaster();
 
 		void Engage(Player* attacker, Creature* enemy);
-		void Engage(Player* enemy);
+		void Engage(Player* attacker, Player* enemy);
 		void BattleStart();
 		bool BattleConcluded();
 		void BattleStop();
 		void WaitForAnimation(uint16 skill);
 
 		void BattleScreenTrigger();
+		void BattleScreenTrigger2();
 
 		void InitAttackerPosition();
 		void InitDefenderPosition();
+		void InitDefenderPosition2();
 
 		void SetPosition(Unit *unit, uint8 col, uint8 row);
 
@@ -190,6 +192,8 @@ class LEGACY_DLL_SPEC BattleSystem
 
 		void SendMessageToSet(WorldPacket * packet, bool log=false);
 		void SendMessageToPlayer(Player* player, WorldPacket * packet, bool log=false);
+		void SendMessageToAttacker(WorldPacket *packet, bool log=false);
+		void SendMessageToDefender(WorldPacket *packet, bool log=false);
 
 		/*******************************************************************/
 		/***                    POSITIONING HELPER                       ***/

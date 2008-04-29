@@ -118,12 +118,13 @@ enum EUnitFields
 	PLAYER_GOLD_INHAND                  = UNIT_END + 0x000E, // 4 INT PUBLIC
 	PLAYER_GOLD_INBANK                  = UNIT_END + 0x0012, // 4 INT PUBLIC
 
-	PLAYER_EMOTE                        = UNIT_END + 0x0016, // 1 INT PUBLIC
-	PLAYER_EMOTE_ACTION                 = UNIT_END + 0x0017, // 1 INT PUBLIC
+	PLAYER_HERALD_CONSUMPTION           = UNIT_END + 0x0016, // 4 INT PUBLIC
 
-	PLAYER_HERALD_CONSUMPTION           = UNIT_END + 0x0018, // 4 INT PUBLIC
+//	PLAYER_EMOTE                        = UNIT_END + 0x0016, // 1 INT PUBLIC
+//	PLAYER_EMOTE_ACTION                 = UNIT_END + 0x0017, // 1 INT PUBLIC
 
-	PLAYER_END                          = UNIT_END + 0x001C,
+
+	PLAYER_END                          = UNIT_END + 0x001A,
 
 	/*
 	PLAYER_DUEL_ARBITER                 = UNIT_END + 0x0000, // 2 LONG  PUBLIC
@@ -271,6 +272,15 @@ enum EUnitFields
 
 	PLAYER_END                          = UNIT_END + 0x04C0,
 	*/
+};
+
+enum EGameObjectFields
+{
+	OBJECT_FIELD_CREATED_BY            = OBJECT_END + 0x0000, // 2 LONG PUBLIC
+	GAMEOBJECT_DISPLAYID               = OBJECT_END + 0x0002, // 1 INT PUBLIC
+	GAMEOBJECT_POS_X                   = OBJECT_END + 0x0003, // 1 INT PUBLIC
+	GAMEOBJECT_POS_Y                   = OBJECT_END + 0x0004, // 1 INT PUBLIC
+	GAMEOBJECT_END                     = OBJECT_END + 0x0005
 };
 
 enum UpdateFieldsFlags

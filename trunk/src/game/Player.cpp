@@ -1658,10 +1658,24 @@ void Player::UpdateCurrentEquip()
 void Player::UpdateCurrentGold()
 {
 	WorldPacket data;
-	data.Initialize( 0x1A, 1 );
+	data.Initialize( 0x1A );
 	data << (uint8 ) 0x04;
 	data << (uint32) GetUInt32Value(PLAYER_GOLD_INHAND); //m_gold_hand; // gold
-	data << (uint32) 0x00000000;
+	data << (uint32) 100000; //GetUInt32Value(PLAYER_GOLD_INBANK);
+
+	if( m_session )
+		m_session->SendPacket(&data);
+}
+
+void Player::UpdateGold(int32 value)
+{
+	if( value == 0 )
+		return;
+
+	WorldPacket data;
+	data.Initialize( 0x1A );
+	data << (uint8 ) (value > 0 ? 1 : 2);
+	data << (uint32) abs(value);
 
 	if( m_session )
 		m_session->SendPacket(&data);
@@ -1851,29 +1865,34 @@ void Player::SendMapChanged()
 	}
 }
 
-void Player::UpdateGroupToSet()
+void Player::BuildUpdateBlockTeam(WorldPacket *data)
 {
+	data->clear();
+
 	if( !isTeamLeader() )
 		return;
 
-	WorldPacket data;
-	data.Initialize( 0x0D );
-	data << (uint8 ) 6;
-	data << (uint32) GetAccountId();
-	data << (uint8 ) m_team.size();
+	data->Initialize( 0x0D );
+	*data << (uint8 ) 6;
+	*data << (uint32) GetAccountId();
+	*data << (uint8 ) m_team.size();
 
-	uint8 member_count = 0;
 	for(TeamList::const_iterator itr = m_team.begin(); itr != m_team.end(); ++itr)
-	{
-		sLog.outDebug("GROUP: Add member #%u '%s' to Group", ++member_count, (*itr)->GetName());
+		*data << (uint32) (*itr)->GetAccountId();
 
-	//	data << (uint8 ) 1; 
-		data << (uint32) (*itr)->GetAccountId();
+}
 
-	}
+void Player::BuildUpdateBlockExpression(WorldPacket *data)
+{
+	data->clear();
 
-	SendMessageToSet(&data, true);
+	if(!m_exprType || !m_exprCode)
+		return;
 
+	data->Initialize( 0x20 );
+	*data << m_exprType;
+	*data << GetAccountId();
+	*data << m_exprCode;
 }
 
 void Player::UpdateRelocationToSet()
@@ -2714,7 +2733,17 @@ void Player::RemoveItem( uint8 slot )
 	sLog.outDebug("STORAGE: RemoveItem slot = %u, item = %u", slot, pItem->GetEntry());
 
 	if( slot < EQUIPMENT_SLOT_END )
+	{
 		_ApplyItemModsFor(this, pItem, false);
+
+		///- Update to set
+		WorldPacket data;
+		data.Initialize( 0x05 );
+		data << (uint8 ) 1;
+		data << (uint32) GetAccountId();
+		data << pItem->GetModelId();
+		SendMessageToSet(&data, false);
+	}
 
 	m_items[slot] = NULL;
 	pItem->SetSlot( NULL_SLOT );
@@ -2869,8 +2898,13 @@ void Player::Engage(Creature* enemy)
 	PlayerBattleClass->Engage( this, enemy );
 }
 
-void Player::Engage(Player* ally)
+void Player::Engage(Player* player)
 {
+	if( isBattleInProgress() )
+		return;
+
+	PlayerBattleClass = new BattleSystem(this);
+	PlayerBattleClass->Engage( this, player );
 }
 
 Player* Player::GetBattleMaster()
@@ -2911,8 +2945,50 @@ void Player::JoinTeam(Player* member)
 
 }
 
+void Player::DismissTeam()
+{
+	if( !isTeamLeader() )
+		return;
+
+	while( !m_team.empty() )
+	{
+		Player* pteam = m_team.front();
+		sLog.outDebug("PLAYER: '%s' as leader, dismiss team for '%s'", GetName(), pteam->GetName());
+		LeaveTeam((pteam));
+	}
+
+	WorldPacket data;
+	data.Initialize( 0x18 );
+	data << (uint8 ) 0x05;
+	data << (uint8 ) 0x02;
+	data << (uint8 ) 0;
+	data << (uint8 ) 0;
+	SendMessageToSet(&data, true);
+
+	data.Initialize( 0x18 );
+	data << (uint8 ) 0x05;
+	data << (uint8 ) 0x62;
+	data << (uint8 ) 0x01;
+	data << (uint8 ) 0;
+	SendMessageToSet(&data, true);
+
+	data.Initialize( 0x18 );
+	data << (uint8 ) 0x05;
+	data << (uint8 ) 0x91;
+	data << (uint8 ) 0x01;
+	data << (uint8 ) 0;
+	SendMessageToSet(&data, true);
+
+	data.Initialize( 0x0D );
+	data << (uint8 ) 0x04;
+	data << (uint32) GetAccountId();
+	SendMessageToSet(&data, true);
+}
+
 void Player::LeaveTeam(Player* member)
 {
+	if( !member ) return;
+
 	member->SetDontMove(false);
 
 	sLog.outDebug("GROUP: '%s' is leaving", member->GetName());
@@ -2942,18 +3018,91 @@ bool Player::isJoinedTeam()
 
 void Player::SetSubleader(uint32 acc_id)
 {
-	Player* sub = ObjectAccessor::FindPlayerByAccountId(acc_id);
+	if( !isTeamLeader() )
+		return;
+
+	Player* sub = objmgr.GetPlayerByAccountId(acc_id);
 	if( !sub )
 		return;
 
+	bool sub_set = false;
 	for(TeamList::const_iterator itr = m_team.begin(); itr != m_team.end(); ++itr)
 	{
 		if( sub == (*itr) )
 		{
 			m_subleaderGuid = sub->GetGUIDLow();
 			sLog.outDebug("GROUP: Promote '%s' as Sub Leader", sub->GetName());
+			sub_set = true;
+			break;
 		}
 	}
+
+	if( !sub_set )
+		return;
+
+	UpdateTeamSub();
+
+}
+
+void Player::UnsetSubleader(uint32 acc_id)
+{
+	if( !isTeamLeader() )
+		return;
+
+	if( !m_subleaderGuid )
+		return;
+
+	Player* sub = objmgr.GetPlayer(m_subleaderGuid);
+	if( !sub )
+		return;
+
+	if( acc_id != sub->GetAccountId() )
+		return;
+
+	WorldPacket data;
+	data.Initialize( 0x0D );
+	data << (uint8 ) 8;
+	data << (uint32) sub->GetAccountId();
+	SendMessageToSet(&data, true);
+
+	data.Initialize( 0x0D );
+	data << (uint8 ) 0x0C;
+	data << (uint32) sub->GetAccountId();
+	SendMessageToSet(&data, true);
+
+	///- Revoke It
+	m_subleaderGuid = 0;
+}
+
+void Player::UpdateTeamSub()
+{
+	uint32 sub_id = 0;
+
+	Player* sub = objmgr.GetPlayer(m_subleaderGuid);
+	if( !sub )
+		return;
+
+	sub_id = sub->GetAccountId();
+
+	WorldPacket data;
+
+	///- Update to leader only
+	data.Initialize( 0x0D );
+	data << (uint8 ) 8;
+	data << (uint32) sub_id;
+	GetSession()->SendPacket(&data, true);
+
+	///- Update to member
+	data.Initialize( 0x0D );
+	data << (uint8 ) 7;
+	data << (uint32) sub_id;
+	SendMessageToSet(&data, true);
+
+	///- Update to member
+	data.Initialize( 0x0D );
+	data << (uint8 ) 0x0B;
+	data << (uint32) sub_id;
+	SendMessageToSet(&data, true);
 }
 
 uint32 Player::GetTeamGuid(uint8 index) const

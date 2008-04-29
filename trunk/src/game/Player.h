@@ -304,6 +304,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 
 		void BuildUpdateBlockVisibilityPacket(WorldPacket *data);
 		void BuildUpdateBlockVisibilityForOthersPacket(WorldPacket *data);
+		void BuildUpdateBlockTeam(WorldPacket *data);
 
 		void BuildUpdateBlockTeleportPacket(WorldPacket *data);
 
@@ -433,12 +434,15 @@ class LEGACY_DLL_SPEC Player : public Unit
 		/*********************************************************/
 		bool CanJoinTeam();
 		void JoinTeam(Player* member);
+		void DismissTeam();
 		void LeaveTeam(Player* member);
 		bool isTeamLeader();
 		bool isJoinedTeam();
 		void SetLeader(uint32 guid) { m_leaderGuid = guid; }
 		void SetSubleader(uint32 acc_id);
-		void UpdateGroupToSet();
+		void UnsetSubleader(uint32 acc_id);
+		void UpdateTeamSub();
+		//void UpdateTeamToSet();
 
 
 		/********************************************************/
@@ -448,7 +452,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 		bool isBattleInProgress();
 		void LeaveBattle();
 		void Engage(Creature* enemy);
-		void Engage(Player* ally);
+		void Engage(Player* player);
 		Player* GetBattleMaster();
 		void SetBattleMaster(Player* master) { i_battleMaster = master; }
 		
@@ -497,6 +501,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 		void UpdateInventoryForItem(uint16 modelid, uint8 count);
 		void UpdateCurrentEquip();
 		void UpdateCurrentGold();
+		void UpdateGold(int32 value);
 		void UpdatePetCarried();
 		void UpdateBattlePet();
 
@@ -518,6 +523,17 @@ class LEGACY_DLL_SPEC Player : public Unit
 			void UpdateVisibilityOf(T* target, UpdateData& data, UpdateDataMapType& data_updates, std::set<WorldObject*>& visibleNow);
 
 		bool HasSpell(uint32 spell) const;
+
+		/**********************************************************/
+		/***                   MISC SYSTEM                      ***/
+		/**********************************************************/
+		void SetExpression(uint8 type, uint8 code)
+		{
+			m_exprType = type;
+			m_exprCode = code;
+		}
+		void ResetExpression() { m_exprType = 0; m_exprCode = 0; }
+		void BuildUpdateBlockExpression(WorldPacket* packet);
 
 		GridReference<Player> &GetGridRef() { return m_gridRef; }
 	protected:
@@ -618,6 +634,9 @@ class LEGACY_DLL_SPEC Player : public Unit
 //		SpellMap m_spells;
 
 		Player* i_battleMaster;
+
+		uint8 m_exprType;
+		uint8 m_exprCode;
 
 };
 

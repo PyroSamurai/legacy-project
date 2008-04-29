@@ -24,20 +24,65 @@
 #include "World.h"
 #include "ObjectAccessor.h"
 
+void WorldSession::HandlePlayerBattleCommandOpcodes( WorldPacket & recv_data )
+{
+	CHECK_PACKET_SIZE( recv_data, 1+1+4+2 );
+
+	DEBUG_LOG( "WORLD: Recvd CMSG_PLAYER_BATTLE_COMMAND Message" );
+
+	uint8  cmd;
+	uint8  type;
+	uint32 target;
+	uint16 map_npcid;
+
+	recv_data >> cmd;
+
+	switch( cmd )
+	{
+		case 0x02: // PK
+		{
+			recv_data >> type;
+			recv_data >> target;
+			recv_data >> map_npcid;
+			switch( type )
+			{
+				case 0x02: // To Player
+				{
+					Player* enemy = objmgr.GetPlayerByAccountId(target);
+					if( !enemy )
+						return;
+
+					_player->Engage( enemy);
+
+				} break;
+				case 0x03: // To Npc
+				{
+					uint16 mapid = _player->GetMapId();
+					uint64 guid  = objmgr.GetNpcGuidByMapNpcId(mapid, map_npcid);
+					Creature* unit = ObjectAccessor::GetNPCIfCanInteractWith(*_player, guid, UNIT_NPC_FLAG_NONE);
+
+					if( !unit )
+						return;
+
+					_player->Engage( unit );
+
+				} break;
+			}
+		} break;
+	}
+
+}
+
 void WorldSession::HandlePlayerAttackOpcode( WorldPacket & recv_data )
 {
+	CHECK_PACKET_SIZE( recv_data, 1+1+1+1+1+2 );
+
 	DEBUG_LOG( "WORLD: Recvd CMSG_PLAYER_ATTACK Message '%s'", _player->GetName());
-
-	///- TODO: Check Packet Size
-
-	uint8 unk1;
-
-	uint8 atk_col;
-	uint8 atk_row;
-	uint8 tgt_col;
-	uint8 tgt_row;
-
-	uint16 unk2;
+	uint8  unk1;
+	uint8  atk_col;
+	uint8  atk_row;
+	uint8  tgt_col;
+	uint8  tgt_row;
 	uint16 skill;
 
 	recv_data >> unk1;

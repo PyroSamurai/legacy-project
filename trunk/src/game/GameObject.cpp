@@ -35,7 +35,7 @@ GameObject::GameObject( WorldObject *instantiator ) : WorldObject( instantiator 
 	m_objectType |= TYPE_GAMEOBJECT;
 	m_objectTypeId = TYPEID_GAMEOBJECT;
 
-//	m_valuesCount = GAMEOBJECT_END;
+	m_valuesCount = GAMEOBJECT_END;
 }
 
 GameObject::~GameObject()

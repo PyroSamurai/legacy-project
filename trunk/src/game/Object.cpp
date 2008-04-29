@@ -244,8 +244,23 @@ void Object::SendUpdateToPlayer(Player* player)
 	WorldPacket packet(100);
 
 //	BuildCreateUpdateBlockForPlayer(&packet, player);
+
+	///- Update player visualization
+	packet.clear();
 	BuildCreateUpdateBlockForPlayer(&packet, (Player*) this);
 	if (0 < packet.size()) 
+		player->GetSession()->SendPacket(&packet);
+
+	///- Update emote/expression
+	packet.clear();
+	((Player*)this)->BuildUpdateBlockExpression(&packet);
+	if (0 < packet.size())
+		player->GetSession()->SendPacket(&packet);
+
+	///- Update team
+	packet.clear();
+	((Player*)this)->BuildUpdateBlockTeam(&packet);
+	if (0 < packet.size())
 		player->GetSession()->SendPacket(&packet);
 
 	// now object update/(create updated)
