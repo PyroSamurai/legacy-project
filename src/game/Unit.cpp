@@ -391,7 +391,7 @@ void Unit::AddKillExp(uint8 enemyLevel, bool linked, bool inTeam, uint8 lowestLe
 	float  xp      = 0;
 
 	int32 diffLevel = enemyLevel - level;
-	if(level - enemyLevel > 17)
+	if(level - enemyLevel > 15)
 		///- Player level too high to gained more experience from enemy
 		xp += 0;
 	else if( linked )
@@ -416,7 +416,7 @@ void Unit::AddKillExp(uint8 enemyLevel, bool linked, bool inTeam, uint8 lowestLe
 	}
 
 	float  rate_xp   = sWorld.getRate(RATE_XP_KILL);
-	uint32 xp_gained = (uint32) round(pow(xp, rate_xp));
+	uint32 xp_gained = (uint32) round(xp * rate_xp);
 	AddExpGained(xp_gained);
 }
 

@@ -469,5 +469,7 @@ void Map::CreatureRelocationNotify(Creature *creature, Cell cell, CellPair cellp
 }
 
 template void Map::Add(Creature *);
+template void Map::Add(GameObject *);
 
 //template void Map::Remove(Creature *, bool);
+//template void Map::Remove(GameObject *, bool);

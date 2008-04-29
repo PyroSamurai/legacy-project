@@ -62,8 +62,7 @@ void WorldSession::HandleGroupOpcodes( WorldPacket & recv_data )
 			data << (uint8 ) 0x01;
 			data << (uint32) GetAccountId();
 			leader->GetSession()->SendPacket(&data);
-			break;
-		}
+		} break;
 
 		///- Leader Response
 		case 0x03:
@@ -115,23 +114,53 @@ void WorldSession::HandleGroupOpcodes( WorldPacket & recv_data )
 				default:
 					break;
 			}
-		}
+		} break;
 
 		///- Group Member Leave/Disconnected
 		case 0x04:
 		{
-			break;
-		}
+			CHECK_PACKET_SIZE( recv_data, 1+4 );
+			uint32 teamleaderId;
+			recv_data >> teamleaderId;
 
-		///- Set as Sub-Leader
+			if( _player->isTeamLeader() )
+				_player->DismissTeam();
+			else
+			{
+				Player* leader = objmgr.GetPlayerByAccountId(teamleaderId);
+				if( !leader )
+					return;
+
+				leader->LeaveTeam(_player);
+			}
+
+		} break;
+
+		///- Grant Sub-Leader as leader
 		case 0x05:
 		{
-			CHECK_PACKET_SIZE( recv_data, 4 );
+			CHECK_PACKET_SIZE( recv_data, 1+4 );
 			uint32 subleaderId;
 			recv_data >> subleaderId;
 			_player->SetSubleader(subleaderId);
-			break;
-		}
+		} break;
+
+		///- Revoke Sub-Leader as leader
+		case 0x06:
+		{
+			CHECK_PACKET_SIZE( recv_data, 1+4 );
+			uint32 subleaderId;
+			recv_data >> subleaderId;
+			_player->UnsetSubleader(subleaderId);
+		} break;
+
+		///- Ask other to join team as leader
+		case 0x07:
+		{
+			CHECK_PACKET_SIZE( recv_data, 1+4 );
+			uint32 targetId;
+			recv_data >> targetId;
+		} break;
 
 		default:
 			break;

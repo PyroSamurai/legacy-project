@@ -194,12 +194,8 @@ void BattleSystem::Engage( Player* player, Creature* enemy )
 	m_waitForAction = false;
 	///- Reset all Unit
 	for(uint8 row = 0; row < BATTLE_ROW_MAX; row++)
-	{
 		for (uint8 col = 0; col < BATTLE_COL_MAX; col++)
-		{
 			m_BattleUnit[col][row] = NULL;
-		}
-	}
 
 	const CreatureData* edata = objmgr.GetCreatureData( enemy->GetGUIDLow() );
 
@@ -220,7 +216,7 @@ void BattleSystem::Engage( Player* player, Creature* enemy )
 
 
 	///- Define only player row
-	// pet will be define later. See InitAttackerPosition
+	//   pet will be define later. See InitAttackerPosition
 	AttackerTeam[3][0] = player->GetTeamGuid(3);
 	AttackerTeam[3][1] = player->GetTeamGuid(2);
 	AttackerTeam[3][2] = player->GetGUIDLow();
@@ -243,8 +239,38 @@ void BattleSystem::Engage( Player* player, Creature* enemy )
 	player->SendMessageToSet(&data, false);
 }
 
-void BattleSystem::Engage( Player* enemy )
+void BattleSystem::Engage( Player* player, Player* enemy )
 {
+	m_PlayerActionNeed = 0;
+	m_PlayerActionCount = 0;
+	m_actionTime = 0;
+	m_waitForAction = false;
+	///- Reset all Unit
+	for(uint8 row = 0; row < BATTLE_ROW_MAX; row++)
+		for(uint8 col = 0; col < BATTLE_COL_MAX; col++)
+			m_BattleUnit[col][row] = NULL;
+
+	///- Define all player defender team
+	//   pet will be define later. See InitDefenderPosition
+	DefenderTeam[0][0] = enemy->GetTeamGuid(3);
+	DefenderTeam[0][1] = enemy->GetTeamGuid(2);
+	DefenderTeam[0][2] = enemy->GetGUIDLow();
+	DefenderTeam[0][3] = enemy->GetTeamGuid(1);
+	DefenderTeam[0][4] = enemy->GetTeamGuid(4);
+
+	///- Define all player attacker team
+	//   pet will be define later. See InitAttackerPosition
+	AttackerTeam[3][0] = player->GetTeamGuid(3);
+	AttackerTeam[3][1] = player->GetTeamGuid(2);
+	AttackerTeam[3][2] = player->GetGUIDLow();
+	AttackerTeam[3][3] = player->GetTeamGuid(1);
+	AttackerTeam[3][4] = player->GetTeamGuid(4);
+
+	InitDefenderPosition2();
+	InitAttackerPosition();
+
+	BattleStart();
+
 }
 
 void BattleSystem::BattleStart()
@@ -367,8 +393,8 @@ void BattleSystem::BattleScreenTrigger()
 		if( !p->isType(TYPE_PLAYER) ) continue;
 
 		sLog.outDebug("BATTLE: Trigger add for '%s'", p->GetName());
-		data << (uint8 ) 0x01;
-		data << (uint8 ) 0x02;
+		data << (uint8 ) 0x01; // unknown
+		data << (uint8 ) 0x02; // unknown
 		data << (uint32) p->GetAccountId();
 		data << (uint16) 0x0000;
 		data << (uint16) 0x0000;
@@ -384,8 +410,11 @@ void BattleSystem::BattleScreenTrigger()
 
 	}
 
-	sLog.outDebug("BATTLE: Triggering battle to set");
-	SendMessageToSet(&data, true);
+	sLog.outDebug("BATTLE: Triggering battle to Attackers");
+	//SendMessageToSet(&data, true);
+	SendMessageToAttacker(&data, true);
+
+	BattleScreenTrigger2();
 
 	///- Start the battle IMPORTANT!!
 	data.Initialize( 0x0B );
@@ -395,6 +424,44 @@ void BattleSystem::BattleScreenTrigger()
 	SendMessageToSet(&data);
 
 	sLog.outDebug("BATTLE: Screen Trigger Complete");
+}
+
+///- Battle Screen Trigger for Defenders
+void BattleSystem::BattleScreenTrigger2()
+{
+	WorldPacket data;
+	data.Initialize( 0x0B );
+	data << (uint8 ) 0xFA;
+	data << (uint16) m_BattleGroundId;
+
+	for(uint8 col = 0; col < BATTLE_COL_MAX; col++)
+		for(uint8 row = 0; row < BATTLE_ROW_MAX; row++)
+		{
+			Player* p = (Player*) GetBattleUnit(col, row);
+
+			if( !p ) continue;
+
+			if( !p->isType(TYPE_PLAYER) ) continue;
+
+			sLog.outDebug("BATTLE: Trigger2 add for '%s'", p->GetName());
+			data << (uint8 ) 0x05; // unknown
+			data << (uint8 ) 0x02; // unknown
+			data << (uint32) p->GetAccountId();
+			data << (uint16) 0;
+			data << (uint16) 0;
+			data << (uint16) 0;
+			data << (uint8 ) col;
+			data << (uint8 ) row;
+			data << (uint16) p->GetUInt32Value(UNIT_FIELD_HP_MAX);
+			data << (uint16) p->GetUInt32Value(UNIT_FIELD_SP_MAX);
+			data << (uint16) p->GetUInt32Value(UNIT_FIELD_HP);
+			data << (uint16) p->GetUInt32Value(UNIT_FIELD_SP);
+			data << (uint8 ) p->GetUInt32Value(UNIT_FIELD_LEVEL);
+			data << (uint8 ) p->GetUInt32Value(UNIT_FIELD_ELEMENT);
+		}
+
+	sLog.outDebug("BATTLE: Triggering battle to Defenders");
+	SendMessageToDefender(&data, true);
 }
 
 ///- Send Only TYPE_PET Unit position
@@ -532,6 +599,39 @@ void BattleSystem::InitDefenderPosition()
 	m_DefRateLvl = level_count / unit_count;
 }
 
+///- Init Enemy Position (for player type)
+void BattleSystem::InitDefenderPosition2()
+{
+	m_DefRateLvl       = 0;
+
+	uint8  unit_count  = 0;
+	uint32 level_count = 0;
+
+	uint8 col = 0; // set col for player row only
+
+	for(uint8 row = 0; row < BATTLE_ROW_MAX; row++)
+	{
+		Player* pPlayer = objmgr.GetPlayer(DefenderTeam[col][row]);
+		if( !pPlayer )
+			continue;
+
+		SetPosition(pPlayer, col, row);
+		unit_count++;
+		level_count += pPlayer->getLevel();
+
+		JoinBattle(pPlayer);
+
+		Pet* pet = pPlayer->GetBattlePet();
+		if( !pet )
+			continue;
+
+		SetPosition(pet, col + 1, row);
+		unit_count++;
+		level_count += pet->getLevel();
+	}
+	m_DefRateLvl = level_count / unit_count;
+}
+
 void BattleSystem::SetPosition(Unit *unit, uint8 col, uint8 row)
 {
 	m_BattleUnit[col][row] = unit;
@@ -576,9 +676,9 @@ void BattleSystem::SendDefenderPosition()
 
 			data.Initialize( 0x0B );
 			data << (uint8 ) 0x05;
-			data << (uint8 ) 0x01;
-			data << (uint8 ) 0x07;
-			data << (uint16) unit->GetModelId();// npc ModelId
+			data << (uint8 ) (unit->isType(TYPE_PLAYER) ? 0x05 : 0x01);
+			data << (uint8 ) (unit->isType(TYPE_PLAYER) ? 0x02 : 0x07);
+			data << (uint16) (unit->isType(TYPE_PLAYER) ? ((Player*)unit)->GetAccountId() : unit->GetModelId());// npc ModelId/player AccId
 			data << (uint16) 0x0000;
 			data << count++;              // unknown, still guessing
 			data << (uint8 ) 0x00;
@@ -609,6 +709,9 @@ void BattleSystem::AIMove()
 		{
 			Unit *attacker = m_BattleUnit[col][row];
 			if( !attacker ) continue;
+
+			if( attacker->isType(TYPE_PLAYER) || attacker->isType(TYPE_PET) )
+				continue;
 
 			if( attacker->isDead() ) continue;
 
@@ -1081,7 +1184,7 @@ bool BattleSystem::SendAction()
 
 	if( valid_action )
 	{
-		SendMessageToSet(&data, false);
+		SendMessageToSet(&data, true);
 		WaitForAnimation( skillId );
 	}
 
@@ -1967,6 +2070,40 @@ void BattleSystem::SendMessageToSet(WorldPacket * packet, bool log)
 		//if( log ) (*itr)->GetSession()->SetLogging(false);
 	}
 
+}
+
+///- Purpose only to send trigger screen to attackers
+void BattleSystem::SendMessageToAttacker(WorldPacket * packet, bool log)
+{
+	uint8 col = 3;
+	for(uint8 row = 0; row < BATTLE_ROW_MAX; row++)
+	{
+		Unit* unit = m_BattleUnit[col][row];
+		if( !unit )
+			continue;
+
+		if( !unit->isType(TYPE_PLAYER) )
+			continue;
+
+		SendMessageToPlayer(((Player*)unit), packet, log);
+	}
+}
+
+///- Purpose only to send trigger screen to defenders
+void BattleSystem::SendMessageToDefender(WorldPacket * packet, bool log)
+{
+	uint8 col = 0;
+	for(uint8 row = 0; row < BATTLE_ROW_MAX; row++)
+	{
+		Unit* unit = m_BattleUnit[col][row];
+		if( !unit )
+			continue;
+
+		if( !unit->isType(TYPE_PLAYER) )
+			continue;
+
+		SendMessageToPlayer(((Player*)unit), packet, log);
+	}
 }
 
 void BattleSystem::SendMessageToPlayer(Player* player, WorldPacket* packet, bool log)
