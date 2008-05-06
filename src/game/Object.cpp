@@ -245,6 +245,17 @@ void Object::SendUpdateToPlayer(Player* player)
 
 //	BuildCreateUpdateBlockForPlayer(&packet, player);
 
+	///- Update team
+	/*
+	packet.clear();
+	((Player*)this)->BuildUpdateBlockTeam(&packet);
+	if (0 < packet.size())
+	{
+		sLog.outDebug("OBJECT: Team Update for '%s' to '%s'", ((Player*)this)->GetName(), player->GetName());
+		player->GetSession()->SendPacket(&packet, true);
+	}
+*/
+
 	///- Update player visualization
 	packet.clear();
 	BuildCreateUpdateBlockForPlayer(&packet, (Player*) this);
@@ -261,7 +272,11 @@ void Object::SendUpdateToPlayer(Player* player)
 	packet.clear();
 	((Player*)this)->BuildUpdateBlockTeam(&packet);
 	if (0 < packet.size())
-		player->GetSession()->SendPacket(&packet);
+	{
+		sLog.outDebug("OBJECT: Team Update for '%s' to '%s'", ((Player*)this)->GetName(), player->GetName());
+		player->GetSession()->SendPacket(&packet, true);
+	}
+
 
 	// now object update/(create updated)
 }

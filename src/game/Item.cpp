@@ -148,7 +148,8 @@ void Item::RemoveFromUpdateQueueOf(Player *player)
 
 bool Item::IsEquipped() const
 {
-	return !IsInPet() && m_slot < EQUIPMENT_SLOT_END;
+	//return !IsInPet() && m_slot < EQUIPMENT_SLOT_END;
+	return IsInPet() || m_slot < EQUIPMENT_SLOT_END;
 }
 
 void Item::SaveToDB()

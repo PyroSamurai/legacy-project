@@ -89,6 +89,9 @@ Player::Player (WorldSession *session): Unit( 0 )
 	//////////////////Inventory System/////////////////
 
 	m_leaderGuid = 0;
+	m_exprType = 0;
+	m_exprCode = 0;
+	m_orientation = 0;
 }
 
 Player::~Player ()
@@ -786,6 +789,7 @@ void Player::_ApplyItemModsFor(Unit* unit, Item* item, bool apply)
 	bool  el_bonus = false;
 	int32 el_value = 0;
 
+	sLog.outDebug("ITEM MODS: Applying item mods <%s> for '%s'", item->GetProto()->Name, unit->GetName());
 
 	///- Parse all item mod stat
 	for(uint8 i = 0; i < 10; i++)
@@ -1840,7 +1844,7 @@ void Player::SendMapChanged()
 	data << (uint16) GetPositionX();
 	data << (uint16) GetPositionY();
 	data << (uint8 ) (isTeamLeader() ? 4 : (!isJoinedTeam() ? 0 : 1));
-	data << (uint8 ) 0x00;
+	data << (uint8 ) 0x00; //GetOrientation();
 
 	if( m_session )
 		m_session->SendPacket(&data, true);
@@ -1870,7 +1874,44 @@ void Player::BuildUpdateBlockTeam(WorldPacket *data)
 	data->clear();
 
 	if( !isTeamLeader() )
-		return;
+	{
+		if( isJoinedTeam() )
+			return;
+
+		///- Pet Carried if any
+		data->Initialize( 0x0F );
+		*data << (uint8 ) 0x07;
+		*data << (uint32) GetAccountId();
+		uint8 pet_count = 0;
+		for(uint8 slot = 0; slot < MAX_PET_SLOT; slot++)
+		{
+			Pet* pet = GetPet(slot);
+			if( !pet )
+				continue;
+
+			*data << (uint8 ) (slot + 1);       // slot
+			*data << (uint16) pet->GetModelId(); //0x3720;  // pet model id
+			*data << (uint8 ) 0 << (uint16) 0;
+			*data << (uint8 ) 0; //1; // unknown
+			*data << (uint8 ) 0; //6; // unknown
+			for(uint8 i = 0; i < 8; i++)
+				*data << (uint8 ) 0; // unknown
+		
+			//*data << (uint16) 0; //0x63B4; // unknown
+			//*data << (uint16) 0; //0xFEB7; // unknown
+			//*data << (uint16) 0; //0x6CB6; // unknown
+
+			pet_count++;
+		}
+
+		if( !pet_count )
+			data->clear();
+		else
+		{
+			sLog.outDebug("PET DATA: for '%s'", GetName());
+			return;
+		}
+	}
 
 	data->Initialize( 0x0D );
 	*data << (uint8 ) 6;
@@ -1903,7 +1944,7 @@ void Player::UpdateRelocationToSet()
 	data.Initialize( 0x06, 1 );
 	data << (uint8) 0x01;
 	data << GetAccountId();
-	data << (uint8) 0x05;
+	data << (uint8) GetOrientation(); //0x05; // orientation
 	data << GetPositionX() << GetPositionY();
 	SendMessageToSet(&data, false);
 
@@ -2770,6 +2811,20 @@ void Player::PetRemoveItem( Pet* pet, uint8 slot )
 
 }
 
+void Player::DestroyItem( uint8 slot )
+{
+	Item* pItem = GetItemByPos( slot );
+	if( !pItem )
+		return;
+
+	sLog.outDebug("STORAGE: DestroyItem slot = %u, item %u", slot, pItem->GetEntry());
+
+	m_items[slot] = NULL;
+	pItem->SetUInt64Value( ITEM_FIELD_CONTAINED, 0 );
+	pItem->SetSlot( NULL_SLOT );
+	pItem->SetState(ITEM_REMOVED, this);
+}
+
 void Player::QuickEquipItem( uint8 pos, Item *pItem)
 {
 	if( pItem )
@@ -2983,6 +3038,7 @@ void Player::DismissTeam()
 	data << (uint8 ) 0x04;
 	data << (uint32) GetAccountId();
 	SendMessageToSet(&data, true);
+
 }
 
 void Player::LeaveTeam(Player* member)
@@ -3001,6 +3057,14 @@ void Player::LeaveTeam(Player* member)
 	data << (uint32) member->GetAccountId();
 
 	SendMessageToSet(&data, true);
+
+	member->BuildUpdateBlockTeam(&data);
+	if( 0 < data.size() )
+		SendMessageToSet(&data, true);
+
+	BuildUpdateBlockTeam(&data);
+	if( 0 < data.size() )
+		SendMessageToSet(&data, true);
 }
 
 bool Player::isTeamLeader()
@@ -3013,7 +3077,7 @@ bool Player::isTeamLeader()
 
 bool Player::isJoinedTeam()
 {
-	return (m_leaderGuid ? true : false);
+	return (m_leaderGuid == 0 ? false : true);
 }
 
 void Player::SetSubleader(uint32 acc_id)
