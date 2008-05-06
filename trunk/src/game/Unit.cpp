@@ -464,6 +464,9 @@ void Unit::AddExpGained(uint32 xp)
 		SetUInt32Value(UNIT_FIELD_NEXT_LEVEL_XP, xp - tnl);
 
 		tnl = (uint32) round(pow(getLevel() + 1, power) + 5);
+
+		if( getLevel() >= 200 )
+			break;
 	}
 }
 

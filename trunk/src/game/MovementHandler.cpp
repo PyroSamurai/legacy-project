@@ -34,14 +34,16 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
 	if(GetPlayer()->GetDontMove())
 		return;
 
+	_player->SetExpression(0, 0);
+
 	/* extract packet */
 	uint8  sub_opcode;
-	uint8  unknown1;
+	uint8  orientation;
 	uint16 pos_x;
 	uint16 pos_y;
 	uint16 unknown2;
 	recv_data >> sub_opcode;
-	recv_data >> unknown1;
+	recv_data >> orientation;
 	recv_data >> pos_x;
 	recv_data >> pos_y;
 	recv_data >> unknown2;
@@ -51,6 +53,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
 	GetPlayer()->SetLastPosition(GetPlayer()->GetPositionX(), GetPlayer()->GetPositionY());
 
 	GetPlayer()->Relocate(pos_x, pos_y);
+	GetPlayer()->SetOrientation(orientation);
 	GetPlayer()->UpdateRelocationToSet();
 	GetPlayer()->EndOfRequest();
 }

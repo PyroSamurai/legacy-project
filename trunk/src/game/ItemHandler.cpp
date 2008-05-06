@@ -100,12 +100,12 @@ void WorldSession::HandleUseItemOpcodes( WorldPacket & recv_data )
 
 			}
 
-			item->SetCount(-amount);
+			item->SetCount(item->GetCount() - amount);
 
 			if(item->GetCount() == 0)
-				item->SetState(ITEM_REMOVED);
+				_player->DestroyItem( invslot );
 			else
-				item->SetState(ITEM_CHANGED);
+				item->SetState(ITEM_CHANGED, _player);
 
 			WorldPacket data;
 			data.Initialize( 0x17 );
@@ -113,6 +113,8 @@ void WorldSession::HandleUseItemOpcodes( WorldPacket & recv_data )
 			data << (uint8 ) tmp_invslot;
 			data << (uint8 ) amount;
 			_player->GetSession()->SendPacket(&data, true);
+
+			_player->DumpPlayer("inventory");
 
 		} break;
 
@@ -263,6 +265,7 @@ void WorldSession::HandleUseItemOpcodes( WorldPacket & recv_data )
 
 			uint8 dest = slot;
 
+			sLog.outDebug("EQUIPING TO %s", pet->GetName());
 
 			if( _player->IsEquipmentPos( dest ) )
 			{

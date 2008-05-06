@@ -389,6 +389,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 		Item* BankItem( uint8 pos, Item *pItem, bool update );
 		void RemoveItem( uint8 slot );
 		void PetRemoveItem( Pet* pet, uint8 slot );
+		void DestroyItem( uint8 slot );
 
 		void DestroyItem( uint8 slot, bool update );
 		void DestroyItemCount( uint32 item, uint32 count, bool update, bool unequip_check = false);
@@ -527,6 +528,8 @@ class LEGACY_DLL_SPEC Player : public Unit
 		/**********************************************************/
 		/***                   MISC SYSTEM                      ***/
 		/**********************************************************/
+		void SetOrientation(uint8 orientation) { m_orientation = orientation; }
+		uint8 GetOrientation() { return m_orientation; }
 		void SetExpression(uint8 type, uint8 code)
 		{
 			m_exprType = type;
@@ -637,7 +640,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 
 		uint8 m_exprType;
 		uint8 m_exprCode;
-
+		uint8 m_orientation;
 };
 
 #endif
