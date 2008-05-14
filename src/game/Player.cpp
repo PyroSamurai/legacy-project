@@ -1906,21 +1906,19 @@ void Player::BuildUpdateBlockTeam(WorldPacket *data)
 
 		if( !pet_count )
 			data->clear();
-		else
-		{
-			sLog.outDebug("PET DATA: for '%s'", GetName());
-			return;
-		}
+
+		sLog.outDebug("PET DATA: Player::BuildUpdateBlockTeam for '%s' have %u pets", GetName(), pet_count);
 	}
+	else if( isTeamLeader() )
+	{
+		data->Initialize( 0x0D );
+		*data << (uint8 ) 6;
+		*data << (uint32) GetAccountId();
+		*data << (uint8 ) m_team.size();
 
-	data->Initialize( 0x0D );
-	*data << (uint8 ) 6;
-	*data << (uint32) GetAccountId();
-	*data << (uint8 ) m_team.size();
-
-	for(TeamList::const_iterator itr = m_team.begin(); itr != m_team.end(); ++itr)
-		*data << (uint32) (*itr)->GetAccountId();
-
+		for(TeamList::const_iterator itr = m_team.begin(); itr != m_team.end(); ++itr)
+			*data << (uint32) (*itr)->GetAccountId();
+	}
 }
 
 void Player::BuildUpdateBlockExpression(WorldPacket *data)
@@ -2102,6 +2100,7 @@ Pet* Player::CreatePet( uint32 pet ) const
 
 uint8 Player::CanSummonPet( uint8 slot, uint8 &dest, Pet *pPet, bool swap) const
 {
+	/// TODO: Check forbid similar pet entry
 	dest = 0;
 	if( pPet )
 	{
@@ -2208,10 +2207,21 @@ void Player::ReleasePet( uint8 slot )
 	if( !m_pets[slot] )
 		return;
 
+	if( m_pets[slot] == m_battlePet )
+		SetBattlePet( NULL );
+
 	m_pets[slot]->SetState(PET_REMOVED);
 	m_pets[slot] = NULL;
 
 	_SavePets();
+
+	///- Confirm releasing to client
+	WorldPacket data;
+	data.Initialize( 0x0F );
+	data << (uint8 ) 0x02;
+	data << (uint32) GetAccountId();
+	data << (uint8 ) (slot+1);
+	SendMessageToSet(&data, true);
 
 }
 

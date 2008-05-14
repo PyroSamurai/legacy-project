@@ -165,6 +165,46 @@ bool ChatHandler::HandleNpcAddCommand(const char* args)
 	return true;
 }
 
+bool ChatHandler::HandleNpcDeleteCommand(const char* args)
+{
+	char* map_npcid_text = strtok((char*)args, " ");
+
+	if( !map_npcid_text )
+		return false;
+
+	uint8 map_npcid = atoi(map_npcid_text);
+
+	// .npc del <mapnpcid>
+	sLog.outDebug("COMMAND: HandleNpcDeleteCommand");
+
+	Player* GM = m_session->GetPlayer();
+
+	if( !GM )
+		return true;
+
+	uint32 mapid = GM->GetMapId();
+	uint32 guid = objmgr.GenerateNpcGuidLow(mapid, map_npcid);
+
+	CreatureData const* npc = objmgr.GetCreatureData(guid);
+
+	if( !npc )
+	{
+		PSendGmMessage("Npc %u does not exists. Cannot delete.", guid);
+		return true;
+	}
+
+	uint64 GUID = objmgr.GetNpcGuidByMapNpcId(mapid, map_npcid);
+	Creature* obj = ObjectAccessor::GetCreature(*GM, GUID);
+
+	Map* map = MapManager::Instance().GetMap(GM->GetMapId(), GM);
+	map->Remove(obj, false);
+	obj->DeleteFromDB();
+	PSendGmMessage("Npc '%s' deleted.", obj->GetName());
+	delete obj;
+
+	return true;
+}
+
 bool ChatHandler::HandleNpcEditCommand(const char* args)
 {
 	char* cmd = strtok((char*)args, " ");
@@ -177,7 +217,7 @@ bool ChatHandler::HandleNpcEditCommand(const char* args)
 
 	// .npc edit team <mapnpcid> [group1] ... [group10]
 	// .npc edit pos  <mapnpcid> idle|random <x> <y>
-	sLog.outDebug("COMAND: HandleEditNpcCommand");
+	sLog.outDebug("COMMAND: HandleNpcEditCommand command: [%s]", cmd);
 
 	Player* GM = m_session->GetPlayer();
 
@@ -203,8 +243,9 @@ bool ChatHandler::HandleNpcEditCommand(const char* args)
 		return true;
 	}
 
-	if(::strcmp(cmd, "team"))
+	if(::strcmp(cmd, "team") == 0)
 	{
+		sLog.outDebug("Editing Team");
 		char* t00_text = strtok(NULL, " ");
 		char* t01_text = strtok(NULL, " ");
 		char* t03_text = strtok(NULL, " ");
@@ -269,9 +310,10 @@ bool ChatHandler::HandleNpcEditCommand(const char* args)
 
 				uint32 guid2 = objmgr.GetCreatureGuidByModelId(team[i][j]);
 
-				if( !guid2 )
+				if( !guid2 && team[i][j] != 0)
 				{
 					PSendGmMessage("Npc team %u npc %u does not exists. Please create it first.", count, team[i][j]);
+					guid2 = 0;
 				}
 
 				ss << "team_" << i << "_" << j << " = " << guid2 << " ";
@@ -393,6 +435,9 @@ bool ChatHandler::HandlePetAddCommand(const char* args)
 		pet->SetLoyalty(60);
 		player->SummonPet( dest, pet );
 		player->UpdatePetCarried();
+		WorldPacket data;
+		player->BuildUpdateBlockTeam(&data);
+		player->SendMessageToSet(&data, true);
 		PSendGmMessage("Pet '%s' created for player '%s'", pet->GetName(), player->GetName());
 	}
 	else

@@ -93,6 +93,7 @@ class ChatHandler
 		bool HandleNpcTalkCommand(const char* args);
 		bool HandleNpcInfoCommand(const char* args);
 		bool HandleNpcAddCommand(const char* args);
+		bool HandleNpcDeleteCommand(const char* args);
 		bool HandleNpcEditCommand(const char* args);
 		bool HandlePetAddCommand(const char* args);
 		bool HandlePetReleaseCommand(const char* args);

@@ -284,7 +284,13 @@ void Unit::AddSpellLevel(uint16 entry, uint8 value)
 
 bool Unit::HaveSpell(uint16 entry)
 {
-	if(entry == SPELL_BASIC) return true; // must have basic attack spell
+	// must have basic spell
+	if( entry == SPELL_BASIC ||
+		entry == SPELL_DEFENSE ||
+		entry == SPELL_CATCH ||
+		entry == SPELL_CATCH2 ||
+		entry == SPELL_ESCAPE )
+		return true;
 
 	if( FindSpell(entry) )
 		return true;

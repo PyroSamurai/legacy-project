@@ -175,6 +175,7 @@ class LEGACY_DLL_SPEC BattleSystem
 		bool CanJoin() const;
 		void JoinBattle(Player* player);
 		void LeaveBattle(Player* player);
+		void Escaped(BattleAction *action);
 
 	protected:
 		void ResetAction();

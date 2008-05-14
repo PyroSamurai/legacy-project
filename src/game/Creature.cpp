@@ -307,7 +307,7 @@ void Creature::AI_SendMoveToPacket(uint16 x, uint16 y, uint32 time, uint8 type)
 {
 	SendMonsterMove(x, y, type, time);
 }
-
+*/
 void Creature::SaveToDB()
 {
 	// update in loaded data
@@ -322,13 +322,13 @@ void Creature::SaveToDB()
 	data.spawn_posX = respawn_cord[0];
 	data.spawn_posY = respawn_cord[1];
 	data.hp    = GetHealth();
-	data.sp    = GetPower(POWER_MANA);
+//	data.sp    = GetPower(POWER_MANA);
 	data.deathState = m_deathState;
 	data.movementType = GetDefaultMovementType();
 
 	// update in DB
 	WorldDatabase.BeginTransaction();
-
+/*
 	WorldDatabase.PExecuteLog("DELETE FROM `creature` WHERE guid ='%u'", m_DBTableGuid);
 
 	std::ostringstream ss;
@@ -347,10 +347,10 @@ void Creature::SaveToDB()
 		<< GetDefaultMovementType() << ")";
 
 	WorldDatabase.PExecuteLog( ss.str().c_str() );
-
+*/
 	WorldDatabase.CommitTransaction();
 }
-*/
+
 void Creature::SelectLevel(const CreatureInfo *cinfo)
 {
 }
@@ -562,19 +562,18 @@ bool Creature::hasInvolvedQuest(uint32 quest_id) const
 	}
 	return false;
 }
-
+*/
 void Creature::DeleteFromDB()
 {
-	objmgr.SaveCreatureRespawnTime(m_DBTableGuid, GetInstanceId(), 0);
+//	objmgr.SaveCreatureRespawnTime(m_DBTableGuid, GetInstanceId(), 0);
 	objmgr.DeleteCreatureData(m_DBTableGuid);
 
 	WorldDatabase.BeginTransaction();
 	WorldDatabase.PExecuteLog("DELETE FROM creature WHERE guid = '%u'", m_DBTableGuid);
-	WorldDatabase.PExecuteLog("DELETE FROM creature_addon WHERE guid = '%u'", m_DBTableGuid);
-	WorldDatabase.PExecuteLog("DELETE FROM creature_movement WHERE id = '%u'", m_DBTableGuid);
+//	WorldDatabase.PExecuteLog("DELETE FROM creature_addon WHERE guid = '%u'", m_DBTableGuid);
+//	WorldDatabase.PExecuteLog("DELETE FROM creature_movement WHERE id = '%u'", m_DBTableGuid);
 	WorldDatabase.CommitTransaction();
 }
-*/
 
 CreatureInfo const *Creature::GetCreatureInfo() const
 {

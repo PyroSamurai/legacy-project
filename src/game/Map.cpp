@@ -288,6 +288,36 @@ void Map::Remove(Player *player, bool remove)
 //	InitResetTime();
 }
 
+template<class T>
+void
+Map::Remove(T *obj, bool remove)
+{
+	CellPair p = LeGACY::ComputeCellPair(obj->GetPositionX(), obj->GetPositionY());
+	if(p.x_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP || p.y_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP)
+	{
+		sLog.outError("Map::Remove: Object " I64FMTD " have invalid coordinates X: %f Y:%f grid cell [%u:%u]", obj->GetGUID(), obj->GetPositionX(), obj->GetPositionY(), p.x_coord, p.y_coord);
+		return;
+	}
+
+	Cell cell(p);
+	if( !loaded(GridPair(cell.data.Part.grid_x, cell.data.Part.grid_y)) )
+		return;
+
+	DEBUG_LOG("Remove object " I64FMTD " from grid[%u,%u]", obj->GetGUID(), cell.data.Part.grid_x, cell.data.Part.grid_y);
+	NGridType *grid = getNGrid(cell.GridX(), cell.GridY());
+	assert( grid != NULL );
+
+	RemoveFromGrid(obj,grid,cell);
+	obj->RemoveFromWorld();
+
+	UpdateObjectVisibility(obj,cell,p);
+
+	if( remove )
+	{
+		DeleteFromWorld(obj);
+	}
+}
+
 void
 Map::PlayerRelocation(Player *player, uint16 x, uint16 y)
 {
@@ -471,5 +501,5 @@ void Map::CreatureRelocationNotify(Creature *creature, Cell cell, CellPair cellp
 template void Map::Add(Creature *);
 template void Map::Add(GameObject *);
 
-//template void Map::Remove(Creature *, bool);
-//template void Map::Remove(GameObject *, bool);
+template void Map::Remove(Creature *,bool);
+template void Map::Remove(GameObject *,bool);

@@ -53,6 +53,7 @@ ChatCommand * ChatHandler::getCommandTable()
 		{ "talk", SEC_GAMEMASTER, &ChatHandler::HandleNpcTalkCommand, "", NULL },
 		{ "info", SEC_GAMEMASTER, &ChatHandler::HandleNpcInfoCommand, "", NULL },
 		{ "add", SEC_GAMEMASTER, &ChatHandler::HandleNpcAddCommand, "", NULL },
+		{ "del", SEC_GAMEMASTER, &ChatHandler::HandleNpcDeleteCommand, "", NULL },
 		{ "edit", SEC_GAMEMASTER, &ChatHandler::HandleNpcEditCommand, "", NULL },
 	};
 

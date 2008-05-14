@@ -59,10 +59,17 @@ enum SpellModType
 
 enum SpellNumberEntry
 {
-	SPELL_BASIC                   = 10000,
-	SPELL_BERSERKER               = 13013,
+	SPELL_BASIC                   = 10000,   // Duel Tangan Kosong
+	SPELL_BERSERKER               = 13013,   // Berserker
+	SPELL_RETREAT                 = 14002,   // Retreat
 	SPELL_TEACHING                = 14027,   // Guru pembimbing
 	SPELL_UNITED                  = 14028,   // Bersatu
+	SPELL_CATCH                   = 15001,   // Menangkap
+	SPELL_CATCH2                  = 15002,   // Menjala
+	SPELL_SUCCESS_CATCH           = 15003,   // Sukses tangkap jala
+	SPELL_DEFENSE                 = 17001,   // Defense
+	SPELL_ESCAPE                  = 18001,   // Escape
+	SPELL_ESCAPE_FAILED           = 18002,   // Escape Failed
 };
 
 /*
