@@ -80,11 +80,13 @@ void WorldSession::HandlePetReleaseOpcode( WorldPacket & recv_data )
 	switch ( subcmd )
 	{
 		case 0x01: // unknown
-			break;
+		{
+		} break;
 
 		case 0x02:
+		{
 			_player->ReleasePet(petslot-1);
-			break;
+		} break;
 	}
 }
 

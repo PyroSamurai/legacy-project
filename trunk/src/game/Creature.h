@@ -171,6 +171,8 @@ class LEGACY_DLL_SPEC Creature : public Unit
 		bool AIM_Initialize();
 
 		bool LoadFromDB(uint32 guid, uint32 InstanceId=0);
+		virtual void SaveToDB();
+		virtual void DeleteFromDB();
 
 
 

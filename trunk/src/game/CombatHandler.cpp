@@ -92,6 +92,14 @@ void WorldSession::HandlePlayerAttackOpcode( WorldPacket & recv_data )
 	recv_data >> tgt_row;
 	recv_data >> skill;
 
+	///- Override incorrect target for self target spell type
+	if( SPELL_DEFENSE == skill ||
+		SPELL_ESCAPE  == skill )
+	{
+		tgt_col = atk_col;
+		tgt_row = atk_row;
+	}
+
 	Player* battleMaster = _player->GetBattleMaster();
 
 	if( !battleMaster )

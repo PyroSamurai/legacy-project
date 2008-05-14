@@ -190,6 +190,22 @@ void ObjectMgr::RemoveCreatureFromGrid(uint32 guid, CreatureData const* data)
 	cell_guids.creatures.erase(guid);
 }
 
+void ObjectMgr::DeleteCreatureData(uint32 guid)
+{
+	// remove mapid*cellid -> guid_set map
+	CreatureData const* data = GetCreatureData(guid);
+	if(data)
+	{
+		CellPair cell_pair = LeGACY::ComputeCellPair(data->posX, data->posY);
+		uint32 cell_id = (cell_pair.y_coord*TOTAL_NUMBER_OF_CELLS_PER_MAP) + cell_pair.x_coord;
+
+		CellObjectGuids& cell_guids = mMapObjectGuids[data->mapid][cell_id];
+		cell_guids.creatures.erase(guid);
+	}
+
+	mCreatureDataMap.erase(guid);
+}
+
 CreatureInfo const* ObjectMgr::GetCreatureTemplate(uint32 entry)
 {
 	return sCreatureStorage.LookupEntry<CreatureInfo>(entry);
@@ -229,7 +245,9 @@ uint32 ObjectMgr::GetCreatureGuidByModelId(uint16 modelid) const
 
 	if( !result ) return 0;
 
-	return (*result)[0].GetUInt32();
+	uint32 guid = (*result)[0].GetUInt32();
+	delete result;
+	return guid;
 }
 /*
 void ObjectMgr::LoadScripts(ScriptMapMap& scripts, char const* tablename)

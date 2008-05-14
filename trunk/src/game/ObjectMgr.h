@@ -212,6 +212,8 @@ class ObjectMgr
 			if(itr==mCreatureDataMap.end()) return NULL;
 			return &itr->second;
 		}
+		CreatureData& NewOrExistCreatureData(uint32 guid) { return mCreatureDataMap[guid]; }
+		void DeleteCreatureData(uint32 guid);
 
 		void LoadPetNumber();
 

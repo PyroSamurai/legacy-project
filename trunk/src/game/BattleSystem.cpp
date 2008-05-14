@@ -489,32 +489,33 @@ void BattleSystem::SendPetPosition()
 	return;
 */
 
-	for(uint8 row = 0; row < BATTLE_ROW_MAX; row++)
-	{
-		Pet* pet = (Pet*) m_BattleUnit[2][row];
-		if( !pet ) continue;
+	///- Pet Column position only
+	for(uint8 col = 1; col <= 2; col++)
+		for(uint8 row = 0; row < BATTLE_ROW_MAX; row++)
+		{
+			Pet* pet = (Pet*) m_BattleUnit[col][row];
+			if( !pet ) continue;
 
-		data.Initialize( 0x0B );
-		data << (uint8 ) 0x05;
-		data << (uint8 ) 0x05;
-		data << (uint8 ) 0x04;
-		data << (uint16) pet->GetModelId(); // Pet ModelId
-		data << (uint16) 0x0000;
-		data << (uint16) 0x0004;
-		//data << pSession->GetAccountId(); // pet owner id (0 for AI)
-		data << pet->GetOwnerAccountId(); // pet owner id (0 for AI)
-		data << (uint8 ) 2;                // pet col position
-		data << (uint8 ) row;              // pet row position
-		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_HP_MAX); // pet hp max
-		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_SP_MAX); // pet sp max
-		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_HP);     // pet hp
-		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_SP);     // pet sp
-		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_LEVEL);   // pet level
-		data << (uint16) pet->GetUInt32Value(UNIT_FIELD_ELEMENT); // pet element
+			data.Initialize( 0x0B );
+			data << (uint8 ) 0x05;
+			data << (uint8 ) 0x05;
+			data << (uint8 ) 0x04;
+			data << (uint16) pet->GetModelId(); // Pet ModelId
+			data << (uint16) 0x0000;
+			data << (uint16) 0x0004;
+			data << pet->GetOwnerAccountId();// pet owner id (0 for AI)
+			data << (uint8 ) col;// pet col position
+			data << (uint8 ) row;// pet row position
+			data << (uint16) pet->GetUInt32Value(UNIT_FIELD_HP_MAX);//pet hp max
+			data << (uint16) pet->GetUInt32Value(UNIT_FIELD_SP_MAX);//pet sp max
+			data << (uint16) pet->GetUInt32Value(UNIT_FIELD_HP);    //pet hp
+			data << (uint16) pet->GetUInt32Value(UNIT_FIELD_SP);    //pet sp
+			data << (uint16) pet->GetUInt32Value(UNIT_FIELD_LEVEL); //pet level
+			data << (uint16) pet->GetUInt32Value(UNIT_FIELD_ELEMENT);//pet elmn
 
-		//pSession->SendPacket(&data);
-		SendMessageToSet(&data);
-	}
+			//pSession->SendPacket(&data);
+			SendMessageToSet(&data);
+		}
 }
 
 ///- Init Attacker position
@@ -666,19 +667,23 @@ void BattleSystem::SendDefenderPosition()
 	pSession->SendPacket(&data);
 */
 	uint8 count = 0;
-	for(uint8 row = 0; row < BATTLE_ROW_MAX; row++)
-	{
-		for(uint8 col = 0; col < DEFENDER_COL_MAX; col++)
+	///- Only back row to send
+	for(uint8 col = 0; col < 1; col++)
+		for(uint8 row = 0; row < BATTLE_ROW_MAX; row++)
 		{
-			Creature *unit = (Creature*) m_BattleUnit[col][row];
+			//Creature *unit = (Creature*) m_BattleUnit[col][row];
+			Unit *unit = m_BattleUnit[col][row];
 			if( !unit )
+				continue;
+
+			if( unit->isType(TYPE_PET) )
 				continue;
 
 			data.Initialize( 0x0B );
 			data << (uint8 ) 0x05;
 			data << (uint8 ) (unit->isType(TYPE_PLAYER) ? 0x05 : 0x01);
 			data << (uint8 ) (unit->isType(TYPE_PLAYER) ? 0x02 : 0x07);
-			data << (uint16) (unit->isType(TYPE_PLAYER) ? ((Player*)unit)->GetAccountId() : unit->GetModelId());// npc ModelId/player AccId
+			data << (uint16) (unit->isType(TYPE_PLAYER) ? ((Player*)unit)->GetAccountId() : ((Creature*)unit)->GetModelId());// npc ModelId/player AccId
 			data << (uint16) 0x0000;
 			data << count++;              // unknown, still guessing
 			data << (uint8 ) 0x00;
@@ -695,7 +700,6 @@ void BattleSystem::SendDefenderPosition()
 			//pSession->SendPacket(&data);
 			SendMessageToSet(&data);
 		}
-	}
 }
 
 void BattleSystem::AIMove()
@@ -1172,13 +1176,36 @@ bool BattleSystem::SendAction()
 
 		sLog.outDebug("BATTLE: Processing action #%u for '%s'", i_action, pAttacker->GetName());
 
-		BuildUpdateBlockAction(&data, bAction, linked);
+		switch( bAction->GetSkill() )
+		{
+			case SPELL_DEFENSE:
+			{
+				///- Need no animation, skipped
+				///- TODO: Set DEFENSE Stance to actor
+				return true;
+			} break;
 
-		///- TODO: Determine animation time by skill id
-		if( bAction->GetSkill() != skillId )
-			skillId = bAction->GetSkill();
+			case SPELL_ESCAPE:
+			{
+				if( rand_chance() > 80 )
+				{
+					Escaped(bAction);
+					break;
+				}
+			};
 
-		valid_action = true;
+			default:
+			{
+
+				BuildUpdateBlockAction(&data, bAction, linked);
+
+				///- TODO: Determine animation time by skill id
+				if( bAction->GetSkill() != skillId )
+					skillId = bAction->GetSkill();
+
+				valid_action = true;
+			} break;
+		}
 	}
 
 
@@ -1251,7 +1278,57 @@ void BattleSystem::BuildUpdateBlockAction(WorldPacket *data, BattleAction* actio
 
 	*data << (uint8 ) action->GetAttackerCol(); // attacker col
 	*data << (uint8 ) action->GetAttackerRow(); // attacker row
-	*data << (uint16) action->GetSkill();       // 0x2710 = basic spell
+
+	bool catched = false;
+	switch( action->GetSkill() )
+	{
+		case SPELL_ESCAPE:
+		{
+			///- TODO: Calculate escape chance
+			*data << (uint16) SPELL_ESCAPE_FAILED;
+		} break;
+
+		case SPELL_CATCH:
+		case SPELL_CATCH2:
+		{
+			uint8 tcol = action->GetTargetCol();
+			uint8 trow = action->GetTargetRow();
+			Unit *victim = GetBattleUnit(tcol, trow);
+			if( !victim->isType(TYPE_PLAYER) ||
+				!victim->isType(TYPE_PET) )
+			{
+				uint8 acol = action->GetAttackerCol();
+				uint8 arow = action->GetAttackerRow();
+				Unit* attacker = GetBattleUnit(acol, arow);
+				if( attacker->isType(TYPE_PLAYER) )
+				{
+					Pet* pet = ((Player*)attacker)->CreatePet( ((Creature*)victim)->GetEntry() );
+					uint8 dest;
+					if( pet )
+					{
+						if( ((Player*)attacker)->CanSummonPet( NULL_PET_SLOT, dest, pet, false ) == PET_ERR_OK )
+							if( rand_chance() > 0 )
+							{
+								*data << (uint16) SPELL_SUCCESS_CATCH;
+								catched = true;
+								pet->SetLoyalty(60);
+								((Player*)attacker)->SummonPet(dest, pet);
+								((Player*)attacker)->UpdatePetCarried();
+								WorldPacket data2;
+								((Player*)attacker)->BuildUpdateBlockTeam(&data2);
+								((Player*)attacker)->SendMessageToSet(&data2, true);
+								break;
+							}
+						delete pet;
+					}
+				}
+			}
+		}
+
+		default:
+			*data << (uint16) action->GetSkill();       // 0x2710 = basic spell
+	}
+
 	*data << (uint8 ) 0x01;
 
 	*data << (uint8 ) sinfo->hit;
@@ -1265,15 +1342,60 @@ void BattleSystem::BuildUpdateBlockAction(WorldPacket *data, BattleAction* actio
 	{
 		hit = hitInfo.front();
 
-		*data << (uint8 ) hit->GetTargetCol();
-		*data << (uint8 ) hit->GetTargetRow();
-
-		*data << (uint16) 0x0001; // unknown
+		///- Override incorrect target for self target spell type, double check
+		if( SPELL_DEFENSE == action->GetSkill() ||
+			SPELL_ESCAPE  == action->GetSkill() )
+		{
+			*data << (uint8 ) hit->GetAttackerCol();
+			*data << (uint8 ) hit->GetAttackerRow();
+		} else {
+			*data << (uint8 ) hit->GetTargetCol();
+			*data << (uint8 ) hit->GetTargetRow();
+		}
 
 		Unit* attacker  = GetAttacker(hit);
 		Unit* victim    = GetVictim(hit);
 		point_inflicted = GetDamage(attacker, victim, sinfo, linked);
 		point_modifier  = point_inflicted < 0 ? 1 : 0;
+
+		uint8 anim_impact = 0;
+		uint8 anim_target = 0;
+		switch( sinfo->DamageMod )
+		{
+			case SPELL_MOD_HURT:
+			case SPELL_MOD_BUF_HURT:
+			{
+				double dice_missed = rand_chance();
+				if( dice_missed > 90 && !catched )
+				{
+					point_inflicted = 0;
+					point_modifier  = 0;
+					anim_impact = 0;
+					anim_target = 2;
+				}
+				else
+				{
+					anim_impact = 1;
+					anim_target = 0;
+				}
+			} break;
+
+			case SPELL_CATCH:
+			default:
+			{
+				anim_impact = 1;
+				anim_target = 0;
+			} break;
+		}
+
+		//impact animation. 0=miss; 1=hit
+		//anim_impact = point_inflicted < 0 ? 1 : 0;
+		*data << (uint8 ) anim_impact;
+
+		//target animation. 0=hit; 1=def; 2=dodge;
+		//uint8 anim_target = point_inflicted == 0 ? 2 : 0;
+		// TODO: Fix for defensive stance
+		*data << (uint8 ) anim_target;
 
 		sLog.outDebug("COMBAT: '%s' use <%s> to '%s'[%u,%u] deal %i dmg, %s", attacker->GetName(), sinfo->Name, victim->GetName(), hit->GetTargetCol(), hit->GetTargetRow(), point_inflicted, linked ? "linked" : "singled");
 
@@ -1288,12 +1410,20 @@ void BattleSystem::BuildUpdateBlockAction(WorldPacket *data, BattleAction* actio
 			AddHitExpGained(attacker, victim, linked);
 		}
 
-		*data << (uint8 ) 0x01;    // spell effect count, 1 for now, HP only
+		// spell effect count, 1 for now, HP only
+		*data << (uint8 ) 1;
 
-		*data << (uint8 ) 0x19;    // affect status code, 0x19 = HP
-		*data << (uint16) abs(point_inflicted);  // affect value
-		*data << (uint8 ) point_modifier; // affect modifier flag 0 = healing, 1 = hurting
+		// affect status code, 0x19 = HP
+		*data << (uint8 ) (point_inflicted == 0 ? 0 : 0x19);
 
+		// affect value
+		*data << (uint16) abs(point_inflicted);
+
+		// affect modifier flag 0 = healing, 1 = hurting
+		*data << (uint8 ) point_modifier;
+
+		if( catched )
+			m_BattleUnit[hit->GetTargetCol()][hit->GetTargetRow()] = NULL;
 
 		hitInfo.pop_front();
 	}
@@ -1673,30 +1803,41 @@ UnitActionTurn BattleSystem::ParseSpell(BattleAction* action, uint8 hit, bool li
 ///- Calculate point inflicted to victim
 //   negative: hurt modifier
 //   positive: heal modifier
-//   zero    : buf modifier
+//   zero    : buf/miss modifier
 int32 BattleSystem::GetDamage(Unit* attacker, Unit* victim, const SpellInfo* sinfo, bool linked)
 {
 	///- TODO Check Aura spell buf
 
-	///- TODO Calculate Miss chance
 
 	int32 dmg_mod = 0;
 
 	switch( sinfo->DamageMod )
 	{
-		case SPELL_MOD_BUF:      // buf mod 1
-			dmg_mod = 0;
+		case SPELL_MOD_NONE:     // mod none 0
+		case SPELL_MOD_BUF:      // mod buf  1
+		{
 			return 0;
-		case SPELL_MOD_HURT:     // hurt mod 2
-		case SPELL_MOD_BUF_HURT: // hurt + buf mod 3
+		} break;
+		case SPELL_MOD_HURT:     // mod hurt 2
+		case SPELL_MOD_BUF_HURT: // mod hurt + buf 3
+		{
+			///- TODO: Correct miss calculation
+			/*
+			double dice_miss = rand_chance();
+			if( dice_miss > 99.91 )
+				return 0;
+			*/
+
 			dmg_mod = -1;
-			break;
-		case SPELL_MOD_HEAL:    // heal mod 6
+		} break;
+		case SPELL_MOD_HEAL:    // mod heal 6
+		{
 			dmg_mod = 1;
-			break;
+		} break;
 		default:
+		{
 			dmg_mod = -1;
-			break;
+		} break;
 	}
 
 	int   diffLevel = attacker->getLevel() - victim->getLevel();
@@ -1929,7 +2070,10 @@ void BattleSystem::WaitForAnimation(uint16 skill)
 	// 20  = 2 sec
 	// 12  = 1.2 sec
 	uint32 msec;
-	if( skill == SPELL_BASIC )
+	if( skill == SPELL_DEFENSE )
+		msec = 0;
+	else if( skill == SPELL_BASIC ||
+			 skill == SPELL_ESCAPE )
 		msec = 12; //msec = 1200;
 	else
 		msec = 25; //msec = 2500;
@@ -2115,31 +2259,7 @@ void BattleSystem::SendMessageToPlayer(Player* player, WorldPacket* packet, bool
 		return;
 
 	//sLog.outDebug("BATTLE: Send Message to '%s'", player->GetName());
-	if( log )
-		if( player )
-			if( player->GetSession() )
-			{
-				ASSERT(player);
-				ASSERT(player->GetSession());
-				player->GetSession()->SetLogging(true);
-			}
-
-	if( player )
-		if( player->GetSession() )
-		{
-			ASSERT(player);
-			ASSERT(player->GetSession());
-			player->GetSession()->SendPacket(packet);
-		}
-
-	if( log )
-		if( player )
-			if( player->GetSession())
-			{
-				ASSERT(player);
-				ASSERT(player->GetSession());
-				player->GetSession()->SetLogging(false);
-			}
+	player->GetSession()->SendPacket(packet, log);
 }
 
 bool BattleSystem::CanJoin() const
@@ -2594,4 +2714,39 @@ void BattleSystem::SendItemDropped(ItemDropped* item)
 	SendMessageToPlayer(pPlayer, &data);
 }
 
+void BattleSystem::Escaped(BattleAction *action)
+{
+	uint8 col = action->GetAttackerCol();
+	uint8 row = action->GetAttackerRow();
+
+	if( isAtkPos( col ) )
+		if( !isAtkPosBackRow( col ) )
+			col += 1;
+
+	if( isDefPos( col ) )
+		if( !isDefPosBackRow( col ) )
+			col -= 1;
+
+	Player* player = (Player*) GetBattleUnit(col, row);
+
+	WorldPacket data;
+	///- Smoke disapear for escapee
+	data.Initialize( 0x0B );
+	data << (uint8 ) 0;
+	data << (uint32) player->GetAccountId();
+	data << (uint16) 0;
+	player->SendMessageToSet(&data, true);
+
+	///- Leave battle screen
+	data.Initialize( 0x0B );
+	data << (uint8 ) 1;
+	data << (uint8 ) col;
+	data << (uint8 ) row;;
+	data << (uint8 ) 0;
+	SendMessageToSet(&data, true);
+
+	LeaveBattle(player);
+
+	DumpBattlePosition();
+}
 
