@@ -522,9 +522,9 @@ void Unit::LevelUp()
 		else if( dice_stat < 60 )
 			ApplyModUInt32Value(UNIT_FIELD_DEF, 1, true);
 		else if( dice_stat < 80 )
-			ApplyModUInt32Value(UNIT_FIELD_HP, 1, true);
+			ApplyModUInt32Value(UNIT_FIELD_HPX, 1, true);
 		else if( dice_stat < 90 )
-			ApplyModUInt32Value(UNIT_FIELD_SP, 1, true);
+			ApplyModUInt32Value(UNIT_FIELD_SPX, 1, true);
 		else if( dice_stat < 100 )
 			ApplyModUInt32Value(UNIT_FIELD_AGI, 1, true);
 	}
