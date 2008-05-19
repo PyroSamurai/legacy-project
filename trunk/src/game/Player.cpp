@@ -1048,6 +1048,14 @@ void Player::_SaveInventory()
 	m_itemUpdateQueue.clear();
 }
 
+void Player::ResetSpells()
+{
+	for(SpellMap::const_iterator itr = m_spells.begin(); itr != m_spells.end(); ++itr)
+		itr->second->SetState(SPELL_REMOVED);
+	_SaveSpells();
+
+}
+
 void Player::_SaveSpells()
 {
 	for(SpellMap::const_iterator itr = m_spells.begin(), next = m_spells.begin(); itr != m_spells.end(); itr = next)
@@ -2100,10 +2108,29 @@ Pet* Player::CreatePet( uint32 pet ) const
 
 uint8 Player::CanSummonPet( uint8 slot, uint8 &dest, Pet *pPet, bool swap) const
 {
-	/// TODO: Check forbid similar pet entry
 	dest = 0;
 	if( pPet )
 	{
+		///- Check forbid similar pet entry
+		CreatureInfo const *pProto = pPet->GetCreatureInfo();
+
+		for(uint8 i = PET_SLOT_START; i < PET_SLOT_BANK_END; i++)
+		{
+			if( !m_pets[i] )
+				continue;
+
+			CreatureInfo const *pProto2 = m_pets[i]->GetCreatureInfo();
+
+			if (pProto->level == pProto2->level &&
+				pProto->element == pProto2->element)
+				if(strcmp(pProto->Name, pProto2->Name) == 0)
+					return PET_ERR_PET_ALREADY_SUMMONED;
+
+			if(pProto->reborn != pProto2->reborn)
+				if(strcmp(pProto->Name, pProto2->Name) == 0)
+					return PET_ERR_PET_ALREADY_SUMMONED;
+		}
+
 		sLog.outDebug("PETS: CanSummonPet slot = %u, pet = %u", slot, pPet->GetEntry());
 		uint8 sslot = FindSummonSlot( slot, swap );
 		if( sslot == NULL_PET_SLOT )

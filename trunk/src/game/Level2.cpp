@@ -80,6 +80,21 @@ bool ChatHandler::HandleChangeLevelCommand(const char* args)
 	player->SetLevel(level);
 	player->UpdatePlayerLevel();
 
+	player->SetUInt32Value(UNIT_FIELD_INT, 0);
+	player->SetUInt32Value(UNIT_FIELD_ATK, 0);
+	player->SetUInt32Value(UNIT_FIELD_DEF, 0);
+	player->SetUInt32Value(UNIT_FIELD_HPX, 0);
+	player->SetUInt32Value(UNIT_FIELD_SPX, 0);
+	player->SetUInt32Value(UNIT_FIELD_AGI, 0);
+	player->SetUInt32Value(UNIT_FIELD_STAT_POINT, level*2+4);
+
+	player->ResetSpells();
+	player->SetUInt32Value(UNIT_FIELD_SPELL_POINT, level-1);
+
+	WorldPacket data;
+	player->BuildUpdateBlockStatusPacket(&data);
+	player->GetSession()->SendPacket(&data);
+
 	return false;
 }
 

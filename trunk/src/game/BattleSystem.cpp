@@ -1734,8 +1734,11 @@ UnitActionTurn BattleSystem::ParseSpell(BattleAction* action, uint8 hit, bool li
 				continue; // primary already pushed
 			else
 			{
-				sLog.outDebug("PARSER: %u,%u Column hit", x, r);
-				hitInfo.push_back(new BattleAction(a,b,s,x,r));
+				if( isUnitAvail(x, r) )
+				{
+					sLog.outDebug("PARSER: %u,%u Column hit", x, r);
+					hitInfo.push_back(new BattleAction(a,b,s,x,r));
+				}
 			}
 		break;
 	}
