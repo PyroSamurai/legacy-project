@@ -398,7 +398,7 @@ void Unit::AddKillExp(uint8 enemyLevel, bool linked, bool inTeam, uint8 lowestLe
 
 	int32 diffLevel = enemyLevel - level;
 	if(level - enemyLevel > 15)
-		///- Player level too high to gained more experience from enemy
+		///- Unit level too high to gained more experience from enemy
 		xp += 0;
 	else if( linked )
 		///- add 10% bonus for linked attack
@@ -428,7 +428,15 @@ void Unit::AddKillExp(uint8 enemyLevel, bool linked, bool inTeam, uint8 lowestLe
 
 void Unit::AddHitExp(uint8 enemyLevel, bool linked)
 {
-	AddExpGained(1);
+	uint8 level = getLevel();
+	int32 diffLevel = enemyLevel - level;
+	if(level - enemyLevel > 15)
+		///- Unit level too high to gained more experience from enemy
+		return;
+
+	float rate_xp = sWorld.getRate(RATE_XP_KILL);
+	uint32 xp_gained = (uint32) round(1 * rate_xp);
+	AddExpGained(xp_gained);
 }
 
 void Unit::AddExpGained(uint32 xp)
@@ -484,12 +492,42 @@ void Unit::LevelUp()
 
 	sLog.outDebug("EXPERIENCE: Player '%s' is level up to [%u] tnl now is <%u>", GetName(), lvl, (uint32) round(pow(lvl + 1, 2.9) + 5));
 
-	uint16 spell_point = GetUInt32Value(UNIT_FIELD_SPELL_POINT);
-	uint16 stat_point  = GetUInt32Value(UNIT_FIELD_STAT_POINT);
+	if(isType(TYPE_PLAYER))
+	{
+		ApplyModUInt32Value(UNIT_FIELD_SPELL_POINT, 1, true);
+		ApplyModUInt32Value(UNIT_FIELD_STAT_POINT,  2, true);
+	}
+	else if(isType(TYPE_PET))
+	{
+		///- Check for Pet for maxed out spells
+		SpellMap::iterator it = m_spells.begin();
+		bool maxed = true;
+		for(it; it != m_spells.end(); ++it)
+		{
+			if( !isSpellLevelMaxed(it->second->GetEntry()) )
+			{
+				maxed = false;
+				break;
+			}
+		}
+		if( !maxed )
+			ApplyModUInt32Value(UNIT_FIELD_SPELL_POINT, 1, true);
 
-	///- TODO: Check for Pet if all spell point maxed out
-	SetUInt32Value(UNIT_FIELD_SPELL_POINT, spell_point + 2);
-	SetUInt32Value(UNIT_FIELD_STAT_POINT,  stat_point  + 2);
+		///- Random stat addition.
+		double dice_stat = rand_chance();
+		if( dice_stat < 20 )
+			ApplyModUInt32Value(UNIT_FIELD_INT, 1, true);
+		else if( dice_stat < 40 )
+			ApplyModUInt32Value(UNIT_FIELD_ATK, 1, true);
+		else if( dice_stat < 60 )
+			ApplyModUInt32Value(UNIT_FIELD_DEF, 1, true);
+		else if( dice_stat < 80 )
+			ApplyModUInt32Value(UNIT_FIELD_HP, 1, true);
+		else if( dice_stat < 90 )
+			ApplyModUInt32Value(UNIT_FIELD_SP, 1, true);
+		else if( dice_stat < 100 )
+			ApplyModUInt32Value(UNIT_FIELD_AGI, 1, true);
+	}
 
 	SetUInt32Value(UNIT_FIELD_HP_MAX, GetHPMax());
 	SetUInt32Value(UNIT_FIELD_HP, GetHPMax());

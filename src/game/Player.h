@@ -539,6 +539,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 		void BuildUpdateBlockExpression(WorldPacket* packet);
 
 		GridReference<Player> &GetGridRef() { return m_gridRef; }
+		void ResetSpells();
 	protected:
 
 		/**********************************************************/

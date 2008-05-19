@@ -77,6 +77,7 @@ struct CreatureInfo
 	uint32 stat_agi;
 	uint32 level;
 	uint32 element;
+	uint32 reborn;
 	uint32 spell1;
 	uint32 spell2;
 	uint32 spell3;

@@ -49,7 +49,8 @@ enum PetChangeFailure
 	PET_ERR_OK                         = 0,
 	PET_ERR_PET_NOT_FOUND              = 1,
 	PET_ERR_PET_CANT_BE_SWAPPED        = 2,
-	PET_ERR_PET_CANT_BE_SUMMONED       = 3
+	PET_ERR_PET_CANT_BE_SUMMONED       = 3,
+	PET_ERR_PET_ALREADY_SUMMONED       = 4,
 };
 
 class Pet : public Creature

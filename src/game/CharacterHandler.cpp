@@ -620,66 +620,64 @@ void WorldSession::HandlePlayerSpellAddOpcodes( WorldPacket & recv_data )
 
 	sLog.outDetail( "WORLD: Recv CMSG_PLAYER_SPELL_ADD Message" );
 
+	uint8 psize = (recv_data.size()-1)/3;
+	sLog.outDetail( "SPELL ADD: Received %u spell addition", psize);
+	if( psize == 0)
+		return;
+
 	uint8  modifier;
 	uint16 spell_entry;
-	uint8 mod_value;
+	uint8  mod_value;
 
 	recv_data >> modifier;
-	recv_data >> spell_entry;
-	recv_data >> mod_value;
 
-	WorldPacket data;
-
-	//_player->BuildUpdateBlockStatusPacket(&data);
-	//_player->GetSession()->SendPacket(&data, true);
-
-	if( !_player->HaveSpell(spell_entry) )
+	for(uint8 i = 0; i < psize; i++)
 	{
-		const SpellInfo* sinfo = objmgr.GetSpellTemplate(spell_entry);
 
-		uint32 learn_point = _player->GetSpellLearnPoint(spell_entry);
+		recv_data >> spell_entry;
+		recv_data >> mod_value;
 
-		if( !learn_point )
-			return;
+		WorldPacket data;
 
-		if( _player->GetUInt32Value(UNIT_FIELD_SPELL_POINT) < learn_point )
-			return;
-
-		sLog.outDebug("PLAYER: Don't have spell %u, try to add it", spell_entry);
-		if( !_player->AddSpell(spell_entry, 1, SPELL_NEW) )
+		if( !_player->HaveSpell(spell_entry) )
 		{
-			sLog.outDebug("PLAYER: Can not have spell %u", spell_entry);
-			return;
+			const SpellInfo* sinfo = objmgr.GetSpellTemplate(spell_entry);
+
+			uint32 learn_point = _player->GetSpellLearnPoint(spell_entry);
+
+			if( !learn_point )
+				continue;
+
+			if( _player->GetUInt32Value(UNIT_FIELD_SPELL_POINT) < learn_point )
+				continue;
+
+			sLog.outDebug("PLAYER: Don't have spell %u, try to add it", spell_entry);
+			if( !_player->AddSpell(spell_entry, 1, SPELL_NEW) )
+			{
+				sLog.outDebug("PLAYER: Can not have spell %u", spell_entry);
+				continue;
+			}
+			_player->ApplyModUInt32Value(UNIT_FIELD_SPELL_POINT, learn_point, false);
 		}
-		_player->ApplyModUInt32Value(UNIT_FIELD_SPELL_POINT, learn_point, false);
+		else
+		{
+			if( !_player->GetUInt32Value(UNIT_FIELD_SPELL_POINT) )
+				continue;
+
+			if( _player->isSpellLevelMaxed(spell_entry) )
+				continue;
+
+			if( _player->GetSpellLevel(spell_entry) == mod_value )
+				continue;
+
+			_player->SetSpellLevel(spell_entry, mod_value);
+			_player->ApplyModUInt32Value(UNIT_FIELD_SPELL_POINT, 1, false);
+		}
+
+		_player->_updatePlayer(UPD_FLAG_SPELL_POINT, 1, _player->GetUInt32Value(UNIT_FIELD_SPELL_POINT));
+
+		_player->_updatePlayer(UPD_FLAG_ADD_SPELL, 1, mod_value, spell_entry);
 	}
-	else
-	{
-		if( !_player->GetUInt32Value(UNIT_FIELD_SPELL_POINT) )
-			return;
 
-		if( _player->isSpellLevelMaxed(spell_entry) )
-			return;
-
-		if( _player->GetSpellLevel(spell_entry) == mod_value )
-			return;
-
-		_player->SetSpellLevel(spell_entry, mod_value);
-		_player->ApplyModUInt32Value(UNIT_FIELD_SPELL_POINT, 1, false);
-	}
-
-	_player->_updatePlayer(UPD_FLAG_SPELL_POINT, 1, _player->GetUInt32Value(UNIT_FIELD_SPELL_POINT));
-
-	_player->_updatePlayer(UPD_FLAG_ADD_SPELL, 1, mod_value, spell_entry);
-
-	data.Initialize ( 0x1C );
-	data << (uint8 ) 0x01;
-	data << (uint16) spell_entry;
-	data << (uint8 ) mod_value;
-	//_player->GetSession()->SendPacket(&data, true);
-
-//	_player->BuildUpdateBlockStatusPacket(&data);
-//	_player->GetSession()->SendPacket(&data, true);
-
-	//_player->SaveToDB();
+	_player->SaveToDB();
 }
