@@ -49,10 +49,11 @@ enum PetSlots
 	PET_SLOT_BANK_3      = 6,
 	PET_SLOT_BANK_4      = 7,
 	PET_SLOT_BANK_5      = 8,
-	PET_SLOT_BANK_END    = 9
+	PET_SLOT_BANK_6      = 9,
+	PET_SLOT_BANK_END    = 10
 };
 
-#define MAX_PET_SLOT  PET_SLOT_END // max can carry 4 pet slot, 0 = empty slot do not use
+#define MAX_PET_SLOT  PET_SLOT_BANK_END // 0 = empty slot do not use
 
 #define MAX_PLAYER_SPELL 254
 

@@ -65,7 +65,7 @@ bool ChatHandler::HandleChangeLevelCommand(const char* args)
 
 	if( level <= 0 || level > 200)
 	{
-		PSendGmMessage("Invalid level. Must be between 1 and 200");
+		PSendGmMessage("Invalid level. Must be between 1 and 200.");
 		return true;
 	}
 
@@ -96,6 +96,58 @@ bool ChatHandler::HandleChangeLevelCommand(const char* args)
 	player->GetSession()->SendPacket(&data);
 
 	return false;
+}
+
+bool ChatHandler::HandleChangeLevelPetCommand(const char* args)
+{
+	if( !args || !m_session )
+		return false;
+
+	char* namepart = strtok((char*)args, " ");
+	char* slot_text = strtok(NULL, " ");
+	char* level_text = strtok(NULL, " ");
+	if(!namepart || !slot_text || !level_text)
+		return false;
+
+	// .changelevelpet <player> <slot> <level>
+	sLog.outDebug("COMMAND: HandleChangeLevelPetCommand");
+
+	std::string player_name = namepart;
+	uint8 slot = atoi(slot_text);
+	int32 level = atoi(level_text);
+
+	if( slot == PET_SLOT_START || slot > MAX_PET_SLOT )
+	{
+		PSendGmMessage("Slot must be between 1 and 4.");
+		return true;
+	}
+	if( level <= 0 || level > 200 )
+	{
+		PSendGmMessage("Invalid level. Must be between 1 and 200.");
+		return true;
+	}
+
+	uint32 player_guid = objmgr.GetPlayerGUIDByName(player_name);
+	Player* player = objmgr.GetPlayer(player_guid);
+	if( !player )
+	{
+		PSendGmMessage("Player '%s' not found.", player_name.c_str());
+		return true;
+	}
+
+	Pet *pet = player->GetPet(slot);
+	if( !pet )
+	{
+		PSendGmMessage("Player '%s' does not have pet in slot %u", player_name.c_str(), slot);
+		return true;
+	}
+
+	pet->SetLevel(level);
+	player->UpdatePetLevel(pet);
+
+	/// TODO: reset stats based on prototype
+	/// TODO: add randomly stat in level gained.
+	/// TODO: add spell point
 }
 
 bool ChatHandler::HandleSaveAllCommand(const char* args)
@@ -210,6 +262,12 @@ bool ChatHandler::HandleNpcDeleteCommand(const char* args)
 
 	uint64 GUID = objmgr.GetNpcGuidByMapNpcId(mapid, map_npcid);
 	Creature* obj = ObjectAccessor::GetCreature(*GM, GUID);
+
+	if( !obj )
+	{
+		PSendGmMessage("Npc %u is invalid.", guid);
+		return true;
+	}
 
 	Map* map = MapManager::Instance().GetMap(GM->GetMapId(), GM);
 	map->Remove(obj, false);
@@ -457,7 +515,7 @@ bool ChatHandler::HandlePetAddCommand(const char* args)
 	}
 	else
 	{
-		PSendGmMessage("Player '%s' can not summon pet '%s'. Slot is full.", player->GetName(), pet->GetName());
+		PSendGmMessage("Player '%s' can not summon pet '%s'. Slot is full or already have.", player->GetName(), pet->GetName());
 		delete pet;
 	}
 
@@ -484,7 +542,7 @@ bool ChatHandler::HandlePetReleaseCommand(const char* args)
 
 	if( slot == PET_SLOT_START || slot > MAX_PET_SLOT )
 	{
-		PSendGmMessage("Slot must be between 1 and 4");
+		PSendGmMessage("Slot must be between 1 and 4.");
 		return true;
 	}
 
