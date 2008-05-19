@@ -106,6 +106,7 @@ class ChatHandler
 		bool HandleBanCommand(const char* args);
 		bool HandleUnBanCommand(const char* args);
 		bool HandleChangeLevelCommand(const char* args);
+		bool HandleChangeLevelPetCommand(const char* args);
 		bool HandleLevelUpCommand(const char* args);
 
 		// common global flag

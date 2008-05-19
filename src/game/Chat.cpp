@@ -85,6 +85,7 @@ ChatCommand * ChatHandler::getCommandTable()
 		{ "warp", SEC_GAMEMASTER, &ChatHandler::HandleWarpCommand, "", NULL },
 		{ "unstuck", SEC_PLAYER, &ChatHandler::HandleUnstuckCommand, "", NULL },
 		{ "changelevel", SEC_ADMINISTRATOR, &ChatHandler::HandleChangeLevelCommand, "", NULL },
+		{ "changelevelpet", SEC_ADMINISTRATOR, &ChatHandler::HandleChangeLevelPetCommand, "", NULL },
 		{ "save", SEC_PLAYER, &ChatHandler::HandleSaveCommand, "", NULL },
 		{ "saveall", SEC_GAMEMASTER, &ChatHandler::HandleSaveAllCommand, "", NULL },
 		{ "ban", SEC_ADMINISTRATOR, &ChatHandler::HandleBanCommand, "", NULL },

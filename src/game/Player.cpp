@@ -2119,6 +2119,8 @@ uint8 Player::CanSummonPet( uint8 slot, uint8 &dest, Pet *pPet, bool swap) const
 			if( !m_pets[i] )
 				continue;
 
+			sLog.outDebug("SUMMMONPET: Checking pet '%s'", m_pets[i]->GetName());
+
 			CreatureInfo const *pProto2 = m_pets[i]->GetCreatureInfo();
 
 			if (pProto->level == pProto2->level &&
@@ -2129,6 +2131,7 @@ uint8 Player::CanSummonPet( uint8 slot, uint8 &dest, Pet *pPet, bool swap) const
 			if(pProto->reborn != pProto2->reborn)
 				if(strcmp(pProto->Name, pProto2->Name) == 0)
 					return PET_ERR_PET_ALREADY_SUMMONED;
+
 		}
 
 		sLog.outDebug("PETS: CanSummonPet slot = %u, pet = %u", slot, pPet->GetEntry());
