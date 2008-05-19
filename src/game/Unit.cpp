@@ -515,7 +515,7 @@ void Unit::LevelUp()
 
 		///- Random stat addition.
 		double dice_stat = rand_chance();
-		if( dice_stat < 20 )
+		if ( dice_stat < 20 )
 			ApplyModUInt32Value(UNIT_FIELD_INT, 1, true);
 		else if( dice_stat < 40 )
 			ApplyModUInt32Value(UNIT_FIELD_ATK, 1, true);
@@ -525,7 +525,7 @@ void Unit::LevelUp()
 			ApplyModUInt32Value(UNIT_FIELD_HPX, 1, true);
 		else if( dice_stat < 90 )
 			ApplyModUInt32Value(UNIT_FIELD_SPX, 1, true);
-		else if( dice_stat < 100 )
+		else
 			ApplyModUInt32Value(UNIT_FIELD_AGI, 1, true);
 	}
 
