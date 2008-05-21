@@ -2981,6 +2981,22 @@ bool Player::ConsumeInventoryItemFor(uint8 target, uint8 invslot, uint8 amount)
 	if( !proto )
 		return false;
 
+	Unit* unit;
+	switch( target )
+	{
+		case 0:
+			unit = this;
+			break;
+		case 1:
+		case 2:
+		case 3:
+		case 4:
+			unit = GetPet(target - 1);
+			break;
+		default:
+			return false;
+	}
+
 	char* type = proto->TypeDesc;
 
 	if( !(strcmp(type, "Food") == 0 ||
@@ -3017,11 +3033,31 @@ bool Player::ConsumeInventoryItemFor(uint8 target, uint8 invslot, uint8 amount)
 		if( !flag )
 			continue;
 
+		uint8 modvalue = value * amount;
+
+		if( flag == UNIT_FIELD_HP )
+			if( unit->GetHealth() >= GetHPMax() )
+				continue;
+			else
+			{
+				if( unit->GetHPMax() - unit->GetHealth() < modvalue )
+					modvalue = unit->GetHPMax() - unit->GetHealth();
+			}
+		else if( flag == UNIT_FIELD_SP )
+			if( unit->GetUInt32Value(UNIT_FIELD_SP) >= GetSPMax() )
+				continue;
+			else
+			{
+				if( unit->GetSPMax() - unit->GetUInt32Value(UNIT_FIELD_SP) < modvalue )
+					modvalue = unit->GetSPMax() - unit->GetUInt32Value(UNIT_FIELD_SP);
+			}
+
+		unit->ApplyModUInt32Value(flag, value*amount, true);
+
 		switch( target )
 		{
 			case 0: // consume item for player
-				ApplyModUInt32Value(flag, value*amount, true);
-				_updatePlayer(updflag, 1, GetUInt32Value(flag));
+				_updatePlayer(updflag, 1, unit->GetUInt32Value(flag));
 				break;
 
 			// consume item for pet slot X
@@ -3029,17 +3065,17 @@ bool Player::ConsumeInventoryItemFor(uint8 target, uint8 invslot, uint8 amount)
 			case 2:
 			case 3:
 			case 4:
-				Pet* pet = GetPet(target);
-				if( !pet )
-					return false;
-
-				pet->ApplyModUInt32Value(flag, value*amount, true);
-				_updatePet(target, updflag, 1, GetUInt32Value(flag));
+				_updatePet(target - 1, updflag, 1, unit->GetUInt32Value(flag));
+				((Pet*)unit)->SetState(PET_CHANGED);
 				break;
 		}
-
-
 	}
+
+	item->SetCount(item->GetCount() - amount);
+	if(item->GetCount() == 0)
+		DestroyItem( invslot );
+	else
+		item->SetState(ITEM_CHANGED, this);
 
 	return true;
 }
