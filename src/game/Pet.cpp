@@ -287,8 +287,7 @@ void Pet::SaveToDB()
 				<< guid << ", " << GUID_LOPART(GetOwnerGUID()) << ", '"
 				<< m_name.c_str() << "', '";
 
-			uint16 i;
-			for( i = 0; i < m_valuesCount; i++ )
+			for(uint16 i = 0; i < m_valuesCount; i++)
 			{
 				ss << GetUInt32Value(i) << " ";
 			}
@@ -318,8 +317,16 @@ void Pet::SaveToDB()
 				ss << GetUInt32Value(i) << " ";
 			}
 
-			ss << "', mode_battle = " << uint32(isBattle() ? 1 : 0)
-				<< " WHERE guid = " << guid;
+			ss << "', ";
+
+			for(uint8 i = 0; i < CREATURE_MAX_SPELLS; i++)
+			{
+				ss << "spell" << uint32(i+1) << "_level = "
+					<< uint32(GetSpellLevelByPos(i)) << ", ";
+			}
+
+			ss << " mode_battle = " << uint32(isBattle() ? 1 : 0);
+			ss << " WHERE guid = " << guid;
 			CharacterDatabase.Execute( ss.str().c_str() );
 		} break;
 

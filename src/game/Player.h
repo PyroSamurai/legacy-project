@@ -498,7 +498,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 		void UpdatePet(uint8 slot);
 		void UpdatePetBattle();
 		void UpdatePetLevel(Pet* pet);
-		void _updatePet(uint8 slot, uint8 flagStatus, uint8 modifier, uint32 value);
+		void _updatePet(uint8 slot, uint8 flagStatus, uint8 modifier, uint32 value, uint16 spell_entry=0);
 
 		void UpdateInventory();
 		void UpdateInventoryForItem(uint16 modelid, uint8 count);

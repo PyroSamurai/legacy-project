@@ -625,11 +625,25 @@ void WorldSession::HandlePlayerSpellAddOpcodes( WorldPacket & recv_data )
 	if( psize == 0)
 		return;
 
-	uint8  modifier;
+	uint8  target; // 1 = player; 2 = pet
+	uint8  petslot;
 	uint16 spell_entry;
 	uint8  mod_value;
 
-	recv_data >> modifier;
+	recv_data >> target;
+
+	Unit* unit = NULL;
+
+	if( target == 1 )
+		unit = _player;
+	else if( target == 2 )
+	{
+		recv_data >> petslot;
+		unit = _player->GetPet(petslot - 1);
+	}
+
+	if( !unit )
+		return;
 
 	for(uint8 i = 0; i < psize; i++)
 	{
@@ -639,45 +653,57 @@ void WorldSession::HandlePlayerSpellAddOpcodes( WorldPacket & recv_data )
 
 		WorldPacket data;
 
-		if( !_player->HaveSpell(spell_entry) )
+		if( !unit->HaveSpell(spell_entry) )
 		{
 			const SpellInfo* sinfo = objmgr.GetSpellTemplate(spell_entry);
 
-			uint32 learn_point = _player->GetSpellLearnPoint(spell_entry);
+			uint32 learn_point = unit->GetSpellLearnPoint(spell_entry);
 
 			if( !learn_point )
 				continue;
 
-			if( _player->GetUInt32Value(UNIT_FIELD_SPELL_POINT) < learn_point )
+			if( unit->GetUInt32Value(UNIT_FIELD_SPELL_POINT) < learn_point )
 				continue;
 
 			sLog.outDebug("PLAYER: Don't have spell %u, try to add it", spell_entry);
-			if( !_player->AddSpell(spell_entry, 1, SPELL_NEW) )
+			if( !unit->AddSpell(spell_entry, 1, SPELL_NEW) )
 			{
 				sLog.outDebug("PLAYER: Can not have spell %u", spell_entry);
 				continue;
 			}
-			_player->ApplyModUInt32Value(UNIT_FIELD_SPELL_POINT, learn_point, false);
+			unit->ApplyModUInt32Value(UNIT_FIELD_SPELL_POINT, learn_point, false);
 		}
 		else
 		{
-			if( !_player->GetUInt32Value(UNIT_FIELD_SPELL_POINT) )
+			if( !unit->GetUInt32Value(UNIT_FIELD_SPELL_POINT) )
 				continue;
 
-			if( _player->isSpellLevelMaxed(spell_entry) )
+			if( unit->isSpellLevelMaxed(spell_entry) )
 				continue;
 
-			if( _player->GetSpellLevel(spell_entry) == mod_value )
+			if( unit->GetSpellLevel(spell_entry) == mod_value )
 				continue;
 
-			_player->SetSpellLevel(spell_entry, mod_value);
-			_player->ApplyModUInt32Value(UNIT_FIELD_SPELL_POINT, 1, false);
+			//Kalo pet belom ngesave nih spell nya ke database.
+			unit->SetSpellLevel(spell_entry, mod_value);
+			unit->ApplyModUInt32Value(UNIT_FIELD_SPELL_POINT, 1, false);
 		}
 
+		if( unit->isType(TYPE_PLAYER) )
+		{
 		_player->_updatePlayer(UPD_FLAG_SPELL_POINT, 1, _player->GetUInt32Value(UNIT_FIELD_SPELL_POINT));
 
 		_player->_updatePlayer(UPD_FLAG_ADD_SPELL, 1, mod_value, spell_entry);
+		}
+		else if( unit->isType(TYPE_PET) )
+		{
+			_player->_updatePet(petslot-1, UPD_FLAG_SPELL_POINT, 1, unit->GetUInt32Value(UNIT_FIELD_SPELL_POINT));
+			_player->_updatePet(petslot-1, UPD_FLAG_ADD_SPELL, 1, mod_value, spell_entry);
+		}
 	}
+
+	if( unit->isType(TYPE_PET) )
+		((Pet*)unit)->SetState(PET_CHANGED);
 
 	_player->SaveToDB();
 }
