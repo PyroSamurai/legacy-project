@@ -38,9 +38,11 @@ enum ItemModType
 	ITEM_MOD_ELEMENT_FIRE  = 12,
 	ITEM_MOD_ELEMENT_WIND  = 13,
 	ITEM_MOD_SOCKET        = 14,
+	ITEM_MOD_HP            = 15,
+	ITEM_MOD_SP            = 16
 };
 
-#define MAX_ITEM_MOD       3
+#define MAX_ITEM_MOD       17
 
 enum ItemSpelltriggerType
 {

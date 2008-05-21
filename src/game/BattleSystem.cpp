@@ -2570,6 +2570,10 @@ void BattleSystem::GiveExpGained()
 		if( pet->isLevelUp() )
 		{
 			(*it)->UpdatePetLevel(pet);
+			pet->resetLevelUp();
+
+			///- TODO: Fix this for smaller data packet
+			(*it)->UpdatePetCarried();
 		}
 	}
 

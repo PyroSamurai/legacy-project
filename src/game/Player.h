@@ -380,6 +380,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 		Item* PetEquipItem( Pet* pet, uint8 pos, Item *pItem, bool update );
 
 		bool  AddNewInventoryItem(uint32 entry, uint32 count);
+		bool  ConsumeInventoryItemFor(uint8 target, uint8 invslot, uint8 amount);
 
 		void QuickEquipItem( uint8 pos, Item *pItem);
 		void VisualizeItem( uint8 pos, Item *pItem);
