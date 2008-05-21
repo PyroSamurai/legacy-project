@@ -1577,7 +1577,7 @@ void Player::UpdatePetBattle()
 		}
 }
 
-void Player::_updatePet(uint8 slot, uint8 updflag, uint8 modifier, uint32 value)
+void Player::_updatePet(uint8 slot, uint8 updflag, uint8 modifier, uint32 value, uint16 spell_entry)
 {
 	//sLog.outDebug("PLAYER: Update Pet slot %u flag %3u value %u", slot, updflag, value);
 	WorldPacket data;
@@ -1588,7 +1588,8 @@ void Player::_updatePet(uint8 slot, uint8 updflag, uint8 modifier, uint32 value)
 	data << (uint8 ) updflag;
 	data << (uint8 ) modifier;
 	data << (uint32) value;
-	data << (uint32) 0;
+	data << (uint16) spell_entry;
+	data << (uint16) 0; // unknown
 
 	if( m_session )
 		m_session->SendPacket(&data);
@@ -2981,7 +2982,8 @@ bool Player::ConsumeInventoryItemFor(uint8 target, uint8 invslot, uint8 amount)
 	if( !proto )
 		return false;
 
-	Unit* unit;
+	Unit* unit = NULL;
+
 	switch( target )
 	{
 		case 0:
