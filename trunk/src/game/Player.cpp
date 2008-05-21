@@ -2967,6 +2967,83 @@ bool Player::AddNewInventoryItem(uint32 modelid, uint32 count)
 	return false;
 }
 
+bool Player::ConsumeInventoryItemFor(uint8 target, uint8 invslot, uint8 amount)
+{
+	Item* item = GetItemByPos(invslot);
+	if( !item )
+		return false;
+
+	if( !amount )
+		return false;
+
+	ItemPrototype const *proto = item->GetProto();
+
+	if( !proto )
+		return false;
+
+	char* type = proto->TypeDesc;
+
+	if( !(strcmp(type, "Food") == 0 ||
+		  strcmp(type, "Medicine") == 0 ||
+		  strcmp(type, "Power") == 0 ||
+		  strcmp(type, "RevivePill") == 0) )
+		return false;
+
+	uint8 flag    = 0;
+	uint8 updflag = 0;
+	int32 value   = 0;
+	///- Parse all item mod consumable
+	for(uint8 i = 0; i < 10; i++)
+	{
+		if( !proto->ItemState[i].ItemStatType )
+			continue;
+
+		flag = 0;
+		updflag = 0;
+		value = proto->ItemState[i].ItemStatValue;
+
+		switch( proto->ItemState[i].ItemStatType )
+		{
+			case ITEM_MOD_HP:
+				flag = UNIT_FIELD_HP;
+				updflag = UPD_FLAG_HP;
+				break;
+			case ITEM_MOD_SP:
+				flag = UNIT_FIELD_SP;
+				updflag = UPD_FLAG_SP;
+				break;
+		}
+
+		if( !flag )
+			continue;
+
+		switch( target )
+		{
+			case 0: // consume item for player
+				ApplyModUInt32Value(flag, value*amount, true);
+				_updatePlayer(updflag, 1, GetUInt32Value(flag));
+				break;
+
+			// consume item for pet slot X
+			case 1:
+			case 2:
+			case 3:
+			case 4:
+				Pet* pet = GetPet(target);
+				if( !pet )
+					return false;
+
+				pet->ApplyModUInt32Value(flag, value*amount, true);
+				_updatePet(target, updflag, 1, GetUInt32Value(flag));
+				break;
+		}
+
+
+	}
+
+	return true;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 bool Player::isBattleInProgress()
 {

@@ -233,10 +233,26 @@ void WorldSession::HandleUseItemOpcodes( WorldPacket & recv_data )
 		case 0x0F: // consumable item
 		{
 			CHECK_PACKET_SIZE( recv_data, 1+1+1+1 );
-			recv_data >> invslot;
+			recv_data >> tmp_invslot;
 			recv_data >> amount;
 			recv_data >> target; // 0 to player
 			recv_data >> unk1;
+
+			invslot = tmp_invslot + INVENTORY_SLOT_ITEM_START - 1;
+
+			if( !_player->ConsumeInventoryItemFor(target, invslot, amount) )
+				break;
+
+			data.Initialize( 0x17 );
+			data << (uint8 ) 0x09;
+			data << (uint8 ) tmp_invslot;
+			data << (uint8 ) amount;
+			SendPacket(&data);
+
+			data.Initialize( 0x17 );
+			data << (uint8 ) 0x0F;
+			SendPacket(&data);
+
 		} break;
 
 		case 0x11: // equip to pet
