@@ -2574,6 +2574,19 @@ void BattleSystem::GiveExpGained()
 
 			///- TODO: Fix this for smaller data packet
 			(*it)->UpdatePetCarried();
+
+			(*it)->_updatePet(pet->GetSlot(), UPD_FLAG_SPELL_POINT, 1, pet->GetUInt32Value(UNIT_FIELD_SPELL_POINT));
+			(*it)->_updatePet(pet->GetSlot(), UPD_FLAG_LOYALTY, 1, pet->GetLoyalty());
+		}
+
+		if( pet->isDead() )
+		{
+			uint8 loyalty = pet->GetLoyalty();
+			pet->SetLoyalty(loyalty - 1);
+
+			///- TODO: Release pet if loyalty = 0
+			(*it)->_updatePet(pet->GetSlot(), UPD_FLAG_LOYALTY, 2, pet->GetLoyalty());
+
 		}
 	}
 

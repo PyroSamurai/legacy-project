@@ -513,6 +513,10 @@ void Unit::LevelUp()
 		if( !maxed )
 			ApplyModUInt32Value(UNIT_FIELD_SPELL_POINT, 1, true);
 
+		uint8 loyalty = ((Pet*)this)->GetLoyalty();
+		if( loyalty < 100 )
+			((Pet*)this)->SetLoyalty(loyalty + 1);
+
 		///- Random stat addition.
 		double dice_stat = rand_chance();
 		if ( dice_stat < 20 )
