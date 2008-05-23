@@ -495,7 +495,7 @@ void BattleSystem::SendPetPosition()
 		{
 			Pet* pet = (Pet*) m_BattleUnit[col][row];
 			if( !pet ) continue;
-
+/*
 			data.Initialize( 0x0B );
 			data << (uint8 ) 0x05;
 			data << (uint8 ) 0x05;
@@ -512,7 +512,8 @@ void BattleSystem::SendPetPosition()
 			data << (uint16) pet->GetUInt32Value(UNIT_FIELD_SP);    //pet sp
 			data << (uint16) pet->GetUInt32Value(UNIT_FIELD_LEVEL); //pet level
 			data << (uint16) pet->GetUInt32Value(UNIT_FIELD_ELEMENT);//pet elmn
-
+*/
+			BuildUpdateBlockPetPosition(&data, pet, col, row);
 			//pSession->SendPacket(&data);
 			SendMessageToSet(&data);
 		}
@@ -2770,3 +2771,124 @@ void BattleSystem::Escaped(BattleAction *action)
 	DumpBattlePosition();
 }
 
+void BattleSystem::BuildUpdateBlockPetPosition(WorldPacket *data, Pet* pet, uint8 col, uint8 row)
+{
+	data->clear();
+
+	if( !pet )
+		return;
+
+	data->Initialize( 0x0B );
+	*data << (uint8 ) 0x05;
+	*data << (uint8 ) 0x05;
+	*data << (uint8 ) 0x04;
+	*data << (uint16) pet->GetModelId(); // Pet ModelId
+	*data << (uint16) 0x0000;
+	*data << (uint16) 0x0004;
+	*data << (uint32) pet->GetOwnerAccountId(); // pet owner id (0 for AI)
+	*data << (uint8 ) col; // pet col position
+	*data << (uint8 ) row; // pet row position
+	*data << (uint16) pet->GetUInt32Value(UNIT_FIELD_HP_MAX); // pet hp max
+	*data << (uint16) pet->GetUInt32Value(UNIT_FIELD_SP_MAX); // pet sp max
+	*data << (uint16) pet->GetUInt32Value(UNIT_FIELD_HP);     // pet hp
+	*data << (uint16) pet->GetUInt32Value(UNIT_FIELD_SP);     // pet sp
+	*data << (uint16) pet->GetUInt32Value(UNIT_FIELD_LEVEL);  // pet level
+	*data << (uint16) pet->GetUInt32Value(UNIT_FIELD_ELEMENT);// pet element
+}
+
+bool BattleSystem::ActivatePetFor(Player* player, Pet* pet)
+{
+	if( !player || !pet )
+		return false;
+
+	Pet* pet2 = player->GetBattlePet();
+	if( !pet2 )
+		return false;
+
+	if( pet != pet2 )
+		return false;
+
+	uint8 col, row;
+
+	if( !GetPetPosFor(player, col, row) )
+		return false;
+
+	SetPosition(pet, col, row);
+	WorldPacket data;
+	BuildUpdateBlockPetPosition(&data, pet, col, row);
+	SendMessageToSet(&data, true);
+
+	///- TODO: Recalculate all Rate Level
+
+	return true;
+}
+
+bool BattleSystem::DeactivatePetFor(Player* player)
+{
+	if( !player )
+		return false;
+
+	if( !player->GetBattlePet() )
+		return false;
+
+	uint8 col, row;
+
+	if( !GetPetPosFor(player, col, row) )
+		return false;
+
+	m_BattleUnit[col][row] = NULL;
+
+	WorldPacket data;
+	data.Initialize( 0x0B );
+	data << (uint8 ) 1;
+	data << (uint8 ) col;
+	data << (uint8 ) row;
+	SendMessageToSet(&data, true);
+}
+
+bool BattleSystem::GetPetPosFor(Player* player, uint8 &col, uint8 &row)
+{
+	if( !player )
+		return false;
+
+	uint8 c, r;
+	if( !GetPosFor(player, c, r) )
+		return false;
+
+	if( isAtkPos( c ) )
+		if( isAtkPosBackRow( c ) )
+			c--;
+		else
+			c++;
+	else if( isDefPos( c ) )
+		if( isDefPosBackRow( c ) )
+			c++;
+		else
+			c--;
+
+	col = c;
+	row = r;
+
+	return true;
+
+}
+
+bool BattleSystem::GetPosFor(Unit* unit, uint8 &col, uint8 &row)
+{
+	for(uint8 i = 0; i < BATTLE_COL_MAX; i++)
+		for(uint8 j = 0; j < BATTLE_ROW_MAX; j++)
+		{
+			Unit* unit2 = GetBattleUnit(i, j);
+			if( !unit2 )
+				continue;
+
+			if( unit != unit2 )
+				continue;
+
+			col = i;
+			row = j;
+			return true;
+		}
+
+	return false;
+}
