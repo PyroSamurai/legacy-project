@@ -16,6 +16,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "BattleSystem.h"
 #include "Common.h"
 #include "WorldPacket.h"
 #include "WorldSocket.h"
@@ -34,6 +35,28 @@ void WorldSession::HandlePetCommandOpcodes( WorldPacket & recv_data )
 
 	recv_data >> command;
 
+	Player* battleMaster = _player->GetBattleMaster();
+	BattleSystem* engine = NULL;
+
+	if( battleMaster )
+		engine = battleMaster->PlayerBattleClass;
+
+	if( engine )
+	{
+		uint8 atk_col, atk_row;
+		engine->GetPosFor(_player, atk_col, atk_row);
+		if( !engine->isActionComplete() )
+		{
+			///- Tell next attacker to move if available
+			WorldPacket data;
+			data.Initialize( 0x35 );
+			data << (uint8 ) 0x05;
+			data << (uint8 ) atk_col;
+			data << (uint8 ) atk_row;
+			SendPacket(&data);
+		}
+	}
+
 	switch( command )
 	{
 		case 0x01:  // Battle command
@@ -46,21 +69,47 @@ void WorldSession::HandlePetCommandOpcodes( WorldPacket & recv_data )
 			if( !pet )
 				return;
 
+			///- in battle handler deactivate any battle pet
+			if( engine )
+				if( engine->DeactivatePetFor(_player) )
+					engine->IncAction();
+
 			_player->SetBattlePet( NULL );
 			_player->UpdateBattlePet();
 			_player->SetBattlePet( pet );
+
+			///- in battle handler activate selected battle pet
+			if( engine && pet )
+				if( engine->ActivatePetFor(_player, pet) )
+					engine->IncAction();
 
 			break;
 		}
 
 		case 0x02:  // Rest command
 		{
+
+			///- in battle handler deactivate any battle pet
+			Pet* pet = _player->GetBattlePet();
+			if( engine && pet )
+			{
+				if( engine->DeactivatePetFor(_player) )
+					engine->IncAction(); // action for pet
+				engine->IncAction(); // action for player
+			}
+
 			_player->SetBattlePet( NULL );
+
 			break;
 		}
 	}
 
 	_player->UpdateBattlePet();
+
+	///- in battle handler, final check is action complete ?
+	if( engine )
+		if( engine->isActionComplete() )
+			engine->BuildActions();
 }
 
 void WorldSession::HandlePetReleaseOpcode( WorldPacket & recv_data )

@@ -177,6 +177,11 @@ class LEGACY_DLL_SPEC BattleSystem
 		void LeaveBattle(Player* player);
 		void Escaped(BattleAction *action);
 
+		bool ActivatePetFor(Player* player, Pet* pet);
+		bool DeactivatePetFor(Player* player);
+		bool GetPosFor(Unit* unit, uint8 &col, uint8 &row);
+		bool GetPetPosFor(Player* player, uint8 &col, uint8 &row);
+
 	protected:
 		void ResetAction();
 
@@ -189,6 +194,7 @@ class LEGACY_DLL_SPEC BattleSystem
 
 		bool CanLink(BattleAction act1, BattleAction act2);
 		void BuildUpdateBlockAction(WorldPacket *data, BattleAction* action, bool linked=false);
+		void BuildUpdateBlockPetPosition(WorldPacket *data, Pet* pet, uint8 col, uint8 row);
 		UnitActionTurn ParseSpell(BattleAction* action, uint8 hit, bool linked=false);
 
 		void SendMessageToSet(WorldPacket * packet, bool log=false);

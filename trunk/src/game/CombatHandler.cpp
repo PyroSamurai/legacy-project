@@ -123,6 +123,10 @@ void WorldSession::HandlePlayerAttackOpcode( WorldPacket & recv_data )
 		action->SetSkill(SPELL_BASIC);
 	}
 
+	///- Prevent flood actions
+	if( engine->isActionComplete() )
+		return;
+
 	engine->AddBattleAction(action);
 	engine->IncAction();
 
@@ -134,8 +138,8 @@ void WorldSession::HandlePlayerAttackOpcode( WorldPacket & recv_data )
 		///- Tell next attacker to move if available
 		data.Initialize( 0x35 );
 		data << (uint8 ) 0x05;
-		data << atk_col;
-		data << atk_row;
+		data << (uint8 ) atk_col;
+		data << (uint8 ) atk_row;
 		SendPacket(&data);
 		//sLog.outDebug("COMBAT: Waiting next action from player '%s'", _player->GetName());
 		return;
