@@ -1303,12 +1303,13 @@ void BattleSystem::BuildUpdateBlockAction(WorldPacket *data, BattleAction* actio
 				Unit* attacker = GetBattleUnit(acol, arow);
 				if( attacker->isType(TYPE_PLAYER) )
 				{
-					Pet* pet = ((Player*)attacker)->CreatePet( ((Creature*)victim)->GetEntry() );
-					uint8 dest;
-					if( pet )
+					if( CanCatchPet(attacker, victim) )
 					{
-						if( ((Player*)attacker)->CanSummonPet( NULL_PET_SLOT, dest, pet, false ) == PET_ERR_OK )
-							if( rand_chance() > 0 )
+						Pet* pet = ((Player*)attacker)->CreatePet( ((Creature*)victim)->GetEntry() );
+						uint8 dest;
+						if( pet )
+						{
+							if( ((Player*)attacker)->CanSummonPet( NULL_PET_SLOT, dest, pet, false ) == PET_ERR_OK )
 							{
 								*data << (uint16) SPELL_SUCCESS_CATCH;
 								catched = true;
@@ -1320,7 +1321,8 @@ void BattleSystem::BuildUpdateBlockAction(WorldPacket *data, BattleAction* actio
 								((Player*)attacker)->SendMessageToSet(&data2, true);
 								break;
 							}
-						delete pet;
+							delete pet;
+						}
 					}
 				}
 			}
@@ -2173,7 +2175,7 @@ void BattleSystem::BattleStop()
 
 	WorldPacket data;
 
-	GiveExpGained();
+//	GiveExpGained();
 
 	for(uint8 row = 0; row < BATTLE_ROW_MAX; row++)
 		for(uint8 col = 0; col < BATTLE_COL_MAX; col++)
@@ -2182,6 +2184,9 @@ void BattleSystem::BattleStop()
 			if( !unit ) continue;
 			if( unit->isType(TYPE_PLAYER) || unit->isType(TYPE_PET) )
 			{
+				if( unit->isType(TYPE_PLAYER) )
+					GiveExpGainedFor((Player*)unit);
+
 				data.Initialize( 0x0B );
 				data << (uint8 ) 0x01;
 				data << (uint8 ) col;
@@ -2520,14 +2525,14 @@ void BattleSystem::AddKillItemDropped(BattleAction* action)
 	}
 }
 
-void BattleSystem::GiveExpGained()
+void BattleSystem::GiveExpGainedFor(Player* player)
 {
 	WorldPacket data;
 
-	PlayerListMap::const_iterator it = m_PlayerList.begin();
-	for(it; it != m_PlayerList.end(); ++it)
-	{
-		sLog.outDebug("EXPERIENCE: Giving '%s' experience %u", (*it)->GetName(), (*it)->GetExpGained());
+	//PlayerListMap::const_iterator it = m_PlayerList.begin();
+	//for(it; it != m_PlayerList.end(); ++it)
+	//{
+		//sLog.outDebug("EXPERIENCE: Giving '%s' experience %u", (*it)->GetName(), (*it)->GetExpGained());
 /*
 		data.Initialize( 0x08 );
 		data << (uint8 ) 0x01;
@@ -2538,19 +2543,26 @@ void BattleSystem::GiveExpGained()
 		(*it)->GetSession()->SetLogging(true);
 		(*it)->GetSession()->SendPacket(&data);
 */
-		(*it)->_updatePlayer(UPD_FLAG_XP, 1, (*it)->GetExpGained());
+		if( player->isDead() )
+			player->AddExpGained(-1);
 
-		if( (*it)->isLevelUp() )
+		player->AddExpGained();
+
+		sLog.outDebug("EXPERIENCE: Giving '%s' experience %u", player->GetName(), player->GetExpGained());
+
+		player->_updatePlayer(UPD_FLAG_XP, 1, player->GetExpGained());
+
+		if( player->isLevelUp() )
 		{
-			(*it)->resetLevelUp();
-			(*it)->UpdatePlayerLevel();
+			player->resetLevelUp();
+			player->UpdatePlayerLevel();
 		}
 
 
-		Pet* pet = (*it)->GetBattlePet();
+		Pet* pet = player->GetBattlePet();
 	
 		if( !pet )
-			continue;
+			return;
 /*
 		data.Initialize( 0x08 );
 		data << (uint8 ) 0x02;
@@ -2562,22 +2574,28 @@ void BattleSystem::GiveExpGained()
 		data << (uint32) pet->GetExpGained();
 		data << (uint32) 0;
 */
+
+		if( pet->isDead() )
+			pet->AddExpGained(0);
+
+		pet->AddExpGained();
+
 		sLog.outDebug("EXPERIENCE: Giving '%s' experience %u", pet->GetName(), pet->GetExpGained());
 
-		(*it)->_updatePet(pet->GetSlot(), UPD_FLAG_XP, 1, pet->GetExpGained());
+		player->_updatePet(pet->GetSlot(), UPD_FLAG_XP, 1, pet->GetExpGained());
 
 		//(*it)->GetSession()->SendPacket(&data);
 
 		if( pet->isLevelUp() )
 		{
-			(*it)->UpdatePetLevel(pet);
+			player->UpdatePetLevel(pet);
 			pet->resetLevelUp();
 
 			///- TODO: Fix this for smaller data packet
-			(*it)->UpdatePetCarried();
+			player->UpdatePetCarried();
 
-			(*it)->_updatePet(pet->GetSlot(), UPD_FLAG_SPELL_POINT, 1, pet->GetUInt32Value(UNIT_FIELD_SPELL_POINT));
-			(*it)->_updatePet(pet->GetSlot(), UPD_FLAG_LOYALTY, 1, pet->GetLoyalty());
+			player->_updatePet(pet->GetSlot(), UPD_FLAG_SPELL_POINT, 1, pet->GetUInt32Value(UNIT_FIELD_SPELL_POINT));
+			player->_updatePet(pet->GetSlot(), UPD_FLAG_LOYALTY, 1, pet->GetLoyalty());
 		}
 
 		if( pet->isDead() )
@@ -2586,10 +2604,10 @@ void BattleSystem::GiveExpGained()
 			pet->SetLoyalty(loyalty - 1);
 
 			///- TODO: Release pet if loyalty = 0
-			(*it)->_updatePet(pet->GetSlot(), UPD_FLAG_LOYALTY, 2, pet->GetLoyalty());
+			player->_updatePet(pet->GetSlot(), UPD_FLAG_LOYALTY, 2, pet->GetLoyalty());
 
 		}
-	}
+//	}
 
 	//data.Initialize( 0x08 );
 	//data << (uint8 ) 0x01; // 1 = char position; 2 = pet position
@@ -2891,4 +2909,24 @@ bool BattleSystem::GetPosFor(Unit* unit, uint8 &col, uint8 &row)
 		}
 
 	return false;
+}
+
+
+///- Calculate all requirement for capturing pet, including chance
+bool BattleSystem::CanCatchPet(Unit* attacker, Unit* victim)
+{
+	///- Check minimum health percentage
+	//   20% current health minimum capturable
+	sLog.outDebug("Can Capture ? %u <= %f", victim->GetHealth(), round(victim->GetUInt32Value(UNIT_FIELD_HP_MAX) * 0.2));
+	if( victim->GetHealth() > round(victim->GetUInt32Value(UNIT_FIELD_HP_MAX) * 0.2) )
+		return false;
+
+	///- Check level minimum
+	if( victim->getLevel() - attacker->getLevel() > 5 )
+		return false;
+
+	if( rand_chance() <= 50 )
+		return false;
+
+	return true;
 }

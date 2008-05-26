@@ -181,7 +181,8 @@ class LEGACY_DLL_SPEC Unit : public WorldObject
 		/*******************************************************************/
 		void   AddKillExp(uint8 enemyLevel, bool linked=false, bool inTeam=false, uint8 lowestLevelInGroup=0, uint8 lowerLevelCount=0);
 		void   AddHitExp(uint8 enemyLevel, bool linked=false);
-		void   AddExpGained(uint32 xp);
+		void   AddExpGained(int32 xp);
+		void   AddExpGained();
 		void   AddKillItemDropped(uint16 itemId);
 		uint16 GetItemDropped(uint8 index);
 		uint32 GetExpGained();
@@ -216,6 +217,7 @@ class LEGACY_DLL_SPEC Unit : public WorldObject
 
 		uint8  m_itemSet;
 		bool   m_itemSetApplied;
+		int32  m_tmp_xp;
 };
 
 #endif

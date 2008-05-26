@@ -49,6 +49,7 @@ Unit::Unit( WorldObject *instantiator )
 	m_levelUp = false;
 	m_itemSet = 0;
 	m_itemSetApplied = false;
+	m_tmp_xp = 0;
 }
 
 Unit::~Unit()
@@ -436,11 +437,41 @@ void Unit::AddHitExp(uint8 enemyLevel, bool linked)
 
 	float rate_xp = sWorld.getRate(RATE_XP_KILL);
 	uint32 xp_gained = (uint32) round(1 * rate_xp);
+
+	///- this unit already have exp either from kill or hit
+	//   ignoring any incoming hit experience
+	if( m_tmp_xp )
+		return;
+
 	AddExpGained(xp_gained);
 }
 
-void Unit::AddExpGained(uint32 xp)
+void Unit::AddExpGained(int32 xp)
 {
+	///- For reseting purpose, ex: when revived after killed 
+	if( xp == 0 )
+	{
+		m_tmp_xp = 0;
+		return;
+	}
+
+	///- For removing purpose, ex: when killed
+	if( xp < 0 )
+	{
+		///- TODO: Fix lost experience when killed
+		m_tmp_xp = xp * int32(sWorld.getRate(RATE_XP_LOST));
+		return;
+	}
+
+	m_tmp_xp += xp;
+}
+
+void Unit::AddExpGained()
+{
+	int32 xp = m_tmp_xp;
+
+	m_tmp_xp = 0;
+
 	uint8  lvl = getLevel();
 
 	uint8  birth_lvl = GetUInt32Value(UNIT_FIELD_REBORN);
@@ -467,6 +498,10 @@ void Unit::AddExpGained(uint32 xp)
 	sLog.outDebug("EXPERIENCE: '%s' XP gain %u, TNL is %u to %u", GetName(), xp, GetUInt32Value(UNIT_FIELD_NEXT_LEVEL_XP) + xp, tnl);
 
 	xp = GetUInt32Value(UNIT_FIELD_NEXT_LEVEL_XP) + xp;
+
+	///- losing experience if get killed
+	if( xp < 0 )
+		xp = 0;
 
 	SetUInt32Value(UNIT_FIELD_NEXT_LEVEL_XP, xp);
 
@@ -603,7 +638,7 @@ uint32 Unit::GetExpGained()
 {
 	uint32 xp  = GetUInt32Value(UNIT_FIELD_XP);
 	uint32 tnl = GetUInt32Value(UNIT_FIELD_NEXT_LEVEL_XP);
-	return xp + tnl;// + (6 * ceil(getLevel() / 2.9) );
+	return xp + tnl + 6;// + (6 * ceil(getLevel() / 2.9) );
 }
 
 uint16 Unit::GetHPMax() const
