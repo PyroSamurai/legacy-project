@@ -182,6 +182,8 @@ class LEGACY_DLL_SPEC BattleSystem
 		bool GetPosFor(Unit* unit, uint8 &col, uint8 &row);
 		bool GetPetPosFor(Player* player, uint8 &col, uint8 &row);
 
+		bool CanCatchPet(Unit* attacker, Unit* victim);
+
 	protected:
 		void ResetAction();
 
@@ -227,7 +229,7 @@ class LEGACY_DLL_SPEC BattleSystem
 		void AddKillExpGained(Unit* killer, Unit* victim, bool linked);
 		void AddHitExpGained(Unit* hitter, Unit* victim, bool linked);
 		void AddKillItemDropped(BattleAction* action);
-		void GiveExpGained();
+		void GiveExpGainedFor(Player* player);
 		void GiveItemDropped();
 		void SendItemDropped(ItemDropped* item);
 		void BuildUpdateBlockItemDropped(WorldPacket *data, ItemDropped* item);

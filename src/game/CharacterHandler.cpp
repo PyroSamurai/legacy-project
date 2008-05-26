@@ -575,6 +575,9 @@ void WorldSession::HandlePlayerStatAddOpcodes( WorldPacket & recv_data )
 {
 	CHECK_PACKET_SIZE(recv_data, 1+1+1+1+1+4);
 
+	if( !_player->GetUInt32Value(UNIT_FIELD_STAT_POINT) )
+		return;
+
 	sLog.outDetail( "WORLD: Recv CMSG_PLAYER_STAT_ADD Message" );
 
 	uint8 modifier;
@@ -618,6 +621,7 @@ void WorldSession::HandlePlayerSpellAddOpcodes( WorldPacket & recv_data )
 {
 	CHECK_PACKET_SIZE(recv_data, 1+2+1);
 
+
 	sLog.outDetail( "WORLD: Recv CMSG_PLAYER_SPELL_ADD Message" );
 
 	uint8 psize = (recv_data.size()-1)/3;
@@ -643,6 +647,9 @@ void WorldSession::HandlePlayerSpellAddOpcodes( WorldPacket & recv_data )
 	}
 
 	if( !unit )
+		return;
+
+	if( !unit->GetUInt32Value(UNIT_FIELD_SPELL_POINT) )
 		return;
 
 	for(uint8 i = 0; i < psize; i++)

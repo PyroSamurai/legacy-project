@@ -77,23 +77,63 @@ bool ChatHandler::HandleChangeLevelCommand(const char* args)
 		return true;
 	}
 
-	player->SetLevel(level);
-	player->UpdatePlayerLevel();
+	if( player != m_session->GetPlayer() )
+	{
+		PSendGmMessage("Cannot change other Player level."); 
+		return true;
+	}
 
+	///- Reset All
+	player->SetLevel(1);
+	player->SetUInt32Value(UNIT_FIELD_XP, 0);
+	player->SetUInt32Value(UNIT_FIELD_NEXT_LEVEL_XP, 0);
+	player->SetUInt32Value(UNIT_FIELD_STAT_POINT, 6);
+	player->SetUInt32Value(UNIT_FIELD_SPELL_POINT, 0);
 	player->SetUInt32Value(UNIT_FIELD_INT, 0);
 	player->SetUInt32Value(UNIT_FIELD_ATK, 0);
 	player->SetUInt32Value(UNIT_FIELD_DEF, 0);
 	player->SetUInt32Value(UNIT_FIELD_HPX, 0);
 	player->SetUInt32Value(UNIT_FIELD_SPX, 0);
 	player->SetUInt32Value(UNIT_FIELD_AGI, 0);
-	player->SetUInt32Value(UNIT_FIELD_STAT_POINT, level*2+4);
-
 	player->ResetSpells();
-	player->SetUInt32Value(UNIT_FIELD_SPELL_POINT, level-1);
+
+	uint8 birth_lvl = player->GetUInt32Value(UNIT_FIELD_REBORN);
+	double power = 2.9;
+	while( player->getLevel() < level )
+	{
+		switch( birth_lvl )
+		{
+			case 0: // normal
+				power = 2.9;
+				break;
+			case 1: // evo
+				power = 3.0;
+				break;
+			case 2: // revo
+				power = 3.1;
+				break;
+			default:
+				power = 2.9;
+				break;
+		}
+
+		uint32 tnl = (uint32) round(pow(player->getLevel() + 1, power) + 5);
+
+		player->ApplyModUInt32Value(UNIT_FIELD_XP, tnl, true);
+
+		player->LevelUp();
+	}
+
+	player->SetUInt32Value(UNIT_FIELD_HP_MAX, player->GetHPMax());
+    player->SetUInt32Value(UNIT_FIELD_HP, player->GetHPMax());
+    player->SetUInt32Value(UNIT_FIELD_SP_MAX, player->GetSPMax());
+    player->SetUInt32Value(UNIT_FIELD_SP, player->GetSPMax());
 
 	WorldPacket data;
 	player->BuildUpdateBlockStatusPacket(&data);
 	player->GetSession()->SendPacket(&data);
+
+	player->UpdatePlayerLevel();
 
 	return false;
 }
