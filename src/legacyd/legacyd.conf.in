@@ -91,6 +91,7 @@ Rate.Drop.Money = 1
 # Default: 1
 Rate.XP.Kill    = 3
 Rate.XP.Quest   = 1
+Rate.XP.Lost    = 1
 
 # Creature Damage Rate.
 # Example: 2 - creatures will damage 2x, 1.7 - 1.7x.
