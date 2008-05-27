@@ -48,11 +48,25 @@ void WorldSession::HandlePlayerBattleCommandOpcodes( WorldPacket & recv_data )
 			{
 				case 0x02: // To Player
 				{
+					if( !_player->isAcceptPK() )
+						return;
+
 					Player* enemy = objmgr.GetPlayerByAccountId(target);
 					if( !enemy )
 						return;
 
-					_player->Engage( enemy);
+					if( !enemy->isAcceptPK() )
+					{
+						///- Tell player if enemy is not accepting PK
+						WorldPacket data;
+						data.Initialize( 0x21 );
+						data << (uint8 ) 1;
+						data << (uint8 ) 1;
+						SendPacket(&data, true);
+						return;
+					}
+
+					_player->Engage( enemy );
 
 				} break;
 				case 0x03: // To Npc

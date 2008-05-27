@@ -646,10 +646,16 @@ uint16 Unit::GetHPMax() const
 	uint8  level   = GetUInt32Value(UNIT_FIELD_LEVEL);
 	uint16 hpx     = GetUInt32Value(UNIT_FIELD_HPX);
 	uint16 hpx_mod = GetInt32Value(UNIT_FIELD_HPX_MOD);
-	uint16 hp_max  = ((hpx + hpx_mod) * 4) + 80 + level;
+	uint16 hp_max  = 80 + level;
+
+	//uint16 hp_max  = ((hpx + hpx_mod) * 4) + 80 + level;
+
+	///- TODO: Fix this formula
+	hp_max += uint16(hpx * (4 * round(pow(level, 0.25))));
+
 	//sLog.outDebug("UNIT: Calculating MAX HP level %u hpx %u hpx_mod %u = %u", level, hpx, hpx_mod, hp_max);
 
-	return hp_max;
+	return hp_max + hpx_mod;
 }
 
 uint16 Unit::GetSPMax() const
@@ -657,7 +663,13 @@ uint16 Unit::GetSPMax() const
 	uint8  level   = GetUInt32Value(UNIT_FIELD_LEVEL);
 	uint16 spx     = GetUInt32Value(UNIT_FIELD_SPX);
 	uint16 spx_mod = GetInt32Value(UNIT_FIELD_SPX_MOD);
-	uint16 sp_max  = ((spx + spx_mod) * 2) + 60 + level;
+	uint16 sp_max  = 60 + level;
+
+	//uint16 sp_max  = ((spx + spx_mod) * 2) + 60 + level;
+
+	///- TODO: Fix this formula
+	sp_max += uint16(spx * (2 * round(pow(level, 0.25))));
+
 	//sLog.outDebug("UNIT: Calculating MAX SP level %u spx %u spx_mod %u = %u", level, spx, spx_mod, sp_max);
 
 	return sp_max;

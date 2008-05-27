@@ -120,11 +120,22 @@ enum EUnitFields
 
 	PLAYER_HERALD_CONSUMPTION           = UNIT_END + 0x0016, // 4 INT PUBLIC
 
-//	PLAYER_EMOTE                        = UNIT_END + 0x0016, // 1 INT PUBLIC
-//	PLAYER_EMOTE_ACTION                 = UNIT_END + 0x0017, // 1 INT PUBLIC
+	PLAYER_SHORTKEY_F1                  = UNIT_END + 0x001A, // 1 INT PUBLIC
+	PLAYER_SHORTKEY_F2                  = UNIT_END + 0x001B, // 1 INT PUBLIC
+	PLAYER_SHORTKEY_F3                  = UNIT_END + 0x001C, // 1 INT PUBLIC
+	PLAYER_SHORTKEY_F4                  = UNIT_END + 0x001D, // 1 INT PUBLIC
+	PLAYER_SHORTKEY_F5                  = UNIT_END + 0x001E, // 1 INT PUBLIC
 
+	PLAYER_SHORTKEY_ALT1                = UNIT_END + 0x001F, // 1 INT PUBLIC
+	PLAYER_SHORTKEY_ALT2                = UNIT_END + 0x0020, // 1 INT PUBLIC
+	PLAYER_SHORTKEY_ALT3                = UNIT_END + 0x0021, // 1 INT PUBLIC
+	PLAYER_SHORTKEY_ALT4                = UNIT_END + 0x0022, // 1 INT PUBLIC
+	PLAYER_SHORTKEY_ALT5                = UNIT_END + 0x0023, // 1 INT PUBLIC
 
-	PLAYER_END                          = UNIT_END + 0x001A,
+	PLAYER_ENABLE_PK                    = UNIT_END + 0x0024, // 1 INT PUBLIC
+	PLAYER_ENABLE_ENGAGE                = UNIT_END + 0x0025, // 1 INT PUBLIC
+
+	PLAYER_END                          = UNIT_END + 0x0026,
 
 	/*
 	PLAYER_DUEL_ARBITER                 = UNIT_END + 0x0000, // 2 LONG  PUBLIC

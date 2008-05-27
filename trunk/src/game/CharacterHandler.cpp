@@ -615,12 +615,13 @@ void WorldSession::HandlePlayerStatAddOpcodes( WorldPacket & recv_data )
 	_player->_updatePlayer(UPD_FLAG_STAT_POINT, 1, _player->GetUInt32Value(UNIT_FIELD_STAT_POINT));
 	_player->_updatePlayer(upd_stat_flag, 1, _player->GetUInt32Value(flag));
 
+	sLog.outDebug("Player MAX HP is %u", _player->GetHPMax());
+	sLog.outDebug("Player MAX SP is %u", _player->GetSPMax());
 }
 
 void WorldSession::HandlePlayerSpellAddOpcodes( WorldPacket & recv_data )
 {
 	CHECK_PACKET_SIZE(recv_data, 1+2+1);
-
 
 	sLog.outDetail( "WORLD: Recv CMSG_PLAYER_SPELL_ADD Message" );
 
@@ -713,4 +714,74 @@ void WorldSession::HandlePlayerSpellAddOpcodes( WorldPacket & recv_data )
 		((Pet*)unit)->SetState(PET_CHANGED);
 
 	_player->SaveToDB();
+}
+
+void WorldSession::HandlePlayerSetupShortkeyOpcodes( WorldPacket & recv_data )
+{
+	CHECK_PACKET_SIZE(recv_data, 1+1+2+1);
+
+	sLog.outDetail( "WORLD: Recv CMSG_PLAYER_SETUP_SHORCUT Message" );
+
+	uint8  unk1;
+	uint8  cmd; // 2 = set; 0 = unset;
+	uint16 spellid;
+	uint8  skslot;
+
+	recv_data >> unk1;
+	recv_data >> cmd;
+	recv_data >> spellid;
+	recv_data >> skslot;
+
+	uint8 shortkey = 0;
+
+	switch( skslot )
+	{
+		case  1: shortkey = PLAYER_SHORTKEY_F1; break;
+		case  2: shortkey = PLAYER_SHORTKEY_F2; break;
+		case  3: shortkey = PLAYER_SHORTKEY_F3; break;
+		case  4: shortkey = PLAYER_SHORTKEY_F4; break;
+		case  5: shortkey = PLAYER_SHORTKEY_F5; break;
+		case  6: shortkey = PLAYER_SHORTKEY_ALT1; break;
+		case  7: shortkey = PLAYER_SHORTKEY_ALT2; break;
+		case  8: shortkey = PLAYER_SHORTKEY_ALT3; break;
+		case  9: shortkey = PLAYER_SHORTKEY_ALT4; break;
+		case 10: shortkey = PLAYER_SHORTKEY_ALT5; break;
+		default: shortkey = 0; break;
+	}
+
+	if( !shortkey )
+		return;
+
+	_player->SetUInt32Value(shortkey, spellid);
+}
+
+void WorldSession::HandlePlayerEnableOptionsOpcodes( WorldPacket & recv_data )
+{
+	CHECK_PACKET_SIZE(recv_data, 1+1);
+
+	sLog.outDetail( "WORLD: Recv CMSG_PLAYER_ENABLE_OPTION Message" );
+
+	uint8 opt;
+	uint8 enable;
+
+	recv_data >> opt;
+	recv_data >> enable;
+
+	uint8 option = 0;
+	switch( opt )
+	{
+		case 1:
+		{
+			option = PLAYER_ENABLE_PK;
+			_player->AcceptPK(enable);
+		} break;
+
+		case 2:
+		{
+			option = PLAYER_ENABLE_ENGAGE;
+			_player->AcceptEngage(enable);
+		} break;
+
+		default: option = 0; break;
+	}
 }

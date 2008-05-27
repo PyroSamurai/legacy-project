@@ -505,6 +505,9 @@ class LEGACY_DLL_SPEC Player : public Unit
 		void UpdateCurrentEquip();
 		void UpdateCurrentGold();
 		void UpdateGold(int32 value);
+		void UpdateShortkey();
+		void UpdateEnablePK();
+		void UpdateEnableEngage();
 		void UpdatePetCarried();
 		void UpdateBattlePet();
 
@@ -542,6 +545,13 @@ class LEGACY_DLL_SPEC Player : public Unit
 
 		GridReference<Player> &GetGridRef() { return m_gridRef; }
 		void ResetSpells();
+
+		void AcceptPK(uint8 accept); 
+		bool isAcceptPK(); 
+		void AcceptEngage(uint8 accept);
+		bool isAcceptEngage();
+
+		uint8 GetBattleCount() { return m_battleCount++; }
 	protected:
 
 		/**********************************************************/
@@ -587,47 +597,6 @@ class LEGACY_DLL_SPEC Player : public Unit
 		Item*  m_items[PLAYER_SLOTS_COUNT];
 		Pet*   m_pets[MAX_PET_SLOT];
 		Pet*   m_battlePet;
-/*
-		uint8  m_reborn;
-		uint8  m_element;
-		uint8  m_gender;
-		uint8  m_face;
-		uint8  m_hair;
-		uint8  m_hair_color_R;
-		uint8  m_hair_color_G;
-		uint8  m_hair_color_B;
-		uint8  m_skin_color_R;
-		uint8  m_skin_color_G;
-		uint8  m_skin_color_B;
-		uint8  m_shirt_color;
-		uint8  m_misc_color;
-
-		uint16 m_hp, m_sp;
-
-		uint16 m_stat_int, m_stat_atk, m_stat_def, m_stat_agi, m_stat_hpx, m_stat_spx;
-		uint8  m_level;
-		uint32 m_rank;
-		uint32 m_xp_gain;
-		uint16 m_skill;
-		uint16 m_stat;
-
-		uint16 m_hp_max;
-		uint16 m_sp_max;
-*/
-		///- TODO: Fix
-		//   We will need this to be signed
-		//   modifiers can have negative value
-//		uint32 m_atk_mod, m_def_mod, m_int_mod, m_agi_mod, m_hpx_mod, m_spx_mod;
-
-//		uint32 m_gold_hand;
-//		uint32 m_gold_bank;
-/*
-		uint16 m_unk1;
-		uint16 m_unk2;
-		uint16 m_unk3;
-		uint16 m_unk4;
-		uint16 m_unk5;
-*/
 	private:
 
 		GridReference<Player> m_gridRef;
@@ -636,14 +605,13 @@ class LEGACY_DLL_SPEC Player : public Unit
 
 		uint32 m_talkedSequence;
 
-		//Spell* m_spells[MAX_PLAYER_SPELL];
-//		SpellMap m_spells;
-
 		Player* i_battleMaster;
 
 		uint8 m_exprType;
 		uint8 m_exprCode;
 		uint8 m_orientation;
+
+		uint8 m_battleCount;
 };
 
 #endif

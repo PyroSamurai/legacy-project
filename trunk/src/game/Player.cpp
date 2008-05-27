@@ -92,6 +92,7 @@ Player::Player (WorldSession *session): Unit( 0 )
 	m_exprType = 0;
 	m_exprCode = 0;
 	m_orientation = 0;
+	m_battleCount = 0;
 }
 
 Player::~Player ()
@@ -1265,6 +1266,10 @@ void Player::SendInitialPacketsBeforeAddToMap()
 {
 	WorldPacket data;
 
+	Send1408();
+	UpdateEnablePK();
+//	UpdateEnableEngage();
+
 	UpdatePlayer();
 	BuildUpdateBlockVisibilityPacket(&data);
 	GetSession()->SendPacket(&data);
@@ -1287,6 +1292,7 @@ void Player::SendInitialPacketsAfterAddToMap()
 {
 	//UpdatePlayer();
 	UpdateCurrentGold();
+	UpdateShortkey();
 }
 
 void Player::UpdatePetCarried()
@@ -1692,6 +1698,61 @@ void Player::UpdateGold(int32 value)
 
 	if( m_session )
 		m_session->SendPacket(&data);
+}
+
+void Player::UpdateShortkey()
+{
+	WorldPacket data;
+	data.Initialize( 0x28 );
+	data << (uint8 ) 1;
+
+	uint8 count = 0;
+
+	for(uint8 i = 0; i < 10; i++)
+	{
+		if( !GetUInt32Value(PLAYER_SHORTKEY_F1 + i) )
+			continue;
+
+		count++;
+		data << (uint8 ) 2;
+		data << (uint16) GetUInt32Value(PLAYER_SHORTKEY_F1 + i);
+		data << (uint8 ) (i + 1);
+	}
+
+	if( !count )
+		return;
+
+	if( m_session )
+		m_session->SendPacket(&data);
+}
+
+void Player::UpdateEnablePK()
+{
+	WorldPacket data;
+	data.Initialize( 0x21 );
+	data << (uint8 ) 0;
+	/*
+	if( GetUInt32Value(PLAYER_ENABLE_PK) )
+		data << (uint8 ) 1;
+	else
+		data << (uint8 ) 0;
+	*/
+	if( m_session )
+		m_session->SendPacket(&data, true);
+}
+
+void Player::UpdateEnableEngage()
+{
+	WorldPacket data;
+	data.Initialize( 0x21 );
+	data << (uint8 ) 2;
+	if( GetUInt32Value(PLAYER_ENABLE_ENGAGE) )
+		data << (uint8 ) 1;
+	else
+		data << (uint8 ) 0;
+
+	if( m_session )
+		m_session->SendPacket(&data, true);
 }
 
 void Player::Send0504()
@@ -3349,4 +3410,26 @@ bool Player::_removeSpell(uint16 entry)
 		return true;
 	}
 	return false;
+}
+
+void Player::AcceptPK(uint8 accept)
+{
+	if( accept > 1 ) accept = 1;
+	SetUInt32Value(PLAYER_ENABLE_PK, accept);
+}
+
+bool Player::isAcceptPK()
+{
+	return (GetUInt32Value(PLAYER_ENABLE_PK) == 1 ? true : false);
+}
+
+void Player::AcceptEngage(uint8 accept)
+{
+	if( accept > 1 ) accept = 1;
+	SetUInt32Value(PLAYER_ENABLE_ENGAGE, accept);
+}
+
+bool Player::isAcceptEngage()
+{
+	return (GetUInt32Value(PLAYER_ENABLE_ENGAGE) == 1 ? true : false);
 }
