@@ -99,7 +99,15 @@ void BattleSystem::DumpBattlePosition()
 BattleSystem::BattleSystem(Player* master)
 {
 	//pSession = Session;
-	m_BattleGroundId = 0x017D;  // battle background stage id
+	// battle ground map 357 - 434
+	// 367 not exist battle ground
+	//m_BattleGroundId = 357 + master->GetBattleCount(); //381;
+
+	m_BattleGroundId = urand( 357, 434 );
+
+	///- Fix incorrect battle map
+	if( m_BattleGroundId == 367 )
+		m_BattleGroundId = 357;
 
 	m_PlayerActionNeed = 0;
 	m_PlayerActionCount = 0;
@@ -163,6 +171,8 @@ BattleSystem::~BattleSystem()
 	m_unitTurn.clear();
 
 	sLog.outDebug("BATTLE: I'm cleaned, my master kungfu is very good");
+
+	sLog.outDebug("++++++++++++ BATTLE BACKGROUND %u ++++++++++++", m_BattleGroundId);
 }
 
 bool BattleSystem::FindNewMaster()

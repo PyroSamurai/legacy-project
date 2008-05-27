@@ -117,6 +117,12 @@ void WorldSession::FillOpcodeHandlerHashTable()
 
 	objmgr.opcodeTable[ CMSG_PLAYER_BATTLE_COMMAND ] = OpcodeHandler(STATUS_LOGGEDIN,
 			&WorldSession::HandlePlayerBattleCommandOpcodes );
+
+	objmgr.opcodeTable[ CMSG_PLAYER_SETUP_SHORTKEY ] = OpcodeHandler(STATUS_LOGGEDIN,
+			&WorldSession::HandlePlayerSetupShortkeyOpcodes );
+
+	objmgr.opcodeTable[ CMSG_PLAYER_ENABLE_OPTION ] = OpcodeHandler(STATUS_LOGGEDIN,
+			&WorldSession::HandlePlayerEnableOptionsOpcodes );
 }
 
 void WorldSession::SizeError(WorldPacket const& packet, uint32 size) const

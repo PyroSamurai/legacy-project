@@ -100,12 +100,14 @@ class LEGACY_DLL_SPEC WorldSession
 		void HandlePlayerAttackOpcode(WorldPacket& recvPacket);
 		void HandlePlayerBattleCommandOpcodes(WorldPacket& recvPacket);
 		void HandlePlayerClickNpc(WorldPacket& recvPacket);
+		void HandlePlayerEnableOptionsOpcodes(WorldPacket& recvPacket);
 		void HandlePlayerEnterDoorOpcode(WorldPacket& recvPacket);
 		void HandlePlayerEnterMapCompletedOpcode(WorldPacket& recvPacket);
 		void HandlePlayerExpressionOpcode(WorldPacket& recvPacket);
 		void HandlePlayerLoginOpcode(WorldPacket& recvPacket);
 		void HandlePlayerLogin(LoginQueryHolder * holder);
 		void HandlePlayerSelectDialogOpcodes(WorldPacket& recvPacket);
+		void HandlePlayerSetupShortkeyOpcodes(WorldPacket& recvPacket);
 		void HandlePlayerStatAddOpcodes(WorldPacket& recvPacket);
 		void HandlePlayerSpellAddOpcodes(WorldPacket& recvPacket);
 		void HandlePlayerTransacItemOpcodes(WorldPacket& recvPacket);

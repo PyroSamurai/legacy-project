@@ -88,6 +88,8 @@ class ChatHandler
 		bool HandleModifyGoldCommand(const char* args);
 
 		///- LEVEL 2 SEC_GAMEMASTER
+		bool HandleChangeLevelCommand(const char* args);
+		bool HandleChangeLevelPetCommand(const char* args);
 		bool HandleWarpCommand(const char* args);
 		bool HandleSaveAllCommand(const char* args);
 		bool HandleNpcTalkCommand(const char* args);
@@ -105,8 +107,6 @@ class ChatHandler
 		bool HandleGetItemState(const char* args);
 		bool HandleBanCommand(const char* args);
 		bool HandleUnBanCommand(const char* args);
-		bool HandleChangeLevelCommand(const char* args);
-		bool HandleChangeLevelPetCommand(const char* args);
 		bool HandleLevelUpCommand(const char* args);
 
 		// common global flag

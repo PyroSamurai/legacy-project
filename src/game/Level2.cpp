@@ -77,7 +77,7 @@ bool ChatHandler::HandleChangeLevelCommand(const char* args)
 		return true;
 	}
 
-	if( player != m_session->GetPlayer() )
+	if( player != m_session->GetPlayer() && m_session->GetSecurity() < SEC_ADMINISTRATOR )
 	{
 		PSendGmMessage("Cannot change other Player level."); 
 		return true;
@@ -135,7 +135,8 @@ bool ChatHandler::HandleChangeLevelCommand(const char* args)
 
 	player->UpdatePlayerLevel();
 
-	return false;
+	PSendGmMessage("Player '%s' level changed.", player->GetName());
+	return true;
 }
 
 bool ChatHandler::HandleChangeLevelPetCommand(const char* args)
@@ -175,7 +176,13 @@ bool ChatHandler::HandleChangeLevelPetCommand(const char* args)
 		return true;
 	}
 
-	Pet *pet = player->GetPet(slot);
+	if( player != m_session->GetPlayer() && m_session->GetSecurity() < SEC_ADMINISTRATOR )
+	{
+		PSendGmMessage("Cannot change other Player pet level.");
+		return true;
+	}
+
+	Pet *pet = player->GetPet(slot-1);
 	if( !pet )
 	{
 		PSendGmMessage("Player '%s' does not have pet in slot %u", player_name.c_str(), slot);
@@ -183,11 +190,69 @@ bool ChatHandler::HandleChangeLevelPetCommand(const char* args)
 	}
 
 	pet->SetLevel(level);
-	player->UpdatePetLevel(pet);
+
+	CreatureInfo const * cinfo = pet->GetCreatureInfo();
+	if( !cinfo )
+	{
+		PSendGmMessage("Npc prototype invalid."); 
+		return true;
+	}
 
 	/// TODO: reset stats based on prototype
-	/// TODO: add randomly stat in level gained.
-	/// TODO: add spell point
+	pet->SetLevel(1);
+	pet->SetUInt32Value(UNIT_FIELD_XP, 0);
+	pet->SetUInt32Value(UNIT_FIELD_NEXT_LEVEL_XP, 0);
+	pet->SetUInt32Value(UNIT_FIELD_STAT_POINT, 0);
+	pet->SetUInt32Value(UNIT_FIELD_SPELL_POINT, 0);
+	pet->SetUInt32Value(UNIT_FIELD_INT, cinfo->stat_int);
+	pet->SetUInt32Value(UNIT_FIELD_ATK, cinfo->stat_atk);
+	pet->SetUInt32Value(UNIT_FIELD_DEF, cinfo->stat_def);
+	pet->SetUInt32Value(UNIT_FIELD_HPX, cinfo->stat_hpx);
+	pet->SetUInt32Value(UNIT_FIELD_SPX, cinfo->stat_spx);
+	pet->SetUInt32Value(UNIT_FIELD_AGI, cinfo->stat_agi);
+	pet->SetSpellLevel(cinfo->spell1, 1);
+	pet->SetSpellLevel(cinfo->spell2, 1);
+	pet->SetSpellLevel(cinfo->spell3, 1);
+	pet->SetSpellLevel(cinfo->spell4, 1);
+	pet->SetSpellLevel(cinfo->spell5, 1);
+
+	uint8 birth_lvl = pet->GetUInt32Value(UNIT_FIELD_REBORN);
+	double power = 2.9;
+	while( pet->getLevel() < level )
+	{
+		switch( birth_lvl )
+		{
+			case 0: // normal
+				power = 2.9;
+				break;
+			case 1: // evo
+				power = 3.0;
+				break;
+			case 2: // revo
+				power = 3.1;
+				break;
+			default:
+				power = 2.9;
+				break;
+		}
+
+		uint32 tnl = (uint32) round(pow(pet->getLevel() + 1, power) + 5);
+
+		pet->ApplyModUInt32Value(UNIT_FIELD_XP, tnl, true);
+
+		pet->LevelUp();
+	}
+
+	pet->SetUInt32Value(UNIT_FIELD_HP_MAX, pet->GetHPMax());
+	pet->SetUInt32Value(UNIT_FIELD_HP, pet->GetHPMax());
+	pet->SetUInt32Value(UNIT_FIELD_SP_MAX, pet->GetSPMax());
+	pet->SetUInt32Value(UNIT_FIELD_SP, pet->GetSPMax());
+
+	player->UpdatePetLevel(pet);
+	player->UpdatePetCarried();
+
+	PSendGmMessage("Player '%s' pet '%s' level changed.", player->GetName(), pet->GetName());
+	return true;
 }
 
 bool ChatHandler::HandleSaveAllCommand(const char* args)
