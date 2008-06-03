@@ -55,12 +55,38 @@ enum SpellModType
 	SPELL_MOD_HURT                = 2,
 	SPELL_MOD_BUF_HURT            = (SPELL_MOD_BUF | SPELL_MOD_HURT),
 	SPELL_MOD_HEAL                = 6,
+	SPELL_MOD_DISABLED_BUF        = 8,
+	SPELL_MOD_POSITIVE_BUF        = 16,
+	SPELL_MOD_NEGATIVE_BUF        = 32,
+
+	SPELL_MOD_DISABLED_HURT       = (SPELL_MOD_DISABLED_BUF | SPELL_MOD_HURT),
 };
 
 enum SpellNumberEntry
 {
+	///- Basic spell
 	SPELL_BASIC                   = 10000,   // Duel Tangan Kosong
+
+	///- Earth Element spell
+	SPELL_TREESPIRIT              = 10004,   // Tree Spirit
+	SPELL_AURA                    = 10010,   // Aura
+	SPELL_MIRROR                  = 10015,   // Mirror
+
+	///- Water Element spell
+	SPELL_ICEWALL                 = 11002,   // Ice Wall
+	SPELL_FREEZING                = 11014,   // Freezing
+
+	///- Wind Element spell
+	SPELL_CYCLONE                 = 13002,   // Cyclone
+	SPELL_DODGE                   = 13003,   // Dodge
+	SPELL_INVISIBLE               = 13005,   // Invisible
+	SPELL_STUN                    = 13007,   // Stun
+	SPELL_MINIFY                  = 13011,   // Minify
+	SPELL_MAGNIFY                 = 13012,   // Magnify
 	SPELL_BERSERKER               = 13013,   // Berserker
+	SPELL_VIGOR                   = 13014,   // Vigor
+
+	///- Heart Element spell
 	SPELL_RETREAT                 = 14002,   // Retreat
 	SPELL_TEACHING                = 14027,   // Guru pembimbing
 	SPELL_UNITED                  = 14028,   // Bersatu

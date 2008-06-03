@@ -92,23 +92,23 @@ void WorldSession::HandlePlayerAttackOpcode( WorldPacket & recv_data )
 	CHECK_PACKET_SIZE( recv_data, 1+1+1+1+1+2 );
 
 	DEBUG_LOG( "WORLD: Recvd CMSG_PLAYER_ATTACK Message '%s'", _player->GetName());
-	uint8  unk1;
+	uint8  type; // 1 = spell; 2 = use inventory item
 	uint8  atk_col;
 	uint8  atk_row;
 	uint8  tgt_col;
 	uint8  tgt_row;
-	uint16 skill;
+	uint16 spell;
 
-	recv_data >> unk1;
+	recv_data >> type;
 	recv_data >> atk_col;
 	recv_data >> atk_row;
 	recv_data >> tgt_col;
 	recv_data >> tgt_row;
-	recv_data >> skill;
+	recv_data >> spell;
 
 	///- Override incorrect target for self target spell type
-	if( SPELL_DEFENSE == skill ||
-		SPELL_ESCAPE  == skill )
+	if( SPELL_DEFENSE == spell ||
+		SPELL_ESCAPE  == spell )
 	{
 		tgt_col = atk_col;
 		tgt_row = atk_row;
@@ -124,17 +124,29 @@ void WorldSession::HandlePlayerAttackOpcode( WorldPacket & recv_data )
 	if( !engine )
 		return;
 
-	BattleAction* action = new BattleAction(atk_col, atk_row, skill, tgt_col, tgt_row);
+	BattleAction* action = new BattleAction(atk_col, atk_row, spell, tgt_col, tgt_row);
 
 	Unit* attacker = engine->GetAttacker(action);
 
 	ASSERT(attacker);
 
-	if( !attacker->HaveSpell(skill) )
+	if( !attacker->HaveSpell(spell) )
 	{
-		sLog.outDebug("COMBAT: '%s' don't have spell '%s', cheating ?", attacker->GetName(), objmgr.GetSpellTemplate(skill)->Name);
-		///- Use default basic attack
-		action->SetSkill(SPELL_BASIC);
+		const SpellInfo* sinfo = objmgr.GetSpellTemplate(spell);
+		if( sinfo )
+		{
+			///- don't have spell or using consumable item
+			//   TODO: handle use consumable item
+			sLog.outDebug("COMBAT: '%s' don't have spell '%s', cheating ?", attacker->GetName(), sinfo->Name);
+			///- Use default basic attack
+			action->SetSkill(spell);
+		}
+		else
+		{
+			sLog.outDebug("COMBAT: '%s' don't have spell %u, cheating ?", attacker->GetName(), spell);
+			action->SetSkill(SPELL_BASIC);
+		}
+
 	}
 
 	///- Prevent flood actions

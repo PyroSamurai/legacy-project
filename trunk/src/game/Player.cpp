@@ -1714,7 +1714,12 @@ void Player::UpdateShortkey()
 			continue;
 
 		count++;
-		data << (uint8 ) 2;
+		uint8 type = 0; // 1 = item; 2 = spell;
+		if( GetUInt32Value(PLAYER_SHORTKEY_F1 + i) > 22000 )
+			type = 1;
+		else
+			type = 2;
+		data << (uint8 ) type;
 		data << (uint16) GetUInt32Value(PLAYER_SHORTKEY_F1 + i);
 		data << (uint8 ) (i + 1);
 	}
@@ -1786,13 +1791,21 @@ void Player::Send0602()
 		m_session->SendPacket(&data);
 }
 
+void Player::Send1406()
+{
+	WorldPacket data;
+	data.Initialize( 0x14 );
+	data << (uint8 ) 0x06;
+	if( m_session )
+		m_session->SendPacket(&data);
+}
+
 void Player::Send1408()
 {
 	///- tell the client request is completed
 	WorldPacket data;
 	data.Initialize( 0x14, 1 );
 	data << (uint8) 0x08;
-
 	if( m_session )
 		m_session->SendPacket(&data);
 }

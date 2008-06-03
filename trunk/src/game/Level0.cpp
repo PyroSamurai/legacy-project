@@ -62,3 +62,17 @@ bool ChatHandler::HandlePasswordCommand(char const* args)
 
 	sLog.outDebug("COMMAND: HandlePasswordCommand");
 }
+
+bool ChatHandler::HandleRestCommand(char const* args)
+{
+	if( !m_session )
+		return false;
+
+	sLog.outDebug("COMMAND: HandleRestCommand");
+
+	Player* player = m_session->GetPlayer();
+	player->SetUInt32Value(UNIT_FIELD_HP, player->GetHPMax());
+	player->SetUInt32Value(UNIT_FIELD_SP, player->GetSPMax());
+	player->UpdatePlayer();
+	return true;
+}

@@ -723,12 +723,12 @@ void WorldSession::HandlePlayerSetupShortkeyOpcodes( WorldPacket & recv_data )
 	sLog.outDetail( "WORLD: Recv CMSG_PLAYER_SETUP_SHORCUT Message" );
 
 	uint8  unk1;
-	uint8  cmd; // 2 = set; 0 = unset;
+	uint8  type; // 0 = remove; 1 = set for item; 2 = set for spell;
 	uint16 spellid;
 	uint8  skslot;
 
 	recv_data >> unk1;
-	recv_data >> cmd;
+	recv_data >> type;
 	recv_data >> spellid;
 	recv_data >> skslot;
 
@@ -751,6 +751,9 @@ void WorldSession::HandlePlayerSetupShortkeyOpcodes( WorldPacket & recv_data )
 
 	if( !shortkey )
 		return;
+
+	if( !type )
+		spellid = 0;
 
 	_player->SetUInt32Value(shortkey, spellid);
 }

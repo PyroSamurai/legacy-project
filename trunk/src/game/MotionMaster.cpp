@@ -74,7 +74,7 @@ MotionMaster::~MotionMaster()
 void
 MotionMaster::UpdateMotion(const uint32 &diff)
 {
-	if(i_owner->hasUnitState(UNIT_STATE_ROOT | UNIT_STATE_STUNED))
+	if(i_owner->hasUnitState(UNIT_STATE_ROOT | UNIT_STATE_STUN))
 		return;
 	
 	if(empty())
