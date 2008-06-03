@@ -64,7 +64,7 @@ SQLStorage sItemStorage(ItemPrototypefmt,"entry","item_template");
 SQLStorage sPageTextStore(PageTextfmt,"entry","page_text");
 SQLStorage sSpellThreatStore(SpellThreatfmt,"entry","spell_threat");
 SQLStorage sInstanceTemplate(InstanceTemplatefmt,"map","instance_template");
-SQLStorage sSpellStorage(SpellPrototypefmt,"entry","spell_template");
+SQLStorage sSpellStorage(SpellPrototypefmt,"entry","spells_template");
 
 void SQLStorage::Free ()
 {
