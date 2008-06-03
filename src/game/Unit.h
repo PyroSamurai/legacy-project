@@ -57,18 +57,29 @@ enum UnitState
 	UNIT_STATE_STOPPED   = 0,
 	UNIT_STATE_DIED      = 1,
 	UNIT_STATE_IN_BATTLE = 2,
-	UNIT_STATE_STUNED    = 4,
-	UNIT_STATE_CYCLONED  = 6,
+	UNIT_STATE_STUN      = 4,
+	UNIT_STATE_CYCLONE   = 6,
 	UNIT_STATE_ROOT      = 8,
-	UNIT_STATE_DISABLED  = (UNIT_STATE_STUNED | UNIT_STATE_CYCLONED | UNIT_STATE_ROOT),
-	UNIT_STATE_CONFUSED  = 32,
-	UNIT_STATE_ROAMING   = 64,
-	UNIT_STATE_CHASE     = 128,
-	UNIT_STATE_SEARCHING = 256,
-	UNIT_STATE_FLEEING   = 512,
+	UNIT_STATE_FREEZE    = 16,
+	UNIT_STATE_DISABLED  = (UNIT_STATE_STUN | UNIT_STATE_CYCLONE | UNIT_STATE_ROOT | UNIT_STATE_FREEZE),
+	UNIT_STATE_CHAOS     = 64,
+	UNIT_STATE_ROAMING   = 128,
+	UNIT_STATE_CHASE     = 256,
+	UNIT_STATE_SEARCHING = 512,
+	UNIT_STATE_FLEEING   = 1024,
 	UNIT_STATE_MOVING    = (UNIT_STATE_ROAMING | UNIT_STATE_CHASE | UNIT_STATE_SEARCHING | UNIT_STATE_FLEEING),
-	UNIT_STATE_FOLLOW    = 1024,
-	UNIT_STATE_ALL_STATE = 0xFFFF
+	UNIT_STATE_DEFEND    = 4096,
+
+	UNIT_STATE_ICEWALL   = 8192,
+	UNIT_STATE_AURA      = 16384,
+	UNIT_STATE_MIRROR    = 32768,
+	UNIT_STATE_VIGOR     = 65536,
+	UNIT_STATE_DODGE     = 131072,
+	UNIT_STATE_INVISIBLE = 262144,
+	UNIT_STATE_MAGNIFY   = 524288,
+	UNIT_STATE_MINIFY    = 1048576,
+
+	UNIT_STATE_ALL_STATE = 0xFFFFFFFF
 };
 
 #define CREATURE_MAX_SPELLS 5
@@ -94,16 +105,37 @@ class LEGACY_DLL_SPEC Unit : public WorldObject
 		DeathState getDeathState() { return m_deathState; }
 		virtual void setDeathState(DeathState s); // overwrited in Creature/Player/Pet
 
+		bool addUnitState(uint32 f, uint8 duration);
 		void addUnitState(uint32 f) { m_state |= f; }
 		bool hasUnitState(const uint32 f) const { return (m_state & f); }
 		void clearUnitState(uint32 f) { m_state &= ~f; }
 		bool isDisabled() const
 		{
 			return hasUnitState(
-					UNIT_STATE_CONFUSED |
+					UNIT_STATE_CYCLONE |
 					UNIT_STATE_ROOT |
-					UNIT_STATE_STUNED);
+					UNIT_STATE_STUN |
+					UNIT_STATE_FREEZE);
 		}
+		bool isPositiveBuffed() const
+		{
+			return hasUnitState(
+					UNIT_STATE_ICEWALL |
+					UNIT_STATE_AURA |
+					UNIT_STATE_MIRROR |
+					UNIT_STATE_VIGOR |
+					UNIT_STATE_DODGE |
+					UNIT_STATE_INVISIBLE);
+		}
+		void ResetAllState();
+
+	private:
+		bool _addDisabledState(uint32 f, uint8 duration);
+		bool _addPositiveBufState(uint32 f, uint8 duration);
+
+	public:
+		bool isReleaseFromDisabledState();
+		bool isPositiveBufExpired();
 
 		uint32 getLevel() const { return GetUInt32Value(UNIT_FIELD_LEVEL); }
 		void SetLevel(uint32 lvl);
@@ -218,6 +250,9 @@ class LEGACY_DLL_SPEC Unit : public WorldObject
 		uint8  m_itemSet;
 		bool   m_itemSetApplied;
 		int32  m_tmp_xp;
+
+		uint8  m_disabled_duration;
+		uint8  m_positive_buf_duration;
 };
 
 #endif

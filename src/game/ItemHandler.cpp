@@ -16,6 +16,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "BattleSystem.h"
 #include "Common.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
@@ -46,6 +47,27 @@ void WorldSession::HandleUseItemOpcodes( WorldPacket & recv_data )
 	recv_data >> useitemtype;
 
 	WorldPacket data;
+
+	Player* battleMaster = _player->GetBattleMaster();
+	BattleSystem* engine = NULL;
+
+	if( battleMaster )
+		engine = battleMaster->PlayerBattleClass;
+
+	if( engine )
+	{
+		uint8 atk_col, atk_row;
+		engine->GetPosFor(_player, atk_col, atk_row);
+		if( !engine->isActionComplete() )
+		{
+			///- Tell next attacker to move if available
+			data.Initialize( 0x35 );
+			data << (uint8 ) 0x05;
+			data << (uint8 ) atk_col;
+			data << (uint8 ) atk_row;
+			SendPacket(&data);
+		}
+	}
 
 	switch( useitemtype )
 	{
@@ -374,6 +396,14 @@ void WorldSession::HandleUseItemOpcodes( WorldPacket & recv_data )
 			SendPacket(&data);
 		} break;
 
+	}
+
+	///- in battle handler, final check is action complete ?
+	if( engine )
+	{
+		engine->IncAction();
+		if( engine->isActionComplete() )
+			engine->BuildActions();
 	}
 }
 

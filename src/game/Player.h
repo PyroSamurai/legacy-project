@@ -322,6 +322,7 @@ class LEGACY_DLL_SPEC Player : public Unit
 		void Send0504();
 		void Send0F0A();
 		void Send0602();
+		void Send1406();
 		void Send1408();
 
 		void UpdateMap2Npc();

@@ -80,6 +80,7 @@ class ChatHandler
 		bool HandleUnstuckCommand(const char* args);
 		bool HandleSaveCommand(const char* args);
 		bool HandlePasswordCommand(const char* args);
+		bool HandleRestCommand(const char* args);
 
 		///- LEVEL 1 SEC_MODERATOR
 		bool HandleLookupAreaCommand(const char* args);

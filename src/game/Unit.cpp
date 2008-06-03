@@ -50,6 +50,9 @@ Unit::Unit( WorldObject *instantiator )
 	m_itemSet = 0;
 	m_itemSetApplied = false;
 	m_tmp_xp = 0;
+
+	m_disabled_duration = 0;
+	m_positive_buf_duration = 0;
 }
 
 Unit::~Unit()
@@ -174,21 +177,28 @@ uint16 Unit::GetAttackPower()
 {
 	uint16 atk = GetUInt32Value(UNIT_FIELD_ATK) + GetInt32Value(UNIT_FIELD_ATK_MOD) + 1;
 	uint8  lvl = GetUInt32Value(UNIT_FIELD_LEVEL);
-	return (atk + (uint16)(lvl * 0.5));
+	return (atk + (uint16)(lvl * 0.05));
 }
 
 uint16 Unit::GetMagicPower()
 {
 	uint16 mag = GetUInt32Value(UNIT_FIELD_INT) + GetInt32Value(UNIT_FIELD_INT_MOD) + 1;
 	uint8  lvl = GetUInt32Value(UNIT_FIELD_LEVEL);
-	return (mag + (uint16)(lvl * 0.5));
+	return (mag + (uint16)(lvl * 0.05));
 }
 
 uint16 Unit::GetDefensePower()
 {
 	uint16 def = GetUInt32Value(UNIT_FIELD_DEF) + GetInt32Value(UNIT_FIELD_DEF_MOD);
 	uint8  lvl = GetUInt32Value(UNIT_FIELD_LEVEL);
-	return (def + (uint16)(lvl * 0.5));
+
+	if( hasUnitState(UNIT_STATE_DEFEND) )
+		def += 25;
+
+	if( hasUnitState(UNIT_STATE_ICEWALL) )
+		def += 50;
+
+	return (def + (uint16)(lvl * 0.05));
 }
 
 bool Unit::CanHaveSpell(Spell* spell)
@@ -395,6 +405,9 @@ void Unit::AddKillExp(uint8 enemyLevel, bool linked, bool inTeam, uint8 lowestLe
 	//sLog.outDebug("EXPERIENCE: '%s' add for killing enemy level %u", GetName(), enemyLevel);
 
 	uint8  level   = getLevel();
+	if( level >= 200 )
+		return;
+
 	float  xp      = 0;
 
 	int32 diffLevel = enemyLevel - level;
@@ -430,6 +443,9 @@ void Unit::AddKillExp(uint8 enemyLevel, bool linked, bool inTeam, uint8 lowestLe
 void Unit::AddHitExp(uint8 enemyLevel, bool linked)
 {
 	uint8 level = getLevel();
+	if( level >= 200 )
+		return;
+
 	int32 diffLevel = enemyLevel - level;
 	if(level - enemyLevel > 15)
 		///- Unit level too high to gained more experience from enemy
@@ -673,4 +689,100 @@ uint16 Unit::GetSPMax() const
 	//sLog.outDebug("UNIT: Calculating MAX SP level %u spx %u spx_mod %u = %u", level, spx, spx_mod, sp_max);
 
 	return sp_max;
+}
+
+bool Unit::addUnitState(uint32 f, uint8 duration)
+{
+	switch( f )
+	{
+		case UNIT_STATE_STUN:
+		case UNIT_STATE_CYCLONE:
+		case UNIT_STATE_ROOT:
+		case UNIT_STATE_FREEZE: return _addDisabledState(f, duration);
+
+		case UNIT_STATE_ICEWALL:
+		case UNIT_STATE_AURA:
+		case UNIT_STATE_MIRROR:
+		case UNIT_STATE_VIGOR:
+		case UNIT_STATE_DODGE:
+		case UNIT_STATE_INVISIBLE: return _addPositiveBufState(f, duration);
+
+		default: addUnitState(f); return true;
+	}
+}
+
+bool Unit::_addDisabledState(uint32 f, uint8 duration)
+{
+	if( f != UNIT_STATE_STUN && f != UNIT_STATE_CYCLONE &&
+		f != UNIT_STATE_ROOT && f != UNIT_STATE_FREEZE )
+		return false;
+
+	if( isDisabled() )
+		return false;
+
+	addUnitState(f);
+	m_disabled_duration = duration + 1;
+	return true;
+}
+
+bool Unit::_addPositiveBufState(uint32 f, uint8 duration)
+{
+	if( isPositiveBuffed() )
+		return false;
+
+	addUnitState(f);
+	m_positive_buf_duration = duration + 1;
+	return true;
+}
+
+bool Unit::isReleaseFromDisabledState()
+{
+	if( m_disabled_duration == 0 )
+		return false;
+
+	--m_disabled_duration;
+	sLog.outDebug("UNIT: Disabled State Duration = %u", m_disabled_duration);
+
+	if( m_disabled_duration == 0 )
+	{
+		sLog.outDebug("UNIT: Releasing from disabled state");
+		if(hasUnitState(UNIT_STATE_STUN)) clearUnitState(UNIT_STATE_STUN);
+		if(hasUnitState(UNIT_STATE_CYCLONE)) clearUnitState(UNIT_STATE_CYCLONE);
+		if(hasUnitState(UNIT_STATE_ROOT)) clearUnitState(UNIT_STATE_ROOT);
+		if(hasUnitState(UNIT_STATE_FREEZE)) clearUnitState(UNIT_STATE_FREEZE);
+
+		return true;
+	}
+	else
+		return false;
+}
+
+bool Unit::isPositiveBufExpired()
+{
+	if( m_positive_buf_duration == 0 )
+		return false;
+
+	--m_positive_buf_duration;
+	sLog.outDebug("UNIT: (+) Buf State Duration = %u", m_positive_buf_duration);
+
+	if( m_positive_buf_duration == 0 )
+	{
+		sLog.outDebug("UNIT: (+) Buf state expired");
+		if(hasUnitState(UNIT_STATE_ICEWALL)) clearUnitState(UNIT_STATE_ICEWALL);
+		if(hasUnitState(UNIT_STATE_AURA)) clearUnitState(UNIT_STATE_AURA);
+		if(hasUnitState(UNIT_STATE_MIRROR)) clearUnitState(UNIT_STATE_MIRROR);
+		if(hasUnitState(UNIT_STATE_VIGOR)) clearUnitState(UNIT_STATE_VIGOR);
+		if(hasUnitState(UNIT_STATE_DODGE)) clearUnitState(UNIT_STATE_DODGE);
+		if(hasUnitState(UNIT_STATE_INVISIBLE)) clearUnitState(UNIT_STATE_INVISIBLE);
+		return true;
+	}
+	else
+		return false;
+}
+
+void Unit::ResetAllState()
+{
+	m_state = 0;
+	m_disabled_duration = 0;
+	m_positive_buf_duration = 0;
 }

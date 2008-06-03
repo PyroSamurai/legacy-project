@@ -336,8 +336,37 @@ void BattleSystem::ResetAction()
 				continue;
 
 			if( unit->isType(TYPE_PLAYER) || unit->isType(TYPE_PET))
-				if( !unit->isDead() )
+				if( !unit->isDead() && !unit->isDisabled() )
 					m_PlayerActionNeed++;
+
+			if( unit->isReleaseFromDisabledState() )
+			{
+				///- disabled unit state released
+				WorldPacket data;
+				data.Initialize( 0x35 );
+				data << (uint8 ) 1;
+				data << (uint8 ) col;
+				data << (uint8 ) row;
+				data << (uint8 ) 1; // release disabled flag = 1
+				data << (uint16) 0; // unknown
+				SendMessageToSet(&data, true);
+			}
+
+			if( unit->isPositiveBufExpired() )
+			{
+				///- (+) buf unit state released
+				WorldPacket data;
+				data.Initialize( 0x35 );
+				data << (uint8 ) 1;
+				data << (uint8 ) col;
+				data << (uint8 ) row;
+				data << (uint8 ) 2; // release (+) buf flag = 2
+				data << (uint16) 0; //unknown
+				SendMessageToSet(&data, true);
+			}
+
+			///- Clear Defensive stance
+			unit->clearUnitState(UNIT_STATE_DEFEND);
 		}
 
 }
@@ -351,12 +380,10 @@ void BattleSystem::SendTurnComplete()
 	WorldPacket data;
 	data.Initialize( 0x14 );
 	data << (uint8 ) 0x09;
-	//pSession->SendPacket(&data);
-	SendMessageToSet(&data);
+	//SendMessageToSet(&data);
 
 	data.Initialize( 0x34 );
 	data << (uint8 ) 0x01;
-	//pSession->SendPacket(&data);
 	SendMessageToSet(&data);
 
 	DumpBattlePosition();
@@ -728,7 +755,7 @@ void BattleSystem::AIMove()
 			if( attacker->isType(TYPE_PLAYER) || attacker->isType(TYPE_PET) )
 				continue;
 
-			if( attacker->isDead() ) continue;
+			if( attacker->isDead() || attacker->isDisabled() ) continue;
 
 			uint8 ai_difficulty = 50;
 
@@ -1185,6 +1212,12 @@ bool BattleSystem::SendAction()
 			continue;
 		}
 
+		if( pAttacker->isDisabled() )
+		{
+			sLog.outDebug("BATTLE: Fuck!, '%s' is disabled, skipped", pAttacker->GetName());
+			continue;
+		}
+
 		sLog.outDebug("BATTLE: Processing action #%u for '%s'", i_action, pAttacker->GetName());
 
 		switch( bAction->GetSkill() )
@@ -1193,12 +1226,13 @@ bool BattleSystem::SendAction()
 			{
 				///- Need no animation, skipped
 				///- TODO: Set DEFENSE Stance to actor
+				pAttacker->addUnitState(UNIT_STATE_DEFEND);
 				return true;
 			} break;
 
 			case SPELL_ESCAPE:
 			{
-				if( rand_chance() > 80 )
+				if( rand_chance() > 65 )
 				{
 					Escaped(bAction);
 					break;
@@ -1207,7 +1241,6 @@ bool BattleSystem::SendAction()
 
 			default:
 			{
-
 				BuildUpdateBlockAction(&data, bAction, linked);
 
 				///- TODO: Determine animation time by skill id
@@ -1217,6 +1250,7 @@ bool BattleSystem::SendAction()
 				valid_action = true;
 			} break;
 		}
+
 	}
 
 
@@ -1285,7 +1319,7 @@ void BattleSystem::BuildUpdateBlockAction(WorldPacket *data, BattleAction* actio
 
 	uint16 data_len = data->size();
 
-	*data << (uint16) 0x000F;         // data length, guess default 0x000F
+	*data << (uint16) 0x000F; // data length for spell attack default 0x000F
 
 	*data << (uint8 ) action->GetAttackerCol(); // attacker col
 	*data << (uint8 ) action->GetAttackerRow(); // attacker row
@@ -1311,26 +1345,34 @@ void BattleSystem::BuildUpdateBlockAction(WorldPacket *data, BattleAction* actio
 				uint8 acol = action->GetAttackerCol();
 				uint8 arow = action->GetAttackerRow();
 				Unit* attacker = GetBattleUnit(acol, arow);
-				if( attacker->isType(TYPE_PLAYER) )
+				if( attacker->isType(TYPE_PLAYER) || attacker->isType(TYPE_PET))
 				{
-					if( CanCatchPet(attacker, victim) )
+
+					Player* catcher = NULL;
+					if(attacker->isType(TYPE_PLAYER))
+						catcher = (Player*) attacker;
+					else if(attacker->isType(TYPE_PET))
+						catcher = (Player*) attacker->GetOwner();
+
+					if( CanCatchPet(catcher, victim) )
 					{
-						Pet* pet = ((Player*)attacker)->CreatePet( ((Creature*)victim)->GetEntry() );
+						Pet* pet = catcher->CreatePet( ((Creature*)victim)->GetEntry() );
 						uint8 dest;
 						if( pet )
 						{
-							if( ((Player*)attacker)->CanSummonPet( NULL_PET_SLOT, dest, pet, false ) == PET_ERR_OK )
+							if( catcher->CanSummonPet( NULL_PET_SLOT, dest, pet, false ) == PET_ERR_OK )
 							{
 								*data << (uint16) SPELL_SUCCESS_CATCH;
 								catched = true;
 								pet->SetLoyalty(60);
-								((Player*)attacker)->SummonPet(dest, pet);
-								((Player*)attacker)->UpdatePetCarried();
+								catcher->SummonPet(dest, pet);
+								catcher->UpdatePetCarried();
 								WorldPacket data2;
-								((Player*)attacker)->BuildUpdateBlockTeam(&data2);
-								((Player*)attacker)->SendMessageToSet(&data2, true);
+								catcher->BuildUpdateBlockTeam(&data2);
+								catcher->SendMessageToSet(&data2, true);
 								break;
 							}
+							sLog.outDebug("CAPTURE: Cannot summon pet '%s'", pet->GetName());
 							delete pet;
 						}
 					}
@@ -1339,7 +1381,12 @@ void BattleSystem::BuildUpdateBlockAction(WorldPacket *data, BattleAction* actio
 		}
 
 		default:
-			*data << (uint16) action->GetSkill();       // 0x2710 = basic spell
+		{
+			if( action->GetSkill() < 26000 )
+				*data << (uint16) action->GetSkill(); // 0x2710 = basic spell
+			else
+				*data << (uint16) 19001;
+		}
 	}
 
 	*data << (uint8 ) 0x01;
@@ -1370,11 +1417,21 @@ void BattleSystem::BuildUpdateBlockAction(WorldPacket *data, BattleAction* actio
 		Unit* victim    = GetVictim(hit);
 		point_inflicted = GetDamage(attacker, victim, sinfo, linked);
 		point_modifier  = point_inflicted < 0 ? 1 : 0;
-
+/*
 		uint8 anim_impact = 0;
 		uint8 anim_target = 0;
 		switch( sinfo->DamageMod )
 		{
+			case SPELL_MOD_BUF:
+			case SPELL_MOD_DISABLED_BUF:
+			case SPELL_MOD_POSITIVE_BUF:
+			case SPELL_MOD_NEGATIVE_BUF:
+			case SPELL_MOD_DISABLED_HURT:
+			{
+				anim_impact = 1;
+				anim_target = 1;
+			} break;
+
 			case SPELL_MOD_HURT:
 			case SPELL_MOD_BUF_HURT:
 			{
@@ -1393,7 +1450,6 @@ void BattleSystem::BuildUpdateBlockAction(WorldPacket *data, BattleAction* actio
 				}
 			} break;
 
-			case SPELL_CATCH:
 			default:
 			{
 				anim_impact = 1;
@@ -1409,9 +1465,9 @@ void BattleSystem::BuildUpdateBlockAction(WorldPacket *data, BattleAction* actio
 		//uint8 anim_target = point_inflicted == 0 ? 2 : 0;
 		// TODO: Fix for defensive stance
 		*data << (uint8 ) anim_target;
-
+*/
 		sLog.outDebug("COMBAT: '%s' use <%s> to '%s'[%u,%u] deal %i dmg, %s", attacker->GetName(), sinfo->Name, victim->GetName(), hit->GetTargetCol(), hit->GetTargetRow(), point_inflicted, linked ? "linked" : "singled");
-
+/*
 		if( isDealDamageToAndKill(victim, point_inflicted) )
 		{
 			m_creatureKilled = true;
@@ -1422,18 +1478,21 @@ void BattleSystem::BuildUpdateBlockAction(WorldPacket *data, BattleAction* actio
 		{
 			AddHitExpGained(attacker, victim, linked);
 		}
-
+*/
+		/*
 		// spell effect count, 1 for now, HP only
 		*data << (uint8 ) 1;
 
-		// affect status code, 0x19 = HP
-		*data << (uint8 ) (point_inflicted == 0 ? 0 : 0x19);
+		// affect status code, 0x19 = HP, 0xDD = (-) buf, 0xDE = (+) buf
+		*data << (uint8 ) (point_inflicted == 0 ? 0xDD : 0x19);
 
 		// affect value
 		*data << (uint16) abs(point_inflicted);
 
 		// affect modifier flag 0 = healing, 1 = hurting
 		*data << (uint8 ) point_modifier;
+		*/
+		BuildUpdateBlockSpellMod(data, hit, sinfo, attacker, victim, point_inflicted, point_modifier, linked, catched);
 
 		if( catched )
 			m_BattleUnit[hit->GetTargetCol()][hit->GetTargetRow()] = NULL;
@@ -1468,6 +1527,116 @@ void BattleSystem::BuildUpdateBlockAction(WorldPacket *data, BattleAction* actio
 
 	*/
 
+}
+
+///- Building block for spell mod
+void BattleSystem::BuildUpdateBlockSpellMod(WorldPacket *data, BattleAction* action, const SpellInfo* sinfo, Unit* attacker, Unit* victim, int32 damage, uint8 modifier, bool linked, bool catched)
+{
+	bool missed = false;
+	uint8 ani_i = ANI_IMPACT_HIT;
+	uint8 ani_t = ANI_TARGET_HIT;
+
+	///- Determine missed attack
+	double dice_missed = rand_chance();
+	if( (dice_missed > 90 && !catched &&
+		 sinfo->DamageMod != SPELL_MOD_POSITIVE_BUF &&
+		 sinfo->DamageMod != SPELL_MOD_HEAL)
+		|| victim->hasUnitState(UNIT_STATE_DODGE))
+	{
+		damage = 0;
+		modifier = 0;
+		missed = true;
+	}
+
+	uint8 stcode = 0;
+	switch( sinfo->DamageMod )
+	{
+	case SPELL_MOD_DISABLED_HURT:
+	case SPELL_MOD_DISABLED_BUF: stcode = 0xDD; ani_t = ANI_TARGET_HIT; break;
+	case SPELL_MOD_POSITIVE_BUF: stcode = 0xDE; ani_t = ANI_TARGET_DEF; break;
+	case SPELL_MOD_NEGATIVE_BUF: stcode = 0xDF; ani_t = ANI_TARGET_DEF; break;
+	case SPELL_MOD_HEAL:         stcode = 0x19; ani_t = ANI_TARGET_DEF; break;
+
+	case SPELL_MOD_HURT:
+	default: stcode = 0x19; ani_t = ANI_TARGET_HIT; break;
+	}
+
+	int32 state = 0;
+	uint8 dur = 0;
+	switch( sinfo->Entry )
+	{
+		///- Disabled state
+		case SPELL_TREESPIRIT: state = UNIT_STATE_ROOT;      dur = 3; break;
+		case SPELL_FREEZING:   state = UNIT_STATE_FREEZE;    dur = 5; break;
+		case SPELL_STUN:       state = UNIT_STATE_STUN;      dur = 2; break;
+		case SPELL_CYCLONE:    state = UNIT_STATE_CYCLONE;   dur = 3; break;
+
+		///- (+) Buf state
+		case SPELL_ICEWALL:    state = UNIT_STATE_ICEWALL;   dur = 2; break;
+		case SPELL_AURA:       state = UNIT_STATE_AURA;      dur = 4; break;
+		case SPELL_MIRROR:     state = UNIT_STATE_MIRROR;    dur = 4; break;
+		case SPELL_VIGOR:      state = UNIT_STATE_VIGOR;     dur = 4; break;
+		case SPELL_DODGE:      state = UNIT_STATE_DODGE;     dur = 2; break;
+		case SPELL_INVISIBLE:  state = UNIT_STATE_INVISIBLE; dur = 4; break;
+		case SPELL_MAGNIFY:    state = UNIT_STATE_MAGNIFY;   dur = 4; break;
+
+		///- (-) Buf state
+		case SPELL_MINIFY:     state = UNIT_STATE_MINIFY;    dur = 4; break;
+	}
+
+	///- Check if unit state hitted and apply it
+	if( !missed && stcode != 0x19 && state && dur )
+		if( !victim->addUnitState(state, dur) )
+		{
+			missed = true;
+			stcode = 0;
+		}
+
+	if( !missed )
+		if( isDealDamageToAndKill(victim, damage) )
+		{
+			m_creatureKilled = true;
+			AddKillExpGained(attacker, victim, linked);
+			AddKillItemDropped(action);
+		}
+		else
+			AddHitExpGained(attacker, victim, linked);
+
+	if(!missed && victim->hasUnitState(UNIT_STATE_DEFEND | UNIT_STATE_ICEWALL))
+		ani_t = ANI_TARGET_DEF;
+
+	if(!missed && victim->hasUnitState(UNIT_STATE_AURA | UNIT_STATE_MIRROR))
+	{
+		ani_t = ANI_TARGET_NONE;
+		damage = 0;
+	}
+
+	if(!missed && sinfo->Entry == SPELL_ESCAPE)
+		missed = true;
+
+	*data << (uint8 ) (missed ? ANI_IMPACT_MISS : ani_i);
+	*data << (uint8 ) (missed ? ANI_TARGET_DODGE : ani_t);
+
+	// spell effect count
+	if( damage != 0 && stcode != 0x19 )
+	{
+		*data << (uint8 ) 2;
+		*data << (uint8 ) 0x19;
+		*data << (uint16) abs(damage);
+		*data << (uint8 ) modifier;
+	}
+	else
+		*data << (uint8 ) 1;
+
+	// affect status code, 0x19 = HP, 0xDD = (-) buf, 0xDE = (+) buf
+	//*data << (uint8 ) (damage == 0 ? 0xDD : 0x19);
+	*data << (uint8 ) stcode;
+
+	// affect value
+	*data << (uint16) (stcode == 0x19 ? abs(damage) : 0);
+
+	// affect modifier flag, 0 = healing, 1 = hurting
+	*data << (uint8 ) modifier;
 }
 
 ///- Building block for area spell hit, including single hit
@@ -1822,34 +1991,33 @@ UnitActionTurn BattleSystem::ParseSpell(BattleAction* action, uint8 hit, bool li
 //   zero    : buf/miss modifier
 int32 BattleSystem::GetDamage(Unit* attacker, Unit* victim, const SpellInfo* sinfo, bool linked)
 {
-	///- TODO Check Aura spell buf
-
+	///- Check Aura spell buf
+	if( victim->hasUnitState(UNIT_STATE_AURA) )
+		return 0;
 
 	int32 dmg_mod = 0;
 
 	switch( sinfo->DamageMod )
 	{
-		case SPELL_MOD_NONE:     // mod none 0
-		case SPELL_MOD_BUF:      // mod buf  1
+		case SPELL_MOD_NONE:         // mod none = 0
+		case SPELL_MOD_BUF:          // mod buf = 1
+		case SPELL_MOD_DISABLED_BUF: // mod disabled = 8
+		case SPELL_MOD_POSITIVE_BUF: // mod (+) buf = 16
+		case SPELL_MOD_NEGATIVE_BUF: // mod (-) buf = 32
 		{
 			return 0;
 		} break;
-		case SPELL_MOD_HURT:     // mod hurt 2
-		case SPELL_MOD_BUF_HURT: // mod hurt + buf 3
+		case SPELL_MOD_HURT:     // mod hurt = 2
+		case SPELL_MOD_BUF_HURT: // mod hurt + buf = 3
 		{
-			///- TODO: Correct miss calculation
-			/*
-			double dice_miss = rand_chance();
-			if( dice_miss > 99.91 )
-				return 0;
-			*/
-
 			dmg_mod = -1;
 		} break;
-		case SPELL_MOD_HEAL:    // mod heal 6
+		case SPELL_MOD_HEAL:    // mod heal = 6
 		{
 			dmg_mod = 1;
 		} break;
+
+		case SPELL_MOD_DISABLED_HURT: // mod disabled + hurt = 10
 		default:
 		{
 			dmg_mod = -1;
@@ -1862,7 +2030,7 @@ int32 BattleSystem::GetDamage(Unit* attacker, Unit* victim, const SpellInfo* sin
 	uint8 a_el = attacker->GetUInt32Value(UNIT_FIELD_ELEMENT);
 	uint8 v_el = victim->GetUInt32Value(UNIT_FIELD_ELEMENT);
 
-	float dmg_multiplier = GetDamageMultiplier(a_el, v_el);
+	float dmg_multiplier = GetDamageMultiplier(a_el, v_el, sinfo);
 
 	float dmg_school = 0;
 
@@ -1897,14 +2065,19 @@ int32 BattleSystem::GetDamage(Unit* attacker, Unit* victim, const SpellInfo* sin
 	}
 
 	///- Add Level bonus to produce pure damage school
-	dmg_school = dmg_school + (diffLevel * 2);
+	dmg_school = dmg_school + (diffLevel * 0.01);
 
 	sLog.outDebug("DAMAGE: Pure Damage School is %.2f", dmg_school);
 
-	//float dmg = dmg_school + (dmg_school * spell_level * 0.05);
-	float dmg = dmg_school + (dmg_school * spell_level * (sinfo->LearnPoint * 0.1));
+	///- Damage dealed calculated by spell level, learn point and mana used
+	float dmg = 0;
+	if( sinfo->LearnPoint && sinfo->SP )
+		dmg = dmg_school + (dmg_school * spell_level * (sinfo->LearnPoint * 0.01) * (sinfo->SP * 0.1));
+	else
+		dmg = dmg_school + (dmg_school * spell_level);
+
 	dmg /= sinfo->hit;
-	dmg *= dmg_multiplier;
+	dmg = dmg * dmg_multiplier;
 
 	sLog.outDebug("DAMAGE: Damage rate per hit is %.2f", dmg);
 
@@ -1916,6 +2089,8 @@ int32 BattleSystem::GetDamage(Unit* attacker, Unit* victim, const SpellInfo* sin
 	if( sinfo->DamageMod == SPELL_MOD_HURT )
 	{
 		dmg = dmg - (dmg * (def_pow * 0.01));
+
+		sLog.outDebug("DAMAGE: Reduced damage is %.2f", dmg);
 
 		if( dmg <= 0 )
 			dmg = 1;
@@ -1942,10 +2117,81 @@ int32 BattleSystem::GetDamage(Unit* attacker, Unit* victim, const SpellInfo* sin
 //   = 1 if no multiplier
 //   < 1 if weaker
 //   > 1 if stronger
-float BattleSystem::GetDamageMultiplier(uint8 el1, uint8 el2)
+float BattleSystem::GetDamageMultiplier(uint8 el1, uint8 el2, const SpellInfo* sinfo)
 {
-	///- Plain 1 for now
-	return 1;
+	float m = 1;
+
+	switch( el1 )
+	{
+		case ELEMENT_EARTH:
+		{
+			if(el2 == ELEMENT_WATER)
+				m += 0.75;
+			else if(el2 == ELEMENT_WIND)
+				m -= 0.25;
+		} break;
+
+		case ELEMENT_WATER:
+		{
+			if(el2 == ELEMENT_FIRE)
+				m += 0.75;
+			else if(el2 == ELEMENT_EARTH)
+				m -= 0.25;
+		} break;
+
+		case ELEMENT_FIRE:
+		{
+			if(el2 == ELEMENT_WIND)
+				m += 0.75;
+			else if(el2 == ELEMENT_WATER)
+				m -= 0.25;
+		} break;
+
+		case ELEMENT_WIND:
+		{
+			if(el2 == ELEMENT_EARTH)
+				m += 0.75;
+			else if(el2 == ELEMENT_FIRE)
+				m -= 0.25;
+		} break;
+	}
+
+	switch( sinfo->Element )
+	{
+		case ELEMENT_EARTH:
+		{
+			if(el2 == ELEMENT_WATER)
+				m += 0.5;
+			else if(el2 == ELEMENT_WIND)
+				m -= 0.5;
+		} break;
+
+		case ELEMENT_WATER:
+		{
+			if(el2 == ELEMENT_FIRE)
+				m += 0.5;
+			else if(el2 == ELEMENT_EARTH)
+				m -= 0.5;
+		} break;
+
+		case ELEMENT_FIRE:
+		{
+			if(el2 == ELEMENT_WIND)
+				m += 0.5;
+			else if(el2 == ELEMENT_WATER)
+				m -= 0.5;
+		} break;
+
+		case ELEMENT_WIND:
+		{
+			if(el2 == ELEMENT_EARTH)
+				m += 0.5;
+			else if(el2 == ELEMENT_FIRE)
+				m -= 0.5;
+		} break;
+	}
+
+	return m;
 }
 
 const char* BattleSystem::GetDamageModText(uint32 dmg_mod)
@@ -2080,17 +2326,19 @@ void BattleSystem::SendComboAttack(BattleAction* action, int32 damage)
 	WaitForAnimation(action->GetSkill());
 }
 
-void BattleSystem::WaitForAnimation(uint16 skill)
+void BattleSystem::WaitForAnimation(uint16 spell)
 {
 	// 220 = 22 sec
 	// 20  = 2 sec
 	// 12  = 1.2 sec
 	uint32 msec;
-	if( skill == SPELL_DEFENSE )
+	if( spell == SPELL_DEFENSE )
 		msec = 0;
-	else if( skill == SPELL_BASIC ||
-			 skill == SPELL_ESCAPE )
+	else if( spell == SPELL_BASIC ||
+			 spell == SPELL_ESCAPE )
 		msec = 12; //msec = 1200;
+	else if( spell > 26000 )
+		msec = 40;
 	else
 		msec = 25; //msec = 2500;
 	//ZThread::Thread::sleep(msec);
@@ -2208,6 +2456,8 @@ void BattleSystem::BattleStop()
 
 	for(PlayerListMap::const_iterator itr = m_PlayerList.begin(); itr != m_PlayerList.end(); ++itr)
 	{
+		(*itr)->Send1406();
+		(*itr)->Send1408();
 		LeaveBattle((*itr));
 	}
 	m_PlayerList.clear();
@@ -2306,11 +2556,10 @@ void BattleSystem::LeaveBattle(Player* player)
 		player->SetUInt32Value(UNIT_FIELD_HP, 1);
 		player->setDeathState(ALIVE);
 	}
-
+	player->ResetAllState();
 	player->UpdatePlayer();
 
 	Pet* pet = player->GetBattlePet();
-
 	if( pet )
 	{
 		if( pet->isDead() || pet->GetHealth() == 0 )
@@ -2318,6 +2567,7 @@ void BattleSystem::LeaveBattle(Player* player)
 			pet->SetUInt32Value(UNIT_FIELD_HP, 1);
 			pet->setDeathState(ALIVE);
 		}
+		pet->ResetAllState();
 		player->UpdatePetBattle();
 	}
 
@@ -2530,7 +2780,7 @@ void BattleSystem::AddKillItemDropped(BattleAction* action)
 				m_itemDropped.push_back(new ItemDropped(a,b,item,x,y));
 				player->DumpPlayer("inventory");
 			}
-			//break;
+			break;
 		}
 	}
 }
@@ -2794,6 +3044,9 @@ void BattleSystem::Escaped(BattleAction *action)
 	data << (uint8 ) 0;
 	SendMessageToSet(&data, true);
 
+	player->Send1406();
+	player->Send1408();
+
 	LeaveBattle(player);
 
 	DumpBattlePosition();
@@ -2925,18 +3178,30 @@ bool BattleSystem::GetPosFor(Unit* unit, uint8 &col, uint8 &row)
 ///- Calculate all requirement for capturing pet, including chance
 bool BattleSystem::CanCatchPet(Unit* attacker, Unit* victim)
 {
+	if(!attacker || !victim)
+		return false;
+
 	///- Check minimum health percentage
 	//   20% current health minimum capturable
-	sLog.outDebug("Can Capture ? %u <= %f", victim->GetHealth(), round(victim->GetUInt32Value(UNIT_FIELD_HP_MAX) * 0.2));
 	if( victim->GetHealth() > round(victim->GetUInt32Value(UNIT_FIELD_HP_MAX) * 0.2) )
+	{
+		sLog.outDebug("CAPTURE: Minimum health not captureable %u <= %.2f", victim->GetHealth(), round(victim->GetUInt32Value(UNIT_FIELD_HP_MAX) * 0.2));
 		return false;
+	}
 
 	///- Check level minimum
-	if( victim->getLevel() - attacker->getLevel() > 5 )
+	if( attacker->getLevel() + 5 < victim->getLevel() )
+	//if( 5 < victim->getLevel() - attacker->getLevel() )
+	{
+		sLog.outDebug("CAPTURE: Minimum level not captureable %i > %i", attacker->getLevel() + 5, victim->getLevel());
 		return false;
+	}
 
 	if( rand_chance() <= 50 )
+	{
+		sLog.outDebug("CAPTURE: Chance failed occurs");
 		return false;
+	}
 
 	return true;
 }

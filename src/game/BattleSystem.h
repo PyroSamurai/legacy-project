@@ -45,6 +45,14 @@ class WorldSession;
  * 0,4  1,4               2,4  3,4
  */
 
+#define ANI_IMPACT_MISS  0
+#define ANI_IMPACT_HIT   1
+
+#define ANI_TARGET_HIT   0
+#define ANI_TARGET_DEF   1
+#define ANI_TARGET_DODGE 2
+#define ANI_TARGET_NONE  4
+
 class BattleAction
 {
 	public:
@@ -188,7 +196,7 @@ class LEGACY_DLL_SPEC BattleSystem
 		void ResetAction();
 
 		int32 GetDamage(Unit* attacker, Unit* victim, const SpellInfo* sinfo, bool linked=false);
-		float GetDamageMultiplier(uint8 el1, uint8 el2);
+		float GetDamageMultiplier(uint8 el1, uint8 el2, const SpellInfo* sinfo);
 		bool isDealDamageToAndKill(Unit* victim, int32 damage);
 
 		void AIMove();
@@ -196,6 +204,7 @@ class LEGACY_DLL_SPEC BattleSystem
 
 		bool CanLink(BattleAction act1, BattleAction act2);
 		void BuildUpdateBlockAction(WorldPacket *data, BattleAction* action, bool linked=false);
+		void BuildUpdateBlockSpellMod(WorldPacket *data, BattleAction* action, const SpellInfo* sinfo,Unit* attacker, Unit* victim, int32 damage, uint8 modifier, bool linked, bool catched);
 		void BuildUpdateBlockPetPosition(WorldPacket *data, Pet* pet, uint8 col, uint8 row);
 		UnitActionTurn ParseSpell(BattleAction* action, uint8 hit, bool linked=false);
 
