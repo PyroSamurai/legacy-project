@@ -12,4 +12,4 @@ In order to compile on Linux, you will need some of these: libssl-dev, libmysql+
 Also check out the [Development Guide](developmentGuide.md) for install instructions.
 
 - Original Author: Valinor 
-- Modified by: @PyroSamurai
+- Modified by: [@PyroSamurai](https://github.com/PyroSamurai)
